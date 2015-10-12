@@ -4,7 +4,7 @@
 #include "dcnode/dcnode.h"
 #include "proto/dagent.pb.h"
 
-struct dagent_msg_t : public DAgentMsg;
+struct dagent_msg_t : public dagent::MsgDAgent;
 
 struct dagent_config_t
 {

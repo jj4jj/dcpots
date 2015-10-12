@@ -2,17 +2,21 @@
 distribute system basic componets
 
 **DAgent main feature**
-1. lib for distribute agent client
-2. distribute agent server for report bussiness, monitor, machine statistics
-
+*. lib for distribute agent client
+*. distribute agent server for report bussiness, monitor, machine statistics , python extension etc.
 
 
 
 **Architecture**
-1. Bussiness Application [reporter , execter , monitor , machine statistics]
-2. DAgent
-3. DCNode
+*. Bussiness Application [reporter , execter , monitor , machine statistics]
+*. DAgent
+*. DCNode
 
 **depends**
-1. libprotobuf 2.6+
-2. libpython 2.7.5+
+*. libprotobuf 2.6+
+*. libpython 2.7.5+
+*. cmake
+
+**optimal todo**
+*. router caching
+*. alloc msg buffer with zero copy [by lower layer allocated]
