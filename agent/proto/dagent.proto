@@ -1,0 +1,16 @@
+
+
+package dagent;
+
+enum MsgDAgentType
+{
+    MSG_DAGENT_HEART_BEAT = 1;
+    //MSG_DAGENT_RPC = 2;//extension
+    MSG_DAGENT_DATA = 10;
+};
+
+message MsgDAgent
+{
+    required    MsgDAgentType   type = 1;
+    optional    bytes           msg = 2;
+};
