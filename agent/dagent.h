@@ -8,6 +8,7 @@ struct dagent_msg_t : public dagent::MsgDAgent;
 
 struct dagent_config_t
 {
+	bool			is_agent;
     dcnode_config_t node_conf;
     char            plugin_start_file[32];
 };
