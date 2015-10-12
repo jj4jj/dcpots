@@ -43,6 +43,14 @@ using std::set;
 using std::shared_ptr;
 using std::make_shared;
 #include <functional>
+#include <unordered_map>
+#include <unordered_set>
+using std::unordered_map;
+using std::unordered_set;
+#include <random>
+
+#include <bitset>
+using std::bitset;
 //#include <iostream>
 
 //-------------------------------------------------

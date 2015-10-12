@@ -10,7 +10,7 @@ struct stcp_msg_t
 
 struct stcp_addr_t
 {
-    char ip[32];
+    string ip;
     int  port;
 };
 struct stcp_config_t
@@ -29,6 +29,7 @@ enum stcp_event_type
     STCP_CLOSED ,
     STCP_READ ,
     STCP_WRITE ,
+	STCP_TIMEOUT,
     STCP_EVENT_MAX
 };
 
@@ -39,13 +40,14 @@ struct stcp_event_t
     const stcp_msg_t *  msg;
 };
 
-typedef void (*stcp_event_cb_t)(stcp_t*, const stcp_event_t & ev);
+typedef int (*stcp_event_cb_t)(stcp_t*, const stcp_event_t & ev);
 
 struct stcp_t * stcp_create(const stcp_config_t & conf);
 void            stcp_destroy(stcp_t * );
 void            stcp_event_cb(stcp_t*, stcp_event_cb_t cb);
 void            stcp_poll(stcp_t *,int timeout_ms);
+int				stcp_send(stcp_t *,const stcp_msg_t & msg);
 void            stcp_listen(stcp_t *);
-int             stcp_connect(stcp_t *, const stcp_addr_t & addr,int timeout_ms);//ms
+int             stcp_connect(stcp_t *, const stcp_addr_t & addr,int timeout_ms, bool reconnect);//ms
 bool            stcp_is_server(stcp_t *);
 
