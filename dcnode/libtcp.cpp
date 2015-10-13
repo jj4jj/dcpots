@@ -16,9 +16,8 @@ struct msg_buffer_t {
 	char *	buffer;
 	int		max_size;
 	int		recv_size;
-	int		current_msg_start;
 	int		current_msg_size;
-	msg_buffer() :buffer(nullptr), max_size(0), recv_size(0), current_msg_start(0), current_msg_size(0)
+	msg_buffer() :buffer(nullptr), max_size(0), recv_size(0), current_msg_size(0)
 	{
 	}
 	int create(int max_sz)
@@ -26,7 +25,7 @@ struct msg_buffer_t {
 		char * p = malloc(max_size);
 		if (!p) return -1;
 		max_size = max_sz;
-		current_msg_start = current_msg_size = recv_size = 0;
+		current_msg_size = recv_size = 0;
 		buffer = p;
 		return 0;
 	}
@@ -54,8 +53,8 @@ struct stcp_t
 	sockaddr		connect_addr;
 	//////////////////////////////
 	std::unordered_map<int, msg_buffer_t>	sock_recv_buffer;
-
-
+	std::unordered_map<int, msg_buffer_t>	sock_send_buffer;
+	
 	void init()
 	{
 		sockfd = epfd = -1;
@@ -199,6 +198,9 @@ static void _new_connx(stcp_t * stcp, int listenfd)
 		stcp_event_t sev;
 		sev.fd = nfd;
 		sev.type = stcp_event_type::STCP_CONNECTED;
+		int on = 1;
+		_set_socket_ctl(nfd, O_NONBLOCK, true);
+		_set_socket_opt(nfd, TCP_NODELAY, &on, sizeof(on));
 		//add epollin
 		_op_poll(stcp, EPOLL_CTL_ADD, nfd, EPOLLIN);
 		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
@@ -250,32 +252,34 @@ static int _write_tcp_socket(stcp_t * stcp, int fd, const char * msg, int sz)
 	//size
 	stcp_event_t sev;
 	sev.fd = fd;
-	int nsize = htonl(sz + sizeof(int));
-	//todo get send buffer like recv buffer
+	sev.type = stcp_event_type::STCP_WRITE;
 
-	int ret = send(fd, &nsize, sizeof(nsize), MSG_DONTWAIT | MSG_NOSIGNAL | MSG_MORE);
-	if (ret != sizeof(nsize)) { 
-		//error 
+	int total = sz + sizeof(int32_t);
+	if (total > stcp->conf.max_send_buff)
+	{
 		return -1;
 	}
-RETRY:
-	int ret = send(fd, msg, sz, MSG_DONTWAIT | MSG_NOSIGNAL);
+	msg_buffer_t* msgbuff = _get_sock_msg_buffer(stcp, fd, false);
+	*(int32_t*)(msgbuff->buffer) = htonl(total);
+	memcpy(msgbuff->buffer + sizeof(int32_t), msg, sz);
+	
+RETRY_WRITE_MSG:
+	int ret = send(fd, msgbuff->buffer, total, MSG_DONTWAIT | MSG_NOSIGNAL);
 	if (ret == sz)
 	{
 		//send ok
-		sev.type = stcp_event_type::STCP_WRITE;
 		sev.msg = stcp_msg_t(msg, sz);
 		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 		return 0;
 	}
 	else
 	{
-		if (errno == EINTR)
+		if ( ret == -1 && errno == EINTR)
 		{
-			goto RETRY;
+			goto RETRY_WRITE_MSG;
 		}
 		//just send one part , close connection
-		_close_fd(stcp, fd, stcp_event_type::STCP_DATA_ERR)
+		_close_fd(stcp, fd, stcp_event_type::STCP_DATA_ERR);
 	}
 	//errno 
 	return -2;
@@ -286,59 +290,131 @@ static void	_close_fd(stcp_t * stcp, int fd, int reason)
 	sev.type = reason;
 	stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 	stcp->sock_recv_buffer.erase(fd);
+	stcp->sock_send_buffer.erase(fd);
 	close(fd);
 	_op_poll(stcp, EPOLL_CTR_DEL, fd);
 }
 
-msg_buffer_t * _get_recv_msg_buffer(stcp_t * stcp, int fd)
+msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
 {
-	auto it = stcp->sock_recv_buffer.find(fd);
-	if (it == stcp->sock_recv_buffer.end())
+	auto * fmap = &stcp->sock_recv_buffer;
+	int bufsize = stcp->conf.max_recv_buff;
+	if (!for_recv)
 	{
-		stcp->sock_recv_buffer[fd] = msg_buffer_t();
-		if (stcp->sock_recv_buffer[fd].create(stcp->conf.max_recv_buff))
+		fmap = &stcp->sock_send_buffer;
+		bufsize = stcp->conf.max_send_buff;
+	}
+	auto it = fmap->find(fd);
+	if (it == fmap->end())
+	{
+		fmap->insert(make_pair(fd, msg_buffer_t()));
+		if ((*fmap)[fd].create(bufsize))
 		{
+			fmap->erase(fd);
 			//no mem error
 			return nullptr;
 		}
-		return &(stcp->sock_recv_buffer[fd]);
+		return &((*fmap)[fd]);
 	}
 	return &(it->second);
+}
+static int _read_msg_error(stcp_t * stcp, int fd, int read_ret)
+{
+	if (read_ret == 0)
+	{
+		//peer close
+		_close_fd(stcp, fd, stcp_event_type::STCP_CLOSED);
+		return -1;
+	}
+	else //if (sz < 0 )
+	{
+		if (errno != EAGAIN &&
+			errno |= EINTR &&
+			errno != EWOULDBLOCK)
+		{
+			//error
+			_close_fd(stcp, fd, stcp_event_type::STCP_DATA_ERR);
+			return -2;
+		}
+	}
+	return 0;
 }
 
 //read msg
 static int _read_tcp_socket(stcp_t * stcp, int fd)
 {
-	msg_buffer_t * buffer = _get_recv_msg_buffer(stcp, fd);
+	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
 	stcp_event_t	sev;
 	sev.type = STCP_READ;
 	sev.fd = fd;
+	int nmsg = 0;
+READ_MSG_DISPATCH:
 	if (buffer->current_msg_size > 0)
 	{
 		int remain = buffer->current_msg_size - buffer->recv_size;
 		while (remain > 0)
 		{
-			int sz = recv(fd, buffer->buffer + buffer->current_msg_start, remain, MSG_DONTWAIT);
-			if (sz == 0)
+			int sz = recv(fd, buffer->buffer + buffer->recv_size, remain, MSG_DONTWAIT);
+			if (sz > 0)
 			{
-				//peer close
-				_close_fd(stcp, fd, stcp_event_type::STCP_CLOSED);
+				remain -= sz;
+				buffer->recv_size += sz;
+				if (remain == 0)
+				{
+					sev.msg = &stcp_msg_t(buffer->buffer + sizeof(int32_t),
+						buffer->current_msg_size - sizeof(int32_t));
+					stcp->event_cb(stcp, sev, stcp->event_cb_ud);
+					buffer->current_msg_size = 0;
+					buffer->recv_size = 0;
+					nmsg++;
+					goto READ_MSG_DISPATCH;
+				}
 			}
-			else if (sz < 0 &&
-				errno != EINTR &&
-				errno != EAGIN &&
-				errno != EWOULDBLOCK)
+			else if (sz == -1 && errno == EINTR)
 			{
-				//error
-				_close_fd(stcp, fd, stcp_event_type::STCP_DATA_ERR);
+				continue;
 			}
+			else
+			{
+				return _read_msg_error(stcp, fd, sz);
+			}			
 		}
 	}
 	else
 	{
-		//
+TRY_READ_HEAD_AGAIN:
+		//read head
+		int sz = recv(fd, buffer->buffer + buffer->recv_size, sizeof(int32_t), MSG_DONTWAIT);
+		if (sz > 0)
+		{
+			buffer->recv_size += sz;
+			if (buffer->recv_size == sizeof(int32_t))
+			{
+				//get head
+				int32_t * headlen = (int32_t*)(buffer->buffer + buffer->recv_size);
+				buffer->current_msg_size = ntohl(*headlen);
+				if (buffer->current_msg_size > buffer->max_size)
+				{
+					//errror msg , too big 
+					_close_fd(stcp, fd, stcp_event_type::STCP_DATA_ERR);
+					return -3;
+				}
+				else
+				{
+					goto READ_MSG_DISPATCH;
+				}
+			}
+		}
+		else if (sz == -1 && errno == EINTR)
+		{
+			goto TRY_READ_HEAD_AGAIN;
+		}
+		else
+		{
+			return _read_msg_error(stcp, fd, sz);
+		}
 	}
-
+	return nmsg;
 }
 static void _proc(stcp_t * stcp, epoll_event & ev)
 {
@@ -401,6 +477,11 @@ void            stcp_poll(stcp_t * stcp, int timeout_us, int max_proc = 100)
 		_proc(stcp, stcp->nevts[i]);
 	}
 }
+int				stcp_send(stcp_t * stcp, const stcp_msg_t & msg)//client
+{
+	if (stcp_is_server(stcp)) return -1;
+	return _write_tcp_socket(stcp, stcp->sockfd, msg.buff, msg.buff_sz);
+}
 int				stcp_send(stcp_t * stcp, int fd, const stcp_msg_t & msg)
 {
 	return _write_tcp_socket(stcp, fd, msg.buff, msg.buff_sz);
@@ -419,6 +500,7 @@ int				stcp_reconnect(stcp_t* stcp)
 		//error no
 		return -1;
 	}
+	stcp->reconnect++;
 	return _op_poll(stcp->epfd, EPOLL_CTL_ADD, stcp->sockfd, EPOLLOUT);
 }
 int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
@@ -438,7 +520,7 @@ int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
 
 	stcp->connect_addr = addr;
 	stcp->max_reconnect = retry;
-	stcp->reconnect = 1;
+	stcp->reconnect = 0;
 	return stcp_reconnect(stcp);
 }
 bool            stcp_is_server(stcp_t * stcp)
