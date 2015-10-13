@@ -14,7 +14,7 @@ static dagent_t AGENT;
 static int _dispatcher(const char* src, const dcnode_msg_t & msg)
 {
 	dagent_msg_t	dm;
-	if (!dm.SerilizeFromBytes(msg.data, msg.sz))
+	if (!dm.SerilizeFromBytes(msg.get_payload(), msg.get_payload_size()))
 	{
 		//error for msg format 
 		return -1;
@@ -66,7 +66,7 @@ int     dagent_send(const char * dst, const dagent_msg_t & msg)
 		//serialize error
 		return -1;
 	}
-	return dcnode_send(AGENT.node, dst, dcnode_msg_t(buffer, msg.ByteSize()));
+	return dcnode_send(AGENT.node, dst, buffer, msg.ByteSize());
 }
 int     dagent_cb_push(int type, dagent_cb_t cb)
 {

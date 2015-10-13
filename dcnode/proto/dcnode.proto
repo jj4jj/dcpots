@@ -1,0 +1,28 @@
+
+package dcnode;
+
+enum MsgDCNodeType
+{
+	MSG_REG_NAME	= 1;
+	MSG_HEART_BEAT	= 2;
+	MSG_RPC = 3;
+    MSG_DATA = 4;
+};
+
+message MsgDCNodeRPC
+{
+	required	string	name = 1;
+	required	uint64	cookie = 2;
+	optional	int32	errcode	= 3;
+	optional	bytes	request = 4;
+	optional	bytes	response = 5;
+};
+
+message MsgDCNode
+{
+	required	string			src	= 1;
+	optional	string			dst = 2;
+    required    MsgDCNodeType   type = 3;
+	optional	MsgDCNodeRPC	rpc = 4;
+    optional    bytes           msg_data = 5;
+};
