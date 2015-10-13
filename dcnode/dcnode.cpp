@@ -2,17 +2,6 @@
 #include "libmq.h"
 #include "libtcp.h"
 
-//int->errortype
-//int ec
-//ok:0
-//error:1:timeout
-enum DCNodeCBErrorType
-{
-	DCNODE_CB_OK = 0,
-	DCNODE_CB_TIMEOUT = 1
-};
-typedef	std::function<int(int)>	dcnode_callback_t;
-
 struct dcnode_t
 {
 	enum {
@@ -29,15 +18,20 @@ struct dcnode_t
 	smq_t	*	smq;	//mq
 	int			state;
 	time_t		next_stat_time;
+
 	//local name map addr[id]
 	dcnode_dispatcher_t		dispatcher;
 	void *					dispatcher_ud;
-	std::multimap<uint64_t, uint64_t>					expiring_info;//time->cookie for rpc
-	std::unordered_map<uint64_t, dcnode_callback_t>		callbacks;
 
+	//timer cb
+	std::multimap<uint64_t, uint64_t>						expiring_callbacks;
+	std::unordered_map<uint64_t, dcnode_timer_callback_t>	timer_callbacks;
+
+	//smq children (agent)
 	std::unordered_map<string, uint64_t>				smq_children;
 	std::unordered_map<uint64_t, string>				smq_children_map_name;
 
+	//tcp children (agent)
 	std::unordered_map<string, stcp_t *>				tcp_children;
 	std::unordered_map<stcp_t *, string>				tcp_children_map_name;
 	
@@ -52,11 +46,34 @@ struct dcnode_t
 		parent = nullptr;
 		state = DCNODE_INIT;
 		dispatcher = nullptr;
-		callbacks.clear();
-		expiring_info.clear();
+		timer_callbacks.clear();
+		expiring_callbacks.clear();
+		smq_children.clear();
+		smq_children_map_name.clear();
+		tcp_children.clear();
+		tcp_children_map_name.clear();
 		next_stat_time = 0;		
 	}
 };
+
+static uint32_t	s_cb_seq = 0;
+static uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_ms, dcnode_timer_callback_t cb)
+{
+	uint64_t cookie = time(NULL);
+	cookie <<= 24;
+	cookie |= s_cb_seq++;
+	timeval tv;
+	gettimeofday(&tv, NULL);
+	uint64_t currentms = tv.tv_sec * 1000 + tv.tv_usec / 1000;
+	currentms += expired_ms;
+	dc->expiring_callbacks[currentms] = cookie;
+	dc->timer_callbacks[cookie] = cb;
+	return cookie;
+}
+static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie)
+{
+	dc->timer_callbacks.erase(cookie);
+}
 
 static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce)
 {
@@ -109,7 +126,7 @@ static  int _connect_parent(dcnode_t * dc)
 
 static int _register_name(dcnode_t * dc)
 {
-	dcnode::dcnode_msg_t	msg;
+	dcnode_msg_t	msg;
 	msg.set_type(dcnode::MSG_REG_NAME);
 	msg.set_src(dc->conf.name);
 	static char buffer[1024];
@@ -348,7 +365,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 	{
 		smq_config_t sc;
 		sc.key = conf.addr.msgq_key;
-		sc.buffsz = conf.max_channel_buff_size;
+		sc.msg_buffsz = conf.max_channel_buff_size;
 		smq_t * smq = smq_create(sc);
 		if (!smq)
 		{
@@ -356,14 +373,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 			return nullptr;
 		}
 		n->smq = smq;
-		if (_is_leaf(n))
-		{
-			smq_msg_cb(smq, _smq_leaf_cb);
-		}
-		else
-		{
-			smq_msg_cb(smq, _smq_agent_cb);
-		}
+		smq_msg_cb(smq, _smq_cb);
 	}
 	return n;
 }
@@ -400,29 +410,29 @@ void      dcnode_destroy(dcnode_t* dc)
 
 	dc->init();
 }
-static	void _check_callback(dcnode_t * dc)
+static	void _check_timer_callback(dcnode_t * dc)
 {
 	timeval tv;
 	gettimeofday(&tv, NULL);
 	uint64_t currentms = tv.tv_sec * 1000 + tv.tv_usec / 1000;
-	auto itend = dc->expiring_info.upper_bound(currentms);
+	auto itend = dc->expiring_callbacks.upper_bound(currentms);
 
-	for (auto it = dc->expiring_info.begin(); it != itend;)
+	for (auto it = dc->expiring_callbacks.begin(); it != itend;)
 	{
 		auto previt = it++;
-		auto funcit = dc->callbacks.find(previt->second());
-		if (funcit != dc->callbacks.end())
+		auto funcit = dc->timer_callbacks.find(previt->second());
+		if (funcit != dc->timer_callbacks.end())
 		{
-			funcit->second(DCNODE_CB_TIMEOUT);//call back
-			dc->callbacks.erase(funcit);
+			funcit->second();//call back
+			dc->timer_callbacks.erase(funcit);
 		}
-		dc->expiring_info.erase(previt);
+		dc->expiring_callbacks.erase(previt);
 	}
 }
-void      dcnode_update(dcnode_t* dc, const timeval & tv, int timout_us)
+void      dcnode_update(dcnode_t* dc, int timout_us)
 {
 	//check cb
-	_check_callback(dc);
+	_check_timer_callback(dc);
 
 	_check_dcnode_fsm(dc);
 
@@ -435,7 +445,7 @@ void      dcnode_update(dcnode_t* dc, const timeval & tv, int timout_us)
 		smq_poll(dc->smq, timout_us);
 	}
 
-	_check_callback(dc);
+	_check_timer_callback(dc);
 }
 
 //typedef int(*dcnode_dispatcher_t)(const char* src, const dcnode_msg_t & msg);
@@ -443,15 +453,15 @@ void      dcnode_set_dispatcher(dcnode_t* dc, dcnode_dispatcher_t dspatch)
 {
 	dc->dispatcher = dspatch;
 }
-
-int      dcnode_listen(dcnode_t*, const dcnode_addr_t & addr)
+uint64_t  dcnode_timer_add(dcnode_t * dc, int delayms, dcnode_timer_callback_t cb)
 {
-
+	return	_insert_timer_callback(dc, delayms, cb);
 }
-int      dcnode_connect(dcnode_t*, const dcnode_addr_t & addr)
+void	  dcnode_timer_cancel(dcnode_t * dc, uint64_t cookie)
 {
-
+	_remove_timer_callback(dc, cookie);
 }
+
 
 int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz)
 {

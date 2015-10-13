@@ -53,10 +53,7 @@ void    dagent_destroy()
 }
 void    dagent_update()
 {
-	//1ms
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	dcnode_update(AGENT.node, tv, 1000);	
+	dcnode_update(AGENT.node, 1000);	
 }
 int     dagent_send(const char * dst, const dagent_msg_t & msg)
 {	

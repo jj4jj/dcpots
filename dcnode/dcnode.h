@@ -22,12 +22,16 @@ struct dcnode_config_t
 	string	name;
 };
 
-dcnode_t* dcnode_create(const dcnode_config_t & conf);
-void      dcnode_destroy(dcnode_t* dc);
-void      dcnode_update(dcnode_t*, const timeval & tv,int timout_us);
-
+typedef	std::function<void()>	dcnode_timer_callback_t;
 typedef int(*dcnode_dispatcher_t)(void * ud, const dcnode_msg_t & msg);
 
+
+dcnode_t* dcnode_create(const dcnode_config_t & conf);
+void      dcnode_destroy(dcnode_t* dc);
+void      dcnode_update(dcnode_t*, int timout_us);
+uint64_t  dcnode_timer_add(dcnode_t * ,int delayms , dcnode_timer_callback_t cb);
+void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);
+
 void      dcnode_set_dispatcher(dcnode_t*, dcnode_dispatcher_t);
-int      dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
+int       dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
 
