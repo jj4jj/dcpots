@@ -242,23 +242,23 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 	sev.fd = fd;
 	int nmsg = 0;
 READ_MSG_DISPATCH:
-	if (buffer->current_msg_size > 0)
+	if (buffer->ctx_msg_size > 0)
 	{
-		int remain = buffer->current_msg_size - buffer->txd_size;
+		int remain = buffer->ctx_msg_size - buffer->valid_size;
 		while (remain > 0)
 		{
-			int sz = recv(fd, buffer->buffer + buffer->txd_size, remain, MSG_DONTWAIT);
+			int sz = recv(fd, buffer->buffer + buffer->valid_size, remain, MSG_DONTWAIT);
 			if (sz > 0)
 			{
 				remain -= sz;
-				buffer->txd_size += sz;
+				buffer->valid_size += sz;
 				if (remain == 0)
 				{
-					stcp_msg_t smsg = stcp_msg_t(buffer->buffer + sizeof(int32_t), buffer->current_msg_size - sizeof(int32_t));
+					stcp_msg_t smsg = stcp_msg_t(buffer->buffer + sizeof(int32_t), buffer->ctx_msg_size - sizeof(int32_t));
 					sev.msg = &smsg;
 					stcp->event_cb(stcp, sev, stcp->event_cb_ud);
-					buffer->current_msg_size = 0;
-					buffer->txd_size = 0;
+					buffer->ctx_msg_size = 0;
+					buffer->valid_size = 0;
 					nmsg++;
 					goto READ_MSG_DISPATCH;
 				}
@@ -277,16 +277,16 @@ READ_MSG_DISPATCH:
 	{
 	TRY_READ_HEAD_AGAIN:
 		//read head
-		int sz = recv(fd, buffer->buffer + buffer->txd_size, sizeof(int32_t), MSG_DONTWAIT);
+		int sz = recv(fd, buffer->buffer + buffer->valid_size, sizeof(int32_t), MSG_DONTWAIT);
 		if (sz > 0)
 		{
-			buffer->txd_size += sz;
-			if (buffer->txd_size == sizeof(int32_t))
+			buffer->valid_size += sz;
+			if (buffer->valid_size == sizeof(int32_t))
 			{
 				//get head
-				int32_t * headlen = (int32_t*)(buffer->buffer + buffer->txd_size);
-				buffer->current_msg_size = ntohl(*headlen);
-				if (buffer->current_msg_size > buffer->max_size)
+				int32_t * headlen = (int32_t*)(buffer->buffer + buffer->valid_size);
+				buffer->ctx_msg_size = ntohl(*headlen);
+				if (buffer->ctx_msg_size > buffer->max_size)
 				{
 					//errror msg , too big 
 					_close_fd(stcp, fd, stcp_close_reason_type::STCP_MSG_ERR);

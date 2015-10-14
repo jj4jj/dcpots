@@ -14,6 +14,18 @@ build()
 clean()
 {
     find . -name *.pyc | rm
+    cd build && make clean
+}
+
+inst_all()
+{
+    cd build && make install
+}
+
+run_test()
+{
+    echo "todo"
+    cd bin && ./dcagent test
 }
 
 list()
@@ -24,6 +36,8 @@ list()
     echo -e "\tbuild"
     echo -e "\tclean"
     echo -e "\tlist"
+    echo -e "\tinstall"
+    echo -e "\ttest"
 }
 
 case $1 in
@@ -35,6 +49,12 @@ case $1 in
         ;;
     clean)
         clean
+        ;;
+    install)
+        inst_all
+        ;;
+    test)
+        run_test
         ;;
     *)
         list

@@ -207,12 +207,12 @@ static int _response_msg(dcnode_t * dc, stcp_t * tcp_src, int sockfd, uint64_t m
 	}
 	if (tcp_src)
 	{
-		return stcp_send(tcp_src, sockfd, stcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.txd_size));
+		return stcp_send(tcp_src, sockfd, stcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
 	else
 	{
 		assert(msgqpid > 0);
-		return smq_send(dc->smq, msgqpid, smq_msg_t(dc->send_buffer.buffer, dc->send_buffer.txd_size));
+		return smq_send(dc->smq, msgqpid, smq_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
 }
 static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, stcp_t * tcp_src, int sockfd, uint64_t msgqpid)
@@ -517,6 +517,6 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz)
 		return -1;
 	}
 	//dc, tcp_src,sockfd, buff, buff_sz, dm.dst()
-	return _forward_msg(dc, nullptr, 0, dc->send_buffer.buffer, dc->send_buffer.txd_size, string(dst));
+	return _forward_msg(dc, nullptr, 0, dc->send_buffer.buffer, dc->send_buffer.valid_size, string(dst));
 }
 
