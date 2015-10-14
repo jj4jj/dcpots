@@ -7,23 +7,24 @@ struct dagent_t
 	dagent_config_t conf;
 	unordered_map<int, dagent_cb_t>		cbs;
 	//python vm todo
+	msg_buffer_t	send_msgbuffer;
 };
 
 static dagent_t AGENT;
 
-static int _dispatcher(const char* src, const dcnode_msg_t & msg)
+static int _dispatcher(void * ud, const dcnode_msg_t & msg)
 {
+	assert(ud == &AGENT);
 	dagent_msg_t	dm;
-	if (!dm.SerilizeFromBytes(msg.get_payload(), msg.get_payload_size()))
+	if (!dm.unpack(msg.msg_data().c_str(), msg.msg_data().length()))
 	{
-		//error for msg format 
+		//error pack
 		return -1;
 	}
-
 	auto it = AGENT.cbs.find(dm.type());
 	if (it != AGENT.cbs.end())
 	{
-		return it->second(dm);
+		return it->second(dm, msg.src());
 	}
 	//not found
 	return -2;
@@ -40,7 +41,7 @@ int     dagent_init(const dagent_config_t & conf)
 		//node error
 		return -2;
 	}
-	dcnode_set_dispatcher(_dispatcher);
+	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
 	AGENT.node = node;
 	return 0;
@@ -50,10 +51,12 @@ void    dagent_destroy()
 {
 	dcnode_destroy(AGENT.node);
 	AGENT.node = NULL;
+	AGENT.cbs.clear();
+	AGENT.send_msgbuffer.destroy();
 }
-void    dagent_update()
+void    dagent_update(int timeout_ms)
 {
-	dcnode_update(AGENT.node, 1000);	
+	dcnode_update(AGENT.node, timeout_ms*1000);	
 }
 int     dagent_send(const char * dst, const dagent_msg_t & msg)
 {	

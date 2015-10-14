@@ -1,10 +1,8 @@
 #include "libmq.h"
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 
-
-struct msgbuf {
-	long mtype;       /* message type, must be > 0 */
-	char mtext[1];    /* message data */
-};
 struct smq_t
 {
 	smq_config_t	conf;
@@ -23,7 +21,8 @@ struct smq_t
 	{
 		sender = recver = -1;
 		msg_cb = nullptr;
-		sendbuff = recvbuff = msg_cb_ud = nullptr;
+		sendbuff = recvbuff = nullptr;
+		msg_cb_ud = nullptr;
 	}
 };
 int		_msgq_create(key_t key, int flag, size_t max_size)
@@ -57,7 +56,6 @@ smq_t * smq_create(const smq_config_t & conf)
 {
 	//sender : recver (1:2) : client
 	int prj_id[] = { 1, 2 };
-	bool is_attach = false;
 	if (conf.is_server)
 	{
 		prj_id[0] = 2;
@@ -68,14 +66,14 @@ smq_t * smq_create(const smq_config_t & conf)
 	{
 		flag |= IPC_CREAT;
 	}
-	key_t key = ftok(conf.key, prj_id[0]);
+	key_t key = ftok(conf.key.c_str(), prj_id[0]);
 	int sender = _msgq_create(key, flag, conf.max_queue_buff_size);
 	if (sender < 0)
 	{
 		//errno
 		return nullptr;
 	}
-	key = ftok(conf.key, prj_id[1]);
+	key = ftok(conf.key.c_str(), prj_id[1]);
 	int recver = _msgq_create(key, flag, conf.max_queue_buff_size);
 	if (recver < 0)
 	{
@@ -159,7 +157,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 			}
 			else if (errno != ENOMSG)
 			{
-				//error log for 
+				//error log for
 			}
 			break;
 		}
@@ -192,11 +190,11 @@ int     smq_send(smq_t* smq, uint64_t dst, const smq_msg_t & msg)
 		return -2;
 	}
 	smq->sendbuff->mtype = dst;	
-	memcpy(smq->sendbuff.mtext, msg.buffer, msg.sz);
+	memcpy(smq->sendbuff->mtext, msg.buffer, msg.sz);
 	int ret = 0;
 	do 
 	{
-		ret = msgsnd(smq->sender, smq->sendbuff, IPC_NOWAIT);
+		ret = msgsnd(smq->sender, smq->sendbuff, msg.sz, IPC_NOWAIT);
 	} while (ret == -1 && errno == EINTR);
 	return ret;
 }

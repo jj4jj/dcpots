@@ -13,8 +13,8 @@ struct dcnode_t
 		DCNODE_READY = 5
 	};
 	dcnode_config_t conf;
-	stcp_t	*	parent;
-	stcp_t  *	listener;
+	stcp_t	*	parent; //to parent
+	stcp_t  *	listener; //children
 	smq_t	*	smq;	//mq
 	int			state;
 	time_t		next_stat_time;
@@ -32,9 +32,11 @@ struct dcnode_t
 	std::unordered_map<uint64_t, string>				smq_children_map_name;
 
 	//tcp children (agent)
-	std::unordered_map<string, stcp_t *>				tcp_children;
-	std::unordered_map<stcp_t *, string>				tcp_children_map_name;
-	
+	std::unordered_map<string, int>						tcp_children;
+	std::unordered_map<int, string>						tcp_children_map_name;
+	//
+	msg_buffer_t										send_buffer;
+
 	dcnode_t()
 	{
 		init();
@@ -64,9 +66,9 @@ static uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_ms, dcno
 	cookie |= s_cb_seq++;
 	timeval tv;
 	gettimeofday(&tv, NULL);
-	uint64_t currentms = tv.tv_sec * 1000 + tv.tv_usec / 1000;
-	currentms += expired_ms;
-	dc->expiring_callbacks[currentms] = cookie;
+	uint64_t expiretimems = tv.tv_sec * 1000 + tv.tv_usec / 1000;
+	expiretimems += expired_ms;
+	dc->expiring_callbacks.insert(std::make_pair(expiretimems, cookie));
 	dc->timer_callbacks[cookie] = cb;
 	return cookie;
 }
@@ -75,6 +77,61 @@ static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie)
 	dc->timer_callbacks.erase(cookie);
 }
 
+//leaf: no children(no stcp listen)
+static bool _is_leaf(dcnode_t* dc)
+{
+	return (dc->listener) == nullptr;
+}
+static int _register_name(dcnode_t * dc)
+{
+	dcnode_msg_t	msg;
+	msg.set_type(dcnode::MSG_REG_NAME);
+	msg.set_src(dc->conf.name);
+	static char buffer[1024];
+	int sz = sizeof(buffer);
+	if (!msg.pack(buffer, sz))
+	{
+		//pack error
+		return -1;
+	}
+	int ret = 0;
+	dc->state = dcnode_t::DCNODE_NAME_REG_ING;
+	if (_is_leaf(dc))
+	{
+		//to agent
+		ret = smq_send(dc->smq, 0, smq_msg_t(buffer, sz));
+	}
+	else
+	{
+		if (!dc->parent)
+		{
+			//no need
+			dc->state = dcnode_t::DCNODE_NAME_REG;
+			return 0;
+		}
+		//to parent
+		ret = stcp_send(dc->parent, stcp_msg_t(buffer, sz));
+	}
+	if (ret)
+	{
+		//send err
+		return ret;
+	}
+	return 0;
+}
+static  int _connect_parent(dcnode_t * dc)
+{
+	if (!dc->parent)
+	{
+		dc->state = dcnode_t::DCNODE_CONNECTED;
+		return 0;
+	}
+	dc->state = dcnode_t::DCNODE_CONNECTING;
+	stcp_addr_t saddr;
+	saddr.ip = dc->conf.addr.parent_addr.substr(0, dc->conf.addr.parent_addr.find(':'));
+	saddr.port = strtol(dc->conf.addr.parent_addr.substr(dc->conf.addr.parent_addr.find(':')+1).c_str(),NULL,10);
+	return stcp_connect(dc->parent, saddr);
+}
 static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce)
 {
 	time_t tNow = time(NULL);
@@ -93,82 +150,72 @@ static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce)
 		_register_name(dc);
 		timeout_time = 2;//2s
 		break;
-
 	case dcnode_t::DCNODE_NAME_REG:
 		dc->state = dcnode_t::DCNODE_READY;
 	case dcnode_t::DCNODE_READY:
 		//nothing
 		timeout_time = 30;//20s
 		break;
+	default: return -1;
 	}
 	dc->next_stat_time = tNow + timeout_time;
+	return 0;
 }
-
-//leaf: no children(no stcp listen)
-static bool _is_leaf(dcnode_t* dc)
+static void _update_children_name(dcnode_t * dc, stcp_t * src, uint64_t smqid, int sockfd , const string & name)
 {
-	return (dc->listener) == nullptr;
-}
-
-static  int _connect_parent(dcnode_t * dc)
-{
-	if (!dc->parent)
+	if (src != nullptr)
 	{
-		dc->state = dcnode_t::DCNODE_CONNECTED;
-		return 0;
+		if (src == dc->listener)
+		{
+			//children
+			auto it = dc->tcp_children.find(name);
+			if (it != dc->tcp_children.end())
+			{
+				dc->tcp_children_map_name.erase(it->second);
+				dc->tcp_children.erase(it);
+			}
+			dc->tcp_children[name] = sockfd;
+			dc->tcp_children_map_name[sockfd] = name;
+		}
+		else
+		{
+			//parent name noneed
+		}
 	}
-	dc->state = dcnode_t::DCNODE_CONNECTING;
-	stcp_addr_t saddr;
-	saddr.ip = dc->conf.addr.parent_addr;
-	saddr.port = dc->conf.addr.parent_addr; //get port todo
-	return stcp_connect(dc->parent, saddr);
-}
-
-static int _register_name(dcnode_t * dc)
-{
-	dcnode_msg_t	msg;
-	msg.set_type(dcnode::MSG_REG_NAME);
-	msg.set_src(dc->conf.name);
-	static char buffer[1024];
-	if (!msg.SerializeToBytes(buffer, sizeof(buffer)))
+	else // if (smqid > 0)
 	{
-		//pack error
+		assert(smqid > 0);
+		auto it = dc->smq_children.find(name);
+		if (it != dc->smq_children.end())
+		{
+			dc->smq_children_map_name.erase(it->second);
+			dc->smq_children.erase(it);
+		}
+		dc->smq_children[name] = smqid;
+		dc->smq_children_map_name[smqid] = name;
+	}
+}
+static int _response_msg(dcnode_t * dc, stcp_t * tcp_src, int sockfd, uint64_t msgqpid, dcnode_msg_t & dm, const dcnode_msg_t & dmsrc)
+{
+	dm.set_src(dc->conf.name);
+	dm.set_dst(dmsrc.src());
+	bool ret = dm.pack(dc->send_buffer);
+	if (!ret)
+	{
+		//error pack
 		return -1;
 	}
-	int ret = 0;
-	dc->state = dcnode_t::DCNODE_NAME_REG_ING;
-	if (_is_leaf(dc))
+	if (tcp_src)
 	{
-		//to agent
-		ret = smq_send(dc->smq, 0, smq_msg_t(buffer, msg.ByteSize()));
+		return stcp_send(tcp_src, sockfd, stcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.txd_size));
 	}
 	else
 	{
-		if (!dc->parent)
-		{
-			//no need
-			dc->state = dcnode_t::DCNODE_NAME_REG;
-			return 0;
-		}
-		//to parent
-		ret = stcp_send(dc->parent, stcp_msg_t(buffer, msg.ByteSize()));
+		assert(msgqpid > 0);
+		return smq_send(dc->smq, msgqpid, smq_msg_t(dc->send_buffer.buffer, dc->send_buffer.txd_size));
 	}
-	if (ret)
-	{
-		//send err
-		return ret;
-	}
-	return 0;
 }
-//
-static int _smq_cb(smq_t * smq, uint64_t src, const smq_msg_t & msg, void * ud)
-{
-	dcnode_t * dc = (dcnode_t*)ud;
-	//get mypid msg
-	return _msg_cb(dc, nullptr, src, msg.buff, msg.buff_sz);
-}
-
-static int _handle_msg(dcnode_t * dc,const dcnode_msg_t & dm, stcp_t * tcp_src, uint64_t msgqpid)
+static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, stcp_t * tcp_src, int sockfd, uint64_t msgqpid)
 {
 	//to me
 	switch (dm.type())
@@ -182,35 +229,15 @@ static int _handle_msg(dcnode_t * dc,const dcnode_msg_t & dm, stcp_t * tcp_src, 
 		if (dc->state == dcnode_t::DCNODE_NAME_REG_ING)
 		{
 			dc->state = dcnode_t::DCNODE_NAME_REG;
-			_check_dcnode_fsm(dc, true);
+			return _check_dcnode_fsm(dc, true);
 		}
 		else
 		{
-			if (tcp_src)
-			{
-				auto it = dc->tcp_children.find(dm.src());
-				if (it != dc->tcp_children.end())
-				{
-					dc->tcp_children_map_name.erase(it->second);
-					dc->tcp_children.erase(it);
-				}
-				dc->tcp_children[dm.src()] = tcp_src;
-				dc->tcp_children_map_name[tcp_src] = dm.src;
-			}
-			else
-			{
-				assert(msgqpid > 0);
-				auto it = dc->smq_children.find(dm.src());
-				if (it != dc->smq_children.end())
-				{
-					dc->smq_children_map_name.erase(it->second);
-					dc->smq_children.erase(it);
-				}
-				dc->smq_children[dm.src()] = msgqpid;
-				dc->smq_children_map_name[msgqpid] = dm.src;
-			}
-			//response msg
-
+			_update_children_name(dc, tcp_src, msgqpid, sockfd,dm.src());
+			//response msg todo
+			dcnode_msg_t ddm;
+			ddm.set_type(dcnode::MSG_REG_NAME);
+			_response_msg(dc, tcp_src, msgqpid, sockfd, ddm, dm);
 		}
 		break;
 	case dcnode::MSG_HEART_BEAT:
@@ -220,16 +247,15 @@ static int _handle_msg(dcnode_t * dc,const dcnode_msg_t & dm, stcp_t * tcp_src, 
 		break;
 	default:
 		//error type
-		return - 1;
+		return -1;
 		break;
 	}
 	return 0;
 }
 
-static int _forward_msg(dcnode_t * dc, stcp_t * tcp_src, const char * buff, int buff_sz, const string & dst)
+static int _forward_msg(dcnode_t * dc, stcp_t * tcp_src, int sockfd, const char * buff, int buff_sz, const string & dst)
 {
 	//check children name , if not found , send to parent except src
-	//forward
 	auto it = dc->smq_children.find(dst);
 	if (it != dc->smq_children.end())
 	{
@@ -238,17 +264,17 @@ static int _forward_msg(dcnode_t * dc, stcp_t * tcp_src, const char * buff, int 
 	auto tit = dc->tcp_children.find(dst);
 	if (tit != dc->tcp_children.end())
 	{
-		return stcp_send(tit->second, stcp_msg_t(buff, buff_sz));
+		return stcp_send(dc->listener, tit->second, stcp_msg_t(buff, buff_sz));
 	}
 
 	for (auto it = dc->tcp_children.begin();
 		it != dc->tcp_children.end(); it++)
 	{
-		if (it->second == tcp_src)
+		if (it->second == sockfd)
 		{
 			continue;
 		}
-		stcp_send(it->second, stcp_msg_t(buff, buff_sz));
+		stcp_send(dc->listener, it->second, stcp_msg_t(buff, buff_sz));
 	}
 	if (tcp_src != dc->parent)
 	{
@@ -256,11 +282,10 @@ static int _forward_msg(dcnode_t * dc, stcp_t * tcp_src, const char * buff, int 
 	}
 	return 0;
 }
-
-static int _msg_cb(dcnode_t * dc, stcp_t * tcp_src, uint64_t msgqpid, const char * buff, int buff_sz)
+static int _msg_cb(dcnode_t * dc, stcp_t * tcp_src, int sockfd, uint64_t msgqpid, const char * buff, int buff_sz)
 {
 	dcnode_msg_t dm;
-	if (!dm.SerializeFromBytes(buff, buff_sz))
+	if (!dm.unpack(buff, buff_sz))
 	{
 		//error for decode
 		return -1;
@@ -269,12 +294,17 @@ static int _msg_cb(dcnode_t * dc, stcp_t * tcp_src, uint64_t msgqpid, const char
 		dm.dst() == dc->conf.name)
 	{
 		//to me
-		return _handle_msg(dc, dm, tcp_src, msgqpid);
+		return _handle_msg(dc, dm, tcp_src, sockfd, msgqpid);
 	}
 	else
 	{
-		return _forward_msg(dc, tcp_src, buff, buff_sz, dm.dst);		
+		return _forward_msg(dc, tcp_src,sockfd, buff, buff_sz, dm.dst());
 	}
+}
+static int _smq_cb(smq_t * smq, uint64_t src, const smq_msg_t & msg, void * ud)
+{
+	dcnode_t * dc = (dcnode_t*)ud;
+	return _msg_cb(dc, nullptr, 0, src, msg.buffer, msg.sz);
 }
 
 //server
@@ -284,24 +314,27 @@ static int _stcp_server_cb(stcp_t* server, const stcp_event_t & ev, void * ud)
 	switch (ev.type)
 	{
 	case stcp_event_type::STCP_CONNECTED:
-		//new connection
+		//new connection no need build the map , but in reg name
 		break;
 	case stcp_event_type::STCP_READ:
 		//
-		return _msg_cb(dc, ev.stcp,0, ev.msg->buff, ev.msg->buff_sz);
+		return _msg_cb(dc, dc->listener, ev.fd,0, ev.msg->buff, ev.msg->buff_sz);
 		break;
 	case stcp_event_type::STCP_CLOSED:
-		auto it = dc->tcp_children_map_name.find(ev.stcp);
+	{
+		auto it = dc->tcp_children_map_name.find(ev.fd);
 		if (it != dc->tcp_children_map_name.end())
 		{
 			dc->tcp_children.erase(it->second);
 			dc->tcp_children_map_name.erase(it);
 		}
-		break;
 	}
-
+		break;
+	default: return -1;
+	}
+	return 0;
 }
-//client
+//client connect parent
 static int _stcp_client_cb(stcp_t* client, const stcp_event_t & ev, void * ud)
 {
 	dcnode_t * dc = (dcnode_t*)ud;
@@ -310,16 +343,17 @@ static int _stcp_client_cb(stcp_t* client, const stcp_event_t & ev, void * ud)
 	case stcp_event_type::STCP_CONNECTED:
 		//connected
 		dc->state = dcnode_t::DCNODE_CONNECTED;
-		_check_dcnode_fsm(dc, true);
-		break;
+		return _check_dcnode_fsm(dc, true);
 	case stcp_event_type::STCP_READ:
-		//
-		return _msg_cb(dc, ev.stcp,0, ev.msg->buff, ev.msg->buff_sz);
-		break;
+		//reada msg
+		return _msg_cb(dc, client, ev.fd, 0 , ev.msg->buff, ev.msg->buff_sz);
 	case stcp_event_type::STCP_CLOSED:
-		_connect_parent(dc);
-		break;
+		//init state
+		dc->state = dcnode_t::DCNODE_INIT;
+		return _check_dcnode_fsm(dc, true);
+	default: return -1;
 	}
+	return 0;
 }
 
 dcnode_t* dcnode_create(const dcnode_config_t & conf)
@@ -332,7 +366,11 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 	{
 		stcp_config_t sc;
 		sc.is_server = true;
-		sc.listen_addr = conf.addr.listen_addr;
+		stcp_addr_t saddr;
+		const string & listenaddr = conf.addr.listen_addr;
+		saddr.ip = listenaddr.substr(0, listenaddr.find(':'));
+		saddr.port = strtol(listenaddr.substr(listenaddr.find(':') + 1).c_str(), nullptr, 10);
+		sc.listen_addr = saddr;
 		sc.max_recv_buff = conf.max_channel_buff_size;
 		sc.max_send_buff = conf.max_channel_buff_size;
 		stcp_t * stcp = stcp_create(sc);
@@ -342,7 +380,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 			return nullptr;
 		}
 		n->listener = stcp;
-		stcp_event_cb(stcp, _stcp_server_cb);
+		stcp_event_cb(stcp, _stcp_server_cb, n);
 	}
 
 	if (conf.addr.parent_addr.length())
@@ -358,7 +396,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 			return nullptr;
 		}
 		n->parent = stcp;
-		stcp_event_cb(stcp, _stcp_client_cb);
+		stcp_event_cb(stcp, _stcp_client_cb, n);
 	}
 
 	if (conf.addr.msgq_key.length())
@@ -373,8 +411,10 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 			return nullptr;
 		}
 		n->smq = smq;
-		smq_msg_cb(smq, _smq_cb);
+		smq_msg_cb(smq, _smq_cb, n);
 	}
+	n->send_buffer.create(conf.max_channel_buff_size);
+
 	return n;
 }
 void      dcnode_destroy(dcnode_t* dc)
@@ -420,7 +460,7 @@ static	void _check_timer_callback(dcnode_t * dc)
 	for (auto it = dc->expiring_callbacks.begin(); it != itend;)
 	{
 		auto previt = it++;
-		auto funcit = dc->timer_callbacks.find(previt->second());
+		auto funcit = dc->timer_callbacks.find(previt->second);
 		if (funcit != dc->timer_callbacks.end())
 		{
 			funcit->second();//call back
@@ -434,7 +474,7 @@ void      dcnode_update(dcnode_t* dc, int timout_us)
 	//check cb
 	_check_timer_callback(dc);
 
-	_check_dcnode_fsm(dc);
+	_check_dcnode_fsm(dc, false);
 
 	if (dc->state == dcnode_t::DCNODE_READY && dc->listener)
 	{
@@ -449,9 +489,10 @@ void      dcnode_update(dcnode_t* dc, int timout_us)
 }
 
 //typedef int(*dcnode_dispatcher_t)(const char* src, const dcnode_msg_t & msg);
-void      dcnode_set_dispatcher(dcnode_t* dc, dcnode_dispatcher_t dspatch)
+void      dcnode_set_dispatcher(dcnode_t* dc, dcnode_dispatcher_t dspatch, void * ud)
 {
 	dc->dispatcher = dspatch;
+	dc->dispatcher_ud = ud;
 }
 uint64_t  dcnode_timer_add(dcnode_t * dc, int delayms, dcnode_timer_callback_t cb)
 {
@@ -469,13 +510,13 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz)
 	dm.set_src(dc->conf.name);
 	dm.set_dst(dst);
 	dm.set_type(dcnode::MSG_DATA);
-	dm.set_msg_data(buff, sz);
-	static char buffer[1024*1024];
-	if(!dm.SerializeToBytes(buffer, sizeof(buffer)))
+	dm.set_msg_data(buff, sz);	
+	if (!dm.pack(dc->send_buffer))
 	{
 		//error ser
 		return -1;
 	}
-	return _forward_msg(dc, nullptr, buffer, dm.ByteSize(), string(dst));
+	//dc, tcp_src,sockfd, buff, buff_sz, dm.dst()
+	return _forward_msg(dc, nullptr, 0, dc->send_buffer.buffer, dc->send_buffer.txd_size, string(dst));
 }
 

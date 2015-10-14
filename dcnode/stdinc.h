@@ -28,8 +28,6 @@ using std::map;
 #include <set>
 using std::set;
 #include <algorithm>
-#include <multimap>
-#include <multiset>
 #include <list>
 #include <stack>
 #include <iterator>
@@ -82,7 +80,7 @@ using std::bitset;
 #include <netdb.h>
 #include <linux/un.h>
 #include <sys/mman.h>
-
+#include <netinet/tcp.h>
 //thread
 #include <pthread.h>
 #include <semaphore.h>
