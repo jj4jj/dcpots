@@ -1,0 +1,23 @@
+PROJECT='dcagent'
+MODE='DEBUG'#RELEASE
+LIB=[
+        {
+            'name':'dcnode',
+            'subdir':'dcnode',
+            'includes':[''],
+        },
+        {
+            'name':'dagent',
+            'subdir':'dagent',
+            'includes':[''],
+        }
+]
+EXE=[
+        {
+            'name':'agent',
+            'subdir':'app',
+            'includes':[''],
+            'linkdirs':[''],
+            'linklibs':['']
+        }
+]
