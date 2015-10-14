@@ -1,2 +1,0 @@
-/usr/bin/ar cq ../../lib/libdcnode.a  CMakeFiles/dcnode.dir/libtcp.cpp.o CMakeFiles/dcnode.dir/dcnode.cpp.o CMakeFiles/dcnode.dir/libmq.cpp.o CMakeFiles/dcnode.dir/proto/dcnode.pb.cc.o
-/usr/bin/ranlib ../../lib/libdcnode.a

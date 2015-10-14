@@ -1,1 +1,0 @@
-/home/gsgame/server/dagent/build/bin/dcagent

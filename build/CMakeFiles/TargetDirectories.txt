@@ -1,3 +1,0 @@
-/home/gsgame/server/dagent/build/app/CMakeFiles/dcagent.dir
-/home/gsgame/server/dagent/build/agent/CMakeFiles/dagent.dir
-/home/gsgame/server/dagent/build/dcnode/CMakeFiles/dcnode.dir

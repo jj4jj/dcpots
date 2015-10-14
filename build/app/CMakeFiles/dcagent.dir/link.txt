@@ -1,1 +1,0 @@
-/usr/bin/c++   -g -std=c++11 -rdynamic -gdwarf-2 -Wall -Wfatal-errors -pg -Wextra -Wno-unused-parameter -ldl -lm -lrt -pthread    CMakeFiles/dcagent.dir/main.cpp.o  -o ../../bin/dcagent  -L/usr/local/lib  -L/home/gsgame/server/dagent/lib -rdynamic ../../lib/libdagent.a ../../lib/libdcnode.a -lprotobuf -Wl,-rpath,/usr/local/lib:/home/gsgame/server/dagent/lib: 

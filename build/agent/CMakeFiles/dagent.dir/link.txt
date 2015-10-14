@@ -1,2 +1,0 @@
-/usr/bin/ar cq ../../lib/libdagent.a  CMakeFiles/dagent.dir/dagent.cpp.o CMakeFiles/dagent.dir/proto/dagent.pb.cc.o
-/usr/bin/ranlib ../../lib/libdagent.a
