@@ -1,11 +1,10 @@
-#projects
+#projects genearte by cmaketools 
 
-#project(<project_name> CXX)
+#project(dcagent CXX)
 project(dcagent CXX)
+set(dcagent_VERSION 0.0.1)
 
 #min version
-set(playeground_VERSION 0.0.1)
-
 cmake_minimum_required(VERSION 2.6)
 
 # building must be in not source
@@ -14,14 +13,14 @@ string(COMPARE EQUAL "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}" BUILDING_IN_SOU
 
 if(BUILDING_IN_SOURCE)
 	message(FATAL_ERROR "compile dir must not be source dir , please remove 'CMakeCache.txt' in current dir , then create a building dir in which dir you can exec commands like this 'cmake <src dir> [options]' ")
-
 endif()
 
 # compile option
 option(DEBUG "Debug mode" 1)
 option(PCH "Use precompiled headers" 0)
 
-#ADD_DEFINITIONS(-D_USE_SYSTEM_LUA)
+ADD_DEFINITIONS(-D)
+
 if(DEBUG)
 	message("Build in debug-mode : Yes")
 	set(CMAKE_BUILD_TYPE Debug)
@@ -46,7 +45,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 # install dir
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
 
-#<add_subdirectory_area>
 add_subdirectory(dcnode)
-add_subdirectory(agent)
+add_subdirectory(dagent)
 add_subdirectory(app)
+

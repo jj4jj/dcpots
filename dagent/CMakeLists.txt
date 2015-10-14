@@ -8,5 +8,5 @@ ${PROJECT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}/3rd/protobuf/include)
 
 #it will generate a static lib for comiling faster
-add_library(dcnode STATIC ${cur_SRCS})
+add_library(dagent STATIC ${cur_SRCS})
 
