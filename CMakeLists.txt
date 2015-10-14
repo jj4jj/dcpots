@@ -19,7 +19,7 @@ endif()
 option(DEBUG "Debug mode" 1)
 option(PCH "Use precompiled headers" 0)
 
-ADD_DEFINITIONS(-D)
+ADD_DEFINITIONS(-D_DCAGENT_DEBUG)
 
 if(DEBUG)
 	message("Build in debug-mode : Yes")

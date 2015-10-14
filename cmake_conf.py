@@ -1,7 +1,7 @@
 PROJECT='dcagent'
 VERSION='0.0.1'
 DEBUG = 1
-DEFS =['']
+DEFS =['_DCAGENT_DEBUG']
 LIBS = [
         {
             'name':'dcnode',
