@@ -2,6 +2,7 @@
 #include "stdinc.h"
 #include "proto/dcnode.pb.h"
 #include "msg_proto.hpp"
+#include "error_msg.h"
 
 struct dcnode_t;
 
@@ -35,3 +36,4 @@ void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);
 void      dcnode_set_dispatcher(dcnode_t*, dcnode_dispatcher_t, void* ud);
 int       dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
 
+error_msg_t * dcnode_error(dcnode_t *);

@@ -1,6 +1,7 @@
 #include "dcnode.h"
 #include "libmq.h"
 #include "libtcp.h"
+#include "error_msg.h"
 
 struct dcnode_t
 {
@@ -36,7 +37,7 @@ struct dcnode_t
 	std::unordered_map<int, string>						tcp_children_map_name;
 	//
 	msg_buffer_t										send_buffer;
-
+	error_msg_t							*				error_msg;
 	dcnode_t()
 	{
 		init();
@@ -54,7 +55,8 @@ struct dcnode_t
 		smq_children_map_name.clear();
 		tcp_children.clear();
 		tcp_children_map_name.clear();
-		next_stat_time = 0;		
+		next_stat_time = 0;
+		error_msg = nullptr;
 	}
 };
 
@@ -218,6 +220,7 @@ static int _response_msg(dcnode_t * dc, stcp_t * tcp_src, int sockfd, uint64_t m
 static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, stcp_t * tcp_src, int sockfd, uint64_t msgqpid)
 {
 	//to me
+	LOGP("hanlde msg size:%d %s", dm.ByteSize(), dm.debug());
 	switch (dm.type())
 	{
 	case dcnode::MSG_DATA:
@@ -404,6 +407,8 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 		smq_config_t sc;
 		sc.key = conf.addr.msgq_key;
 		sc.msg_buffsz = conf.max_channel_buff_size;
+		sc.is_server = (n->listener != nullptr);
+
 		smq_t * smq = smq_create(sc);
 		if (!smq)
 		{
@@ -414,7 +419,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 		smq_msg_cb(smq, _smq_cb, n);
 	}
 	n->send_buffer.create(conf.max_channel_buff_size);
-
+	n->error_msg = error_create();
 	return n;
 }
 void      dcnode_destroy(dcnode_t* dc)
@@ -433,6 +438,11 @@ void      dcnode_destroy(dcnode_t* dc)
 	{
 		smq_destroy(dc->smq);
 		dc->smq = nullptr;
+	}
+	if (dc->error_msg)
+	{
+		error_destroy(dc->error_msg);
+		dc->error_msg = nullptr;
 	}
 	for (auto it = dc->smq_children.begin();
 		it != dc->smq_children.end(); ++it)
@@ -518,5 +528,8 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz)
 	}
 	//dc, tcp_src,sockfd, buff, buff_sz, dm.dst()
 	return _forward_msg(dc, nullptr, 0, dc->send_buffer.buffer, dc->send_buffer.valid_size, string(dst));
+}
+error_msg_t * dcnode_error(dcnode_t * dc){
+	return dc->error_msg;
 }
 

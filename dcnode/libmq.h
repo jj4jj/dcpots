@@ -9,8 +9,15 @@ struct smq_config_t
     string			key;
     int				msg_buffsz;
 	int				max_queue_buff_size;
-	int				is_server;
+	bool			is_server;
 	bool			attach;
+	smq_config_t()
+	{
+		msg_buffsz = 1024 * 1024;
+		max_queue_buff_size = 10 * 1024 * 1024; //2MB
+		is_server = false;
+		attach = false;
+	}
 };
 
 struct smq_msg_t

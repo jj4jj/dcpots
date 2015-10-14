@@ -1,6 +1,7 @@
 #@/bin/bash
 build()
 {
+    mkdir -p build
     cd tools/cmaketools/
     python generate.py ../../cmake_conf
     cd -
@@ -13,7 +14,13 @@ build()
 ###########################
 clean()
 {
-    find . -name *.pyc | rm
+    echo "clean files ..."
+    find . -name *.pyc
+    find . -name *.pyc | xargs rm -f
+    find . -name '*.pb.cc'
+    find . -name '*.pb.cc' | xargs rm -f
+    find . -name '*.pb.h'
+    find . -name '*.pb.h' | xargs rm -f
     cd build && make clean
 }
 
@@ -39,6 +46,11 @@ list()
     echo -e "\tinstall"
     echo -e "\ttest"
 }
+
+if [[ ! -d build ]];then
+    echo "init project compiling ..."
+    build
+fi
 
 case $1 in
     build)

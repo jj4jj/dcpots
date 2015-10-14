@@ -12,6 +12,7 @@ struct stcp_addr_t
 {
     string ip;
     int  port;
+	stcp_addr_t() :ip("0.0.0.0"), port(0) {}
 	uint32_t u32ip() const
 	{
 		return inet_addr(ip.c_str());
@@ -27,6 +28,15 @@ struct stcp_config_t
 	int max_tcp_send_buff_size;
 	int max_tcp_recv_buff_size;
     stcp_addr_t listen_addr;
+	stcp_config_t()
+	{
+		max_client = 8192;
+		max_backlog = 2048;
+		max_recv_buff = max_send_buff = 1024 * 100; //100K
+		max_tcp_send_buff_size = 1024 * 100; //100K
+		max_tcp_recv_buff_size = 640 * 100; //600K
+		is_server = 0;
+	}
 };
 
 struct stcp_t;

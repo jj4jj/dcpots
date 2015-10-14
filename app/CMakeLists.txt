@@ -4,11 +4,11 @@ file(GLOB_RECURSE cur_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *
 #base dir depend on itself and some otherlib
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
-${PROJECT_SOURCE_DIR}/3rd/protobuf/include)
+)
 
 #base dir linked lib dir
 link_directories(
-${PROJECT_SOURCE_DIR}/3rd/protobuf/include/lib
+
 /usr/local/lib
 ${PROJECT_SOURCE_DIR}/lib)
 

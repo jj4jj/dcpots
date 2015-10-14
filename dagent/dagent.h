@@ -9,17 +9,13 @@ struct dagent_config_t
 {
     dcnode_config_t node_conf;
     char            plugin_start_file[32];
+	int				max_msg_size;//1MB
 };
 
 typedef int (*dagent_cb_t)(const dagent_msg_t &  msg, const string & src);
 
 int     dagent_init(const dagent_config_t & conf);
 void    dagent_destroy();
-
-const char *	dagent_errmsg();
-int				dagent_errno();
-const char *	dagent_errro_str(int err);
-
 void    dagent_update(int timeout_ms = 10);
 int     dagent_send(const char * dst, const dagent_msg_t & msg);
 int     dagent_cb_push(int type, dagent_cb_t cb);
@@ -30,3 +26,7 @@ int     dagent_init_plugins();
 int     dagent_destroy_plugins();
 int     dagent_reload_plugins();
 
+struct error_msg_t;
+error_msg_t * dagent_errmsg();
+
+#define DAGENT_ERRMSG(...)	error_msg(dagent_errmsg(), __VA_ARGS__)

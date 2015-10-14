@@ -67,6 +67,11 @@ smq_t * smq_create(const smq_config_t & conf)
 		flag |= IPC_CREAT;
 	}
 	key_t key = ftok(conf.key.c_str(), prj_id[0]);
+	if (key == -1)
+	{
+		//error no
+		return nullptr;
+	}
 	int sender = _msgq_create(key, flag, conf.max_queue_buff_size);
 	if (sender < 0)
 	{

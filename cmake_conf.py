@@ -7,14 +7,14 @@ LIBS = [
             'name':'dcnode',
             'subdir':'dcnode',
             'includes':[
-                '3rd/protobuf/include'
+                #'3rd/protobuf/include'
             ]
         },
         {
             'name':'dagent',
             'subdir':'dagent',
             'includes':[
-                '3rd/protobuf/include'
+                #'3rd/protobuf/include'
             ]
         }
 ]
@@ -23,10 +23,10 @@ EXES = [
             'name':'dcagent',
             'subdir':'app',
             'includes': [
-                '3rd/protobuf/include',
+                #'3rd/protobuf/include',
             ],
             'linkpaths' : [
-                '3rd/protobuf/include/lib',
+                #'3rd/protobuf/include/lib',
             ],
             'linklibs' : [
                 'dagent',

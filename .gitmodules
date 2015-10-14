@@ -1,0 +1,3 @@
+[submodule "tools/cmaketools"]
+	path = tools/cmaketools
+	url = git@github.com:jj4jj/cmaketools.git

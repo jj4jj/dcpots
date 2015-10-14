@@ -5,7 +5,7 @@ ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *.hpp)
 #base dir depend on itself and some otherlib
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
-${PROJECT_SOURCE_DIR}/3rd/protobuf/include)
+)
 
 #it will generate a static lib for comiling faster
 add_library(dagent STATIC ${cur_SRCS})

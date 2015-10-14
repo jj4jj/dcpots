@@ -1,4 +1,5 @@
 #include "dagent.h"
+#include "dcnode/error_msg.h"
 
 struct dagent_t
 {
@@ -8,20 +9,17 @@ struct dagent_t
 	unordered_map<int, dagent_cb_t>		cbs;
 	//python vm todo
 	msg_buffer_t						send_msgbuffer;
-	char								last_error_msg[1024];
-	int									last_errno;
+	error_msg_t					*		error_msg;
 };
 
 
 static dagent_t AGENT;
 
-static int	_error(int err, const char * msg)
+static inline int	_error(const char * msg, int err = -1, error_msg_t * trace = nullptr)
 {
-	AGENT.last_errno = err;
-	strncpy(AGENT.last_error_msg, msg, sizeof(AGENT.last_error_msg) - 1);
+	ERROR_BT_MSG(AGENT.error_msg, trace, err, msg);
 	return err;
 }
-
 static int _dispatcher(void * ud, const dcnode_msg_t & msg)
 {
 	assert(ud == &AGENT);
@@ -29,7 +27,7 @@ static int _dispatcher(void * ud, const dcnode_msg_t & msg)
 	if (!dm.unpack(msg.msg_data().c_str(), msg.msg_data().length()))
 	{
 		//error pack
-		return _error(-1, "msg unpack error !");
+		return _error("msg unpack error !");
 	}
 	auto it = AGENT.cbs.find(dm.type());
 	if (it != AGENT.cbs.end())
@@ -37,19 +35,23 @@ static int _dispatcher(void * ud, const dcnode_msg_t & msg)
 		return it->second(dm, msg.src());
 	}
 	//not found
-	return _error(-2, "not found handler !");
+	return _error("not found handler !");
 }
 int     dagent_init(const dagent_config_t & conf)
 {
 	if (AGENT.node)
 	{
-		return _error(-1, "node has been inited !");
+		return _error("node has been inited !");
 	}
+	if (AGENT.send_msgbuffer.create(conf.max_msg_size))
+		return _error("create send msgbuffer error !");
+	if (!(AGENT.error_msg = error_create(1024)))
+		return _error("create error msg error !");
 	dcnode_t * node = dcnode_create(conf.node_conf);
 	if (!node)
 	{
 		//node error
-		return _error(-2, "create dcnode error !");
+		return _error("create dcnode error !");
 	}
 	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
@@ -118,19 +120,10 @@ int     dagent_reload_plugins()
 	return -1;
 }
 
-const char *	dagent_errmsg()
+struct error_msg_t * dagent_errmsg()
 {
-	return	AGENT.last_error_msg;
+	return AGENT.error_msg;
 }
-int				dagent_errno()
-{
-	return	AGENT.last_errno;
-}
-const char *	dagent_errro_str(int err)
-{
-	return "";
-}
-
 
 
 

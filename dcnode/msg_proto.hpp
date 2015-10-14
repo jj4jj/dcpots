@@ -33,9 +33,12 @@ struct msg_buffer_t : public noncopyable {
 
 
 
-
 template<class T>
 struct msgproto_t : public T {
+	const char * debug() const
+	{
+		return T::ShortDebugString().c_str();
+	}
 	bool pack(msg_buffer_t & msgbuf) const
 	{
 		int sz = msgbuf.max_size;
