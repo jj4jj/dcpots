@@ -28,5 +28,5 @@ int				error_write(error_msg_t *, int err, error_msg_t * killer, const char* fmt
 //	printf("(env>%ld.%ld|%s:%d) "format, tv.tv_sec, tv.tv_usec, __FILE__, __LINE__, __VA_ARGS__);
 #define LOGP(format, ...)		do{\
 	timeval tv; gettimeofday(&tv, NULL); \
-	printf("(env>%ld.%ld|%s:%d) " format "\n", tv.tv_sec, tv.tv_usec, __FILE__, __LINE__, ##__VA_ARGS__); \
+	printf("(env>%ld.%ld|%s:%d) " format "\n", tv.tv_sec, tv.tv_usec, __FUNCTION__, __LINE__, ##__VA_ARGS__); \
 }while (0)

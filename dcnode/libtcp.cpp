@@ -1,7 +1,8 @@
 #include "libtcp.h"
 #include "msg_proto.hpp"
+#include "dcnode/error_msg.h"
 
-typedef	std::shared_ptr<msg_buffer_t>	msg_buffer_ptr_t;
+//typedef	std::shared_ptr<msg_buffer_t>	msg_buffer_ptr_t;
 
 //client
 struct stcp_connecting_t {
@@ -27,8 +28,8 @@ struct stcp_t
 	int				nproc;
 	int				nevts;
 	//////////////////////////////
-	std::unordered_map<int, msg_buffer_ptr_t>	sock_recv_buffer;
-	std::unordered_map<int, msg_buffer_ptr_t>	sock_send_buffer;
+	std::unordered_map<int, msg_buffer_t*>	sock_recv_buffer;
+	std::unordered_map<int, msg_buffer_t*>	sock_send_buffer;
 	////////////////////////////////////////
 	msg_buffer_t	misc_buffer;
 	void init()
@@ -162,15 +163,55 @@ static int _get_sockerror(int fd)
 	else 
 		return errno;
 }
+
+void _free_sock_msg_buffer(stcp_t * stcp, int fd){
+	auto it = stcp->sock_send_buffer.find(fd);
+	if (it != stcp->sock_recv_buffer.end()){
+		delete it->second;
+		stcp->sock_recv_buffer.erase(it);
+	}
+	it = stcp->sock_send_buffer.find(fd);
+	if (it != stcp->sock_send_buffer.end()){
+		delete it->second;
+		stcp->sock_send_buffer.erase(it);
+	}
+}
+msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
+{
+	if (for_recv){
+		auto it = stcp->sock_recv_buffer.find(fd);
+		if (it == stcp->sock_recv_buffer.end()){
+			msg_buffer_t * p = new msg_buffer_t();
+			if (!p || p->create(stcp->conf.max_recv_buff)){
+				return nullptr;
+			}
+			stcp->sock_recv_buffer[fd] = p;
+			return p;
+		}
+		return it->second;
+	}
+	else
+	{
+		auto it = stcp->sock_send_buffer.find(fd);
+		if (it == stcp->sock_send_buffer.end()){
+			msg_buffer_t * p = new msg_buffer_t();
+			if (!p || p->create(stcp->conf.max_recv_buff)){
+				return nullptr;
+			}
+			stcp->sock_send_buffer[fd] = p;
+			return p;
+		}
+		return it->second;
+	}
+}
 static void	_close_fd(stcp_t * stcp, int fd, stcp_close_reason_type reason)
 {
 	int error = _get_sockerror(fd);
 	_op_poll(stcp, EPOLL_CTL_DEL, fd);
 	close(fd);
 	stcp->connectings.erase(fd);
-	stcp->sock_recv_buffer.erase(fd);
-	stcp->sock_send_buffer.erase(fd);
 
+	_free_sock_msg_buffer(stcp, fd);
 	//just notify
 	stcp_event_t  sev;
 	sev.type = stcp_event_type::STCP_CLOSED;
@@ -200,29 +241,7 @@ static void _new_connx(stcp_t * stcp, int listenfd)
 		//error
 	}
 }
-msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
-{
-	auto * fmap = &stcp->sock_recv_buffer;
-	int bufsize = stcp->conf.max_recv_buff;
-	if (!for_recv)
-	{
-		fmap = &stcp->sock_send_buffer;
-		bufsize = stcp->conf.max_send_buff;
-	}
-	auto it = fmap->find(fd);
-	if (it == fmap->end())
-	{
-		fmap->insert(std::make_pair(fd, msg_buffer_ptr_t(new msg_buffer_t())));
-		if ((*fmap)[fd]->create(bufsize))
-		{
-			fmap->erase(fd);
-			//no mem error
-			return nullptr;
-		}
-		return ((*fmap)[fd]).get();
-	}
-	return it->second.get();
-}
+
 static int _read_msg_error(stcp_t * stcp, int fd, int read_ret)
 {
 	if (read_ret == 0)
@@ -244,77 +263,79 @@ static int _read_msg_error(stcp_t * stcp, int fd, int read_ret)
 	}
 	return 0;
 }
-static int _read_tcp_socket(stcp_t * stcp, int fd)
-{
-	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
+static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
 	stcp_event_t	sev;
 	sev.type = STCP_READ;
 	sev.fd = fd;
 	int nmsg = 0;
-READ_MSG_DISPATCH:
-	if (buffer->ctx_msg_size > 0)
+	int msg_buff_start = 0;
+	int total = ntohl(*(int32_t*)(buffer->buffer));
+	while ( msg_buff_start + total <= buffer->valid_size )
 	{
-		int remain = buffer->ctx_msg_size - buffer->valid_size;
-		while (remain > 0)
-		{
-			int sz = recv(fd, buffer->buffer + buffer->valid_size, remain, MSG_DONTWAIT);
-			if (sz > 0)
-			{
-				remain -= sz;
-				buffer->valid_size += sz;
-				if (remain == 0)
-				{
-					stcp_msg_t smsg = stcp_msg_t(buffer->buffer + sizeof(int32_t), buffer->ctx_msg_size - sizeof(int32_t));
-					sev.msg = &smsg;
-					stcp->event_cb(stcp, sev, stcp->event_cb_ud);
-					buffer->ctx_msg_size = 0;
-					buffer->valid_size = 0;
-					nmsg++;
-					goto READ_MSG_DISPATCH;
-				}
-			}
-			else if (sz == -1 && errno == EINTR)
-			{
-				continue;
-			}
-			else
-			{
-				return _read_msg_error(stcp, fd, sz);
-			}
+		stcp_msg_t smsg(buffer->buffer + msg_buff_start + sizeof(int32_t),
+			total - sizeof(int32_t));
+		sev.msg = &smsg;
+		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
+		nmsg++;
+		msg_buff_start += total;
+		total = 0;
+		if (msg_buff_start + (int)sizeof(int32_t) <= buffer->valid_size){
+			total = ntohl(*(int32_t*)(buffer->buffer + msg_buff_start));
+		}
+		else{
+			break;
 		}
 	}
-	else
+	if (msg_buff_start > 0){
+		memmove(buffer->buffer,
+			buffer->buffer + msg_buff_start,
+			buffer->valid_size - msg_buff_start);
+		buffer->valid_size -= msg_buff_start;
+	}
+	return nmsg;
+}
+
+static int _read_tcp_socket(stcp_t * stcp, int fd)
+{
+	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
+	if (buffer) {
+		//no buffer
+		return -1;
+	}
+	int nmsg = 0;
+	//loop
+		//1. read break
+		//2. dispatch
+	while (buffer->max_size > buffer->valid_size)
 	{
-	TRY_READ_HEAD_AGAIN:
-		//read head
-		int sz = recv(fd, buffer->buffer + buffer->valid_size, sizeof(int32_t), MSG_DONTWAIT);
-		if (sz > 0)
-		{
+		int sz = recv(fd, buffer->buffer + buffer->valid_size, 
+						buffer->max_size - buffer->valid_size, MSG_DONTWAIT);
+		if (sz > 0){
 			buffer->valid_size += sz;
-			if (buffer->valid_size == sizeof(int32_t))
-			{
-				//get head
-				int32_t * headlen = (int32_t*)(buffer->buffer + buffer->valid_size);
-				buffer->ctx_msg_size = ntohl(*headlen);
-				if (buffer->ctx_msg_size > buffer->max_size)
-				{
-					//errror msg , too big 
-					_close_fd(stcp, fd, stcp_close_reason_type::STCP_MSG_ERR);
-					return -3;
-				}
-				else
-				{
-					goto READ_MSG_DISPATCH;
-				}
+		}
+		else if (sz == -1 && errno == EINTR){
+			continue;
+		}
+		else if (_read_msg_error(stcp, fd, sz)){
+			//read error
+			return -1;
+		}
+		//dispatch
+		if (buffer->valid_size > (int)sizeof(int32_t)){
+			int32_t total = ntohl(*(int32_t*)buffer->buffer);
+			if (total > buffer->max_size){
+				//errror msg , too big 
+				_close_fd(stcp, fd, stcp_close_reason_type::STCP_MSG_ERR);
+				return -2;
 			}
-		}
-		else if (sz == -1 && errno == EINTR)
-		{
-			goto TRY_READ_HEAD_AGAIN;
-		}
-		else
-		{
-			return _read_msg_error(stcp, fd, sz);
+			else if (total > buffer->valid_size){
+				//next time
+				return 0;
+			}
+			else{
+				//need dispatching
+				nmsg += _dispatch_msg(stcp, fd, buffer);
+			}
 		}
 	}
 	return nmsg;
@@ -364,6 +385,7 @@ static int _write_tcp_socket(stcp_t * stcp, int fd, const char * msg, int sz)
 {
 	//write app buffer ? write tcp socket directly ?
 	//size
+	LOGP("write msg size:%d", sz);
 	stcp_event_t sev;
 	sev.fd = fd;
 	sev.type = stcp_event_type::STCP_WRITE;
@@ -374,12 +396,16 @@ static int _write_tcp_socket(stcp_t * stcp, int fd, const char * msg, int sz)
 		return -1;
 	}
 	msg_buffer_t* msgbuff = _get_sock_msg_buffer(stcp, fd, false);
+	if (!msgbuff){
+		//no buffer
+		return -2;
+	}
 	*(int32_t*)(msgbuff->buffer) = htonl(total);
 	memcpy(msgbuff->buffer + sizeof(int32_t), msg, sz);
 	
 RETRY_WRITE_MSG:
 	int ret = send(fd, msgbuff->buffer, total, MSG_DONTWAIT | MSG_NOSIGNAL);
-	if (ret == sz)
+	if (ret == total)
 	{
 		//send ok
 		stcp_msg_t smsg = stcp_msg_t(msg, sz);

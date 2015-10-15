@@ -55,6 +55,12 @@ int test_mq(const char * ap)
 int _stcp_cb(stcp_t* stc, const stcp_event_t & ev, void * ud)
 {
 	LOGP("stcp event type:%d fd:%d reason:%d last error msg:%s", ev.type, ev.fd, ev.reason, strerror(ev.error));
+	if (ev.type == stcp_event_type::STCP_CONNECTED){
+		stcp_send(stc, ev.fd, stcp_msg_t("eeeeeeeeeeee", 8));
+	}
+	if (ev.type == stcp_event_type::STCP_READ){
+		LOGP("get msg from client:%s", ev.msg->buff);
+	}
 	return -1;
 }
 
@@ -95,7 +101,10 @@ int test_node(const char * p)
 {
 	dcnode_config_t dcf;
 	dcf.addr.msgq_key = "./gmon.out";
+	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = "leaf";
+	dcf.heart_beat_gap = 10;
+	dcf.max_live_heart_beat_gap = 20;
 	if (p)
 	{
 		if (strcmp(p, "l1") == 0)

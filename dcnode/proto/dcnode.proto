@@ -17,10 +17,17 @@ message MsgDCNodeRPC
 	optional	bytes	request = 4;
 	optional	bytes	response = 5;
 };
+enum MsgOption
+{
+	MSG_OPT_REQ = 1; //a request
+	MSG_OPT_RSP = 2; //this is a response
+	MSG_OPT_PUSH = 3; //push msg 
+}
 message MsgExt
 {
 	optional	uint32			unixtime = 1;//send time
 	optional	MsgDCNodeRPC	rpc = 2;
+	optional	MsgOption		opt = 3;
 }
 
 message MsgDCNode

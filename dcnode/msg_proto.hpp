@@ -6,8 +6,7 @@ struct msg_buffer_t : public noncopyable {
 	char *	buffer;
 	int		max_size;
 	int		valid_size;
-	int		ctx_msg_size;
-	msg_buffer_t() :buffer(nullptr), max_size(0), valid_size(0), ctx_msg_size(0)
+	msg_buffer_t() :buffer(nullptr), max_size(0), valid_size(0)
 	{
 	}
 	int create(int max_sz)
@@ -16,7 +15,7 @@ struct msg_buffer_t : public noncopyable {
 		char * p = (char*)malloc(max_size);
 		if (!p) return -1;
 		max_size = max_sz;
-		ctx_msg_size = valid_size = 0;
+		valid_size = 0;
 		buffer = p;
 		return 0;
 	}
