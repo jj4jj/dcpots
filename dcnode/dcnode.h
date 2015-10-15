@@ -22,6 +22,16 @@ struct dcnode_config_t
     int heart_beat_gap;//seconds
     int max_register_children;//max children
 	string	name;
+	dcnode_config_t()
+	{
+		name = "noname";
+		max_register_children = 100;
+		heart_beat_gap = 60;
+		max_channel_buff_size = 1024 * 1024;
+		addr.listen_addr = "";
+		addr.parent_addr = "";
+		addr.msgq_key = "";
+	}
 };
 
 typedef	std::function<void()>	dcnode_timer_callback_t;

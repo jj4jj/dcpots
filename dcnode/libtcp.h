@@ -42,10 +42,11 @@ struct stcp_config_t
 struct stcp_t;
 enum stcp_close_reason_type
 {
+	STCP_MSG_OK = 0, //OK
 	STCP_MSG_ERR = 1,	//msg error
 	STCP_CONNECT_ERR = 2, //connect
 	STCP_PEER_CLOSE = 3,
-	STCP_POLL_ERR = 4,
+	STCP_POLL_ERR = 4, //refer to errno
 	STCP_INVAL_CALL = 5, //usage err
 	STCP_SYS_ERR = 6, //system call error refer to errno
 };
@@ -67,7 +68,8 @@ struct stcp_event_t
 	int					fd;
     const stcp_msg_t *  msg;
 	stcp_close_reason_type		reason;
-	stcp_event_t() :type(STCP_EVT_INIT), msg(nullptr){}
+	int							error;
+	stcp_event_t() :type(STCP_EVT_INIT), msg(nullptr), reason(STCP_MSG_OK), error(0){}
 };
 
 typedef int (*stcp_event_cb_t)(stcp_t*, const stcp_event_t & ev, void * ud);
@@ -81,4 +83,7 @@ int				stcp_send(stcp_t *,int fd, const stcp_msg_t & msg);
 int             stcp_connect(stcp_t *, const stcp_addr_t & addr, int retry = 0);
 int				stcp_reconnect(stcp_t* , int fd);
 bool            stcp_is_server(stcp_t *);
+
+const char *	stcp_error(stcp_t *, int fd);
+
 

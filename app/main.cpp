@@ -1,7 +1,144 @@
 #include "dagent/dagent.h"
+#include "dcnode/libmq.h"
+#include "dcnode/libtcp.h"
+
+
+static int max_ping_pong = 10000;
+static int max_ppsz = 0;
+static int max_ping_time = 100000;
+int mq_cb(smq_t * mq, uint64_t src, const smq_msg_t & msg, void * ud)
+{
+	//LOGP("mq cb msg size:%d src:%lu", msg.sz, src);
+	max_ppsz += msg.sz;
+	if (max_ping_time <= 0)
+	{
+		LOGP("mq cb msg size:%d src:%lu total:%d MB", msg.sz, src, max_ppsz/1048576);
+		exit(0);
+	}
+	max_ping_time--;
+	smq_send(mq, src, msg);
+	return 0;
+}
+#define CHECK(r)	\
+if (r) {\
+\
+	LOGP("check error :%d sys error:%s",r, strerror(errno)); \
+	return -1;\
+}
+
+
+int test_mq(const char * ap)
+{
+	char * test_msg = (char*)malloc(1024*10);
+
+	smq_config_t	sc;
+	sc.key = "./dcagent";
+	sc.is_server = ap ? true : false;
+	auto p = smq_create(sc);
+	if (!p)
+	{
+		LOGP("error create smq errno:%s", strerror(errno));
+		return -1;
+	}
+	smq_msg_cb(p, mq_cb, nullptr);
+	if (!sc.is_server)
+	{
+		smq_send(p, getpid(), smq_msg_t(test_msg, 1024*10));
+	}
+	while (true)
+	{
+		smq_poll(p, 500);
+	}
+	return 0;
+}
+
+int _stcp_cb(stcp_t* stc, const stcp_event_t & ev, void * ud)
+{
+	LOGP("stcp event type:%d fd:%d reason:%d last error msg:%s", ev.type, ev.fd, ev.reason, strerror(ev.error));
+	return -1;
+}
+
+int test_tcp(const char * ap)
+{
+	stcp_config_t sc;
+	sc.is_server = ap ? true : false;
+	sc.listen_addr.ip = "127.0.0.1";
+	sc.listen_addr.port = 8888;
+	auto * p = stcp_create(sc);
+	if (!p)
+	{
+		LOGP("create stcp error ! syserror:%s", strerror(errno));
+		return -1;
+	}
+	stcp_event_cb(p, _stcp_cb, nullptr);
+	if (!sc.is_server)
+	{
+		int ret = stcp_connect(p, sc.listen_addr, 2);
+		CHECK(ret)		
+	}
+	while (true)
+	{
+		stcp_poll(p, 1000);
+		usleep(1000);
+	}	
+	return 0;
+}
+
+int dc_cb(void * ud, const dcnode_msg_t & msg)
+{
+	LOGP("dc msg recv :%s", msg.debug());
+	return 0;
+}
+
+
+int test_node(const char * p)
+{
+	dcnode_config_t dcf;
+	dcf.addr.msgq_key = "./gmon.out";
+	dcf.name = "leaf";
+	auto dc = dcnode_create(dcf);
+	CHECK(!dc)
+	dcnode_set_dispatcher(dc, dc_cb, nullptr);
+	if (strcmp(p, "l1") == 0)
+	{
+		//client leaf node
+		dcf.addr.msgq_key = "./gmon.out";
+		dcf.addr.parent_addr = "127.0.0.1:8880";
+		dcf.name = "layer1";
+	}
+	else
+	if (strcmp(p, "l2") == 0)
+	{
+		dcf.addr.msgq_key = "";
+		dcf.name = "layer2";
+		dcf.addr.listen_addr = "127.0.0.1:8880";
+	}
+	while (true)
+	{
+		dcnode_update(dc, 10000);
+		usleep(10000);
+	}
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
+	if (argc >= 2)
+	{
+		switch (argv[1][0])
+		{
+		case 'm':
+			return test_mq(argv[2]);
+		case 't':
+			return test_tcp(argv[2]);
+		case 'n':
+			return test_node(argv[2]);
+		default:
+			break;
+		}
+	}
+
+
 	dagent_config_t	conf;
 
 	//an agent

@@ -29,10 +29,11 @@ struct stcp_t
 	//////////////////////////////
 	std::unordered_map<int, msg_buffer_ptr_t>	sock_recv_buffer;
 	std::unordered_map<int, msg_buffer_ptr_t>	sock_send_buffer;
-	
+	////////////////////////////////////////
+	msg_buffer_t	misc_buffer;
 	void init()
 	{
-		listenfd = epfd = - 1;
+		listenfd = epfd = -1;
 		event_cb = nullptr;
 		event_cb_ud = nullptr;
 		events = nullptr;
@@ -122,11 +123,12 @@ struct stcp_t * stcp_create(const stcp_config_t & conf)
 		if (ret) { stcp_destroy(stcp); return nullptr; }
 
 		epoll_event evt;
-		evt.events = EPOLLIN;
+		evt.events = EPOLLIN | EPOLLET;
 		evt.data.fd = fd;
 		ret = epoll_ctl(stcp->epfd, EPOLL_CTL_ADD, fd, &evt);
 		if (ret) { stcp_destroy(stcp); return nullptr; };
 	}
+	stcp->misc_buffer.create(1024 * 64);
 	return stcp;
 }
 void            stcp_destroy(stcp_t * stcp)
@@ -150,18 +152,31 @@ static int _op_poll(stcp_t * stcp, int cmd, int fd, int flag = 0)
 	ev.events = flag;
 	return epoll_ctl(stcp->epfd, cmd, fd, &ev);
 }
-
+static int _get_sockerror(int fd)
+{
+	int error = 0;
+	socklen_t len = sizeof(int);
+	int ret = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len);
+	if (ret == 0)
+		return error;
+	else 
+		return errno;
+}
 static void	_close_fd(stcp_t * stcp, int fd, stcp_close_reason_type reason)
 {
+	int error = _get_sockerror(fd);
 	_op_poll(stcp, EPOLL_CTL_DEL, fd);
 	close(fd);
 	stcp->connectings.erase(fd);
 	stcp->sock_recv_buffer.erase(fd);
 	stcp->sock_send_buffer.erase(fd);
-	//notify
+
+	//just notify
 	stcp_event_t  sev;
 	sev.type = stcp_event_type::STCP_CLOSED;
+	sev.fd = fd;
 	sev.reason = reason;
+	sev.error = error;
 	stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 }
 
@@ -304,10 +319,6 @@ READ_MSG_DISPATCH:
 	}
 	return nmsg;
 }
-static void _data_readable(stcp_t* stcp, int fd)
-{
-	_read_tcp_socket(stcp, fd);
-}
 static void _connect_check(stcp_t * stcp, int fd)
 {
 	int error = 0;
@@ -319,35 +330,32 @@ static void _connect_check(stcp_t * stcp, int fd)
 	}
 	auto & cnx = it->second;
 	socklen_t len = sizeof(int);
-	if ((0 == getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len)))
+	if (0 == getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len))
 	{
 		stcp_event_t sev;
 		sev.fd = fd;
-		_op_poll(stcp, EPOLL_CTL_DEL, fd);
 		if (0 == error)
 		{
 			//clear
 			stcp->connectings.erase(fd);
 			sev.type = stcp_event_type::STCP_CONNECTED;
 			stcp->event_cb(stcp, sev, stcp->event_cb_ud);
-			_op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLIN);
-		}
-		else
-		{
-			if (cnx.reconnect < cnx.max_reconnect)
-			{
-				//reconnect
-				stcp_reconnect(stcp, fd);
-			}
-			else
-			{
-				_close_fd(stcp, fd, stcp_close_reason_type::STCP_CONNECT_ERR);
-			}
+			_op_poll(stcp, EPOLL_CTL_MOD, fd, EPOLLIN);
+			return;
 		}
 	}
 	else
 	{
-		_close_fd(stcp, fd, stcp_close_reason_type::STCP_INVAL_CALL);
+		if (cnx.reconnect < cnx.max_reconnect)
+		{
+			//reconnect
+			_op_poll(stcp, EPOLL_CTL_DEL, fd);
+			stcp_reconnect(stcp, fd);
+		}
+		else
+		{
+			_close_fd(stcp, fd, stcp_close_reason_type::STCP_CONNECT_ERR);
+		}
 	}
 }
 
@@ -393,10 +401,30 @@ RETRY_WRITE_MSG:
 }
 static void _proc(stcp_t * stcp,const epoll_event & ev)
 {
-	//schedule todo 
-	if (ev.events & EPOLLIN)
+	//schedule
+	//error check
+	if (ev.events & EPOLLRDHUP)
 	{
-		if (ev.data.fd == stcp->listenfd )
+		//peer close
+		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_PEER_CLOSE);
+	}
+	else if (ev.events & EPOLLERR)
+	{
+		//error 
+		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_POLL_ERR);
+	}
+	else if ((ev.events & EPOLLHUP))
+	{
+		//before listen/connect  add in poll ?
+		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_INVAL_CALL);
+	}
+	else if (ev.events & EPOLLOUT)
+	{
+		_connect_check(stcp, ev.data.fd);
+	}
+	else if (ev.events & EPOLLIN)
+	{
+		if (ev.data.fd == stcp->listenfd)
 		{
 			assert(stcp_is_server(stcp));
 			//new connection
@@ -404,17 +432,13 @@ static void _proc(stcp_t * stcp,const epoll_event & ev)
 		}
 		else
 		{
-			_data_readable(stcp, ev.data.fd);
+			_read_tcp_socket(stcp, ev.data.fd);
 		}
-	}
-	else if (ev.events & EPOLLOUT)
-	{
-		_connect_check(stcp, ev.data.fd);
 	}
 	else
 	{
 		//error
-		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_POLL_ERR);
+		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_SYS_ERR);
 	}
 }
 
@@ -423,28 +447,22 @@ int            stcp_poll(stcp_t * stcp, int timeout_us, int max_proc)
 	int ms = timeout_us / 1000;
 	if (ms == 0) ms = 1;
 	int nproc = 0;
-	for (int i = stcp->nproc; i < stcp->nevts && nproc < max_proc; ++i)
+	for (; stcp->nproc < stcp->nevts && nproc < max_proc; ++(stcp->nproc))
 	{
 		++nproc;
-		_proc(stcp, stcp->events[i]);
+		_proc(stcp, stcp->events[stcp->nproc]);
 	}
-	stcp->nproc += nproc;
-	if (stcp->nproc > stcp->nevts)
-	{
-		stcp->nproc = 0;
-		stcp->nevts = 0;
-	}
-	else
+	if (stcp->nproc < stcp->nevts)
 	{
 		//busy
 		return nproc;
 	}
-	int n = epoll_wait(stcp->epfd, stcp->events, stcp->conf.max_client, ms);
-	if (n > 0)
+	else
 	{
 		stcp->nproc = 0;
-		stcp->nevts = n;
+		stcp->nevts = 0;
 	}
+	int n = epoll_wait(stcp->epfd, stcp->events, stcp->conf.max_client, ms);
 	for (int i = 0; i < n && nproc < max_proc; ++i)
 	{
 		nproc++;
@@ -460,16 +478,14 @@ int				stcp_reconnect(stcp_t* stcp, int fd)
 {
 	auto it = stcp->connectings.find(fd);
 	stcp_connecting_t * cnx = nullptr;
-	if (it != stcp->connectings.end())
-	{
+	if (it != stcp->connectings.end()) {
 		cnx = &it->second;
 	}
 	socklen_t addrlen = sizeof(cnx->connect_addr);
 	int ret = connect(fd, (sockaddr*)&cnx->connect_addr, addrlen);
 	if (ret && errno != EALREADY &&
-		errno != EINPROGRESS)
-	{
-		//error no
+			   errno != EINPROGRESS) {
+		//error
 		return -1;
 	}
 	cnx->reconnect++;
@@ -480,7 +496,6 @@ int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
 	//allocate
 	int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
 	if (fd < 0) return -1;//socket error
-
 	int on = 1;
 	_set_socket_opt(fd, SO_KEEPALIVE, &on, sizeof(on));
 
@@ -489,7 +504,6 @@ int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
 	saddr.sin_family = AF_INET;
 	saddr.sin_addr.s_addr = addr.u32ip();
 	saddr.sin_port = htons(addr.port);
-
 	stcp_connecting_t cnx;
 	cnx.max_reconnect = retry;
 	cnx.reconnect = 0;
@@ -498,6 +512,21 @@ int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
 
 	return stcp_reconnect(stcp, fd);
 }
+const char *	stcp_error(stcp_t * stcp, int fd)
+{
+	int error = 0;
+	socklen_t len = sizeof(int);
+	int ret = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len);
+	if (ret == 0)
+	{
+		return strerror_r(error, stcp->misc_buffer.buffer, stcp->misc_buffer.max_size);
+	}
+	else
+	{
+		return strerror_r(errno, stcp->misc_buffer.buffer, stcp->misc_buffer.max_size);
+	}
+}
+
 bool            stcp_is_server(stcp_t * stcp)
 {
 	return stcp->conf.is_server;

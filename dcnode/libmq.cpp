@@ -49,7 +49,7 @@ int		_msgq_create(key_t key, int flag, size_t max_size)
 			return -3;
 		}
 	}
-	return 0;
+	return id;
 }
 
 smq_t * smq_create(const smq_config_t & conf)
