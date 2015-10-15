@@ -123,6 +123,7 @@ void    smq_destroy(smq_t* smq)
 		free(smq->recvbuff);
 	}
 	smq->init();
+	delete smq;
 }
 void    smq_msg_cb(smq_t * smq, smq_msg_cb_t cb, void * ud)
 {
@@ -139,14 +140,12 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 	int nproc = 0;
 	while (past_us < timeout_us)
 	{
+		uint64_t msgtype = 0;
 		if (smq->conf.is_server)
 		{
-			sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, 0, IPC_NOWAIT);
+			msgtype = getpid();
 		}
-		else
-		{
-			sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, getpid(), IPC_NOWAIT);
-		}
+		sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, 0, IPC_NOWAIT);
 		if (sz <= 0)
 		{
 			if (errno == EINTR)
@@ -157,7 +156,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 			if (errno == E2BIG)
 			{
 				//error for msg too much , clear it then continue;
-				sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, getpid(), IPC_NOWAIT | MSG_NOERROR);
+				sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, msgtype, IPC_NOWAIT | MSG_NOERROR);
 				continue;
 			}
 			else if (errno != ENOMSG)

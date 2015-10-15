@@ -53,8 +53,9 @@ enum stcp_close_reason_type
 enum stcp_event_type
 {
 	STCP_EVT_INIT = 0,
-    STCP_CONNECTED = 1, //client :connected, server:new connection
-    STCP_CLOSED ,
+    STCP_CONNECTED = 1,
+	STCP_NEW_CONNX,
+	STCP_CLOSED ,
     STCP_READ ,
     STCP_WRITE ,
     STCP_EVENT_MAX
@@ -76,9 +77,8 @@ void            stcp_destroy(stcp_t * );
 void            stcp_event_cb(stcp_t*, stcp_event_cb_t cb, void *ud);
 //return proced
 int	            stcp_poll(stcp_t *, int timeout_us, int max_proc = 100);
-int				stcp_send(stcp_t *,int fd, const stcp_msg_t & msg);//server
-int				stcp_send(stcp_t *, const stcp_msg_t & msg);//client
+int				stcp_send(stcp_t *,int fd, const stcp_msg_t & msg);
 int             stcp_connect(stcp_t *, const stcp_addr_t & addr, int retry = 0);
-int				stcp_reconnect(stcp_t*);
+int				stcp_reconnect(stcp_t* , int fd);
 bool            stcp_is_server(stcp_t *);
 
