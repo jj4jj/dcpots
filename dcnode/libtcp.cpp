@@ -44,7 +44,9 @@ struct stcp_t
 
 static int _set_socket_opt(int fd, int name, void * val, socklen_t len)
 {
-	return setsockopt(fd, SOL_SOCKET, name, val, len);
+	int lv = SOL_SOCKET;
+	if (name == TCP_NODELAY) lv = IPPROTO_TCP;
+	return setsockopt(fd, lv, name, val, len);
 }
 
 static int _set_socket_ctl(int fd, int flag, bool open)

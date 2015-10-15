@@ -56,7 +56,7 @@ struct dcnode_t
 		tcpfd_map_name.clear();
 		next_stat_time = 0;
 		error_msg = nullptr;
-		parentfd = 0;
+		parentfd = -1;
 	}
 };
 
@@ -293,19 +293,16 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buff, int buff_sz)
 {
 	dcnode_msg_t dm;
-	if (!dm.unpack(buff, buff_sz))
-	{
+	if (!dm.unpack(buff, buff_sz)) {
 		//error for decode
 		return -1;
 	}
 	if (dm.dst().length() == 0 ||
-		dm.dst() == dc->conf.name)
-	{
+		dm.dst() == dc->conf.name) {
 		//to me
 		return _handle_msg(dc, dm, sockfd, msgqpid);
 	}
-	else
-	{
+	else {
 		return _forward_msg(dc, sockfd, buff, buff_sz, dm.dst());
 	}
 }
@@ -359,27 +356,30 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf)
 	dcnode_t * n = new dcnode_t();
 	if (!n)
 		return nullptr;
-
+	n->conf = conf;
 	stcp_config_t sc;
 	sc.max_recv_buff = conf.max_channel_buff_size;
 	sc.max_send_buff = conf.max_channel_buff_size;
 	sc.max_tcp_send_buff_size = conf.max_channel_buff_size;
 	sc.max_tcp_recv_buff_size = conf.max_channel_buff_size;
 
-	if (conf.addr.listen_addr.length())
+	if (!_is_leaf(n))
 	{
-		sc.is_server = true;
-		stcp_addr_t saddr;
-		const string & listenaddr = conf.addr.listen_addr;
-		saddr.ip = listenaddr.substr(0, listenaddr.find(':'));
-		saddr.port = strtol(listenaddr.substr(listenaddr.find(':') + 1).c_str(), nullptr, 10);
-		sc.listen_addr = saddr;
+		if (conf.addr.listen_addr.length())
+		{
+			sc.is_server = true;
+			stcp_addr_t saddr;
+			const string & listenaddr = conf.addr.listen_addr;
+			saddr.ip = listenaddr.substr(0, listenaddr.find(':'));
+			saddr.port = strtol(listenaddr.substr(listenaddr.find(':') + 1).c_str(), nullptr, 10);
+			sc.listen_addr = saddr;
+		}
+		n->stcp = stcp_create(sc);
+		if (!n->stcp) {
+			dcnode_destroy(n); return nullptr;
+		}
+		stcp_event_cb(n->stcp, _stcp_cb, n);
 	}
-	n->stcp = stcp_create(sc);
-	if (!n->stcp) {
-		dcnode_destroy(n); return nullptr;
-	}
-	stcp_event_cb(n->stcp, _stcp_cb, n);
 	if (conf.addr.msgq_key.length())
 	{
 		smq_config_t smc;
@@ -415,23 +415,8 @@ void      dcnode_destroy(dcnode_t* dc)
 		error_destroy(dc->error_msg);
 		dc->error_msg = nullptr;
 	}
-	for (auto it = dc->named_smqid.begin();
-		it != dc->named_smqid.end(); ++it)
-	{
-
-	}
-	dc->named_smqid.clear();
-
-
-	for (auto it = dc->named_tcpfd.begin();
-		it != dc->named_tcpfd.end(); ++it)
-	{
-	}
-	dc->named_tcpfd.clear();
-
 	dc->init();
-
-	delete(dc);
+	delete dc;
 }
 static	void _check_timer_callback(dcnode_t * dc)
 {
