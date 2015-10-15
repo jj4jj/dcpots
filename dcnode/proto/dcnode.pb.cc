@@ -20,6 +20,9 @@ namespace {
 const ::google::protobuf::Descriptor* MsgDCNodeRPC_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   MsgDCNodeRPC_reflection_ = NULL;
+const ::google::protobuf::Descriptor* MsgExt_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  MsgExt_reflection_ = NULL;
 const ::google::protobuf::Descriptor* MsgDCNode_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   MsgDCNode_reflection_ = NULL;
@@ -53,12 +56,28 @@ void protobuf_AssignDesc_dcnode_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(MsgDCNodeRPC));
-  MsgDCNode_descriptor_ = file->message_type(1);
+  MsgExt_descriptor_ = file->message_type(1);
+  static const int MsgExt_offsets_[2] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgExt, unixtime_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgExt, rpc_),
+  };
+  MsgExt_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      MsgExt_descriptor_,
+      MsgExt::default_instance_,
+      MsgExt_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgExt, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgExt, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(MsgExt));
+  MsgDCNode_descriptor_ = file->message_type(2);
   static const int MsgDCNode_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDCNode, src_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDCNode, dst_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDCNode, type_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDCNode, rpc_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDCNode, ext_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDCNode, msg_data_),
   };
   MsgDCNode_reflection_ =
@@ -88,6 +107,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     MsgDCNodeRPC_descriptor_, &MsgDCNodeRPC::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    MsgExt_descriptor_, &MsgExt::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     MsgDCNode_descriptor_, &MsgDCNode::default_instance());
 }
 
@@ -96,6 +117,8 @@ void protobuf_RegisterTypes(const ::std::string&) {
 void protobuf_ShutdownFile_dcnode_2eproto() {
   delete MsgDCNodeRPC::default_instance_;
   delete MsgDCNodeRPC_reflection_;
+  delete MsgExt::default_instance_;
+  delete MsgExt_reflection_;
   delete MsgDCNode::default_instance_;
   delete MsgDCNode_reflection_;
 }
@@ -110,17 +133,20 @@ void protobuf_AddDesc_dcnode_2eproto() {
     "\n\014dcnode.proto\022\006dcnode\"`\n\014MsgDCNodeRPC\022\014"
     "\n\004name\030\001 \002(\t\022\016\n\006cookie\030\002 \002(\004\022\017\n\007errcode\030"
     "\003 \001(\005\022\017\n\007request\030\004 \001(\014\022\020\n\010response\030\005 \001(\014"
-    "\"\177\n\tMsgDCNode\022\013\n\003src\030\001 \002(\t\022\013\n\003dst\030\002 \001(\t\022"
-    "#\n\004type\030\003 \002(\0162\025.dcnode.MsgDCNodeType\022!\n\003"
-    "rpc\030\004 \001(\0132\024.dcnode.MsgDCNodeRPC\022\020\n\010msg_d"
-    "ata\030\005 \001(\014*P\n\rMsgDCNodeType\022\020\n\014MSG_REG_NA"
-    "ME\020\001\022\022\n\016MSG_HEART_BEAT\020\002\022\013\n\007MSG_RPC\020\003\022\014\n"
-    "\010MSG_DATA\020\004", 331);
+    "\"=\n\006MsgExt\022\020\n\010unixtime\030\001 \001(\r\022!\n\003rpc\030\002 \001("
+    "\0132\024.dcnode.MsgDCNodeRPC\"y\n\tMsgDCNode\022\013\n\003"
+    "src\030\001 \002(\t\022\013\n\003dst\030\002 \001(\t\022#\n\004type\030\003 \002(\0162\025.d"
+    "cnode.MsgDCNodeType\022\033\n\003ext\030\004 \001(\0132\016.dcnod"
+    "e.MsgExt\022\020\n\010msg_data\030\005 \001(\014*P\n\rMsgDCNodeT"
+    "ype\022\020\n\014MSG_REG_NAME\020\001\022\022\n\016MSG_HEART_BEAT\020"
+    "\002\022\013\n\007MSG_RPC\020\003\022\014\n\010MSG_DATA\020\004", 388);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "dcnode.proto", &protobuf_RegisterTypes);
   MsgDCNodeRPC::default_instance_ = new MsgDCNodeRPC();
+  MsgExt::default_instance_ = new MsgExt();
   MsgDCNode::default_instance_ = new MsgDCNode();
   MsgDCNodeRPC::default_instance_->InitAsDefaultInstance();
+  MsgExt::default_instance_->InitAsDefaultInstance();
   MsgDCNode::default_instance_->InitAsDefaultInstance();
   ::google::protobuf::internal::OnShutdown(&protobuf_ShutdownFile_dcnode_2eproto);
 }
@@ -553,10 +579,265 @@ void MsgDCNodeRPC::Swap(MsgDCNodeRPC* other) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int MsgExt::kUnixtimeFieldNumber;
+const int MsgExt::kRpcFieldNumber;
+#endif  // !_MSC_VER
+
+MsgExt::MsgExt()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+}
+
+void MsgExt::InitAsDefaultInstance() {
+  rpc_ = const_cast< ::dcnode::MsgDCNodeRPC*>(&::dcnode::MsgDCNodeRPC::default_instance());
+}
+
+MsgExt::MsgExt(const MsgExt& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+}
+
+void MsgExt::SharedCtor() {
+  _cached_size_ = 0;
+  unixtime_ = 0u;
+  rpc_ = NULL;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+MsgExt::~MsgExt() {
+  SharedDtor();
+}
+
+void MsgExt::SharedDtor() {
+  if (this != default_instance_) {
+    delete rpc_;
+  }
+}
+
+void MsgExt::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* MsgExt::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return MsgExt_descriptor_;
+}
+
+const MsgExt& MsgExt::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_dcnode_2eproto();  return *default_instance_;
+}
+
+MsgExt* MsgExt::default_instance_ = NULL;
+
+MsgExt* MsgExt::New() const {
+  return new MsgExt;
+}
+
+void MsgExt::Clear() {
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    unixtime_ = 0u;
+    if (has_rpc()) {
+      if (rpc_ != NULL) rpc_->::dcnode::MsgDCNodeRPC::Clear();
+    }
+  }
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool MsgExt::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) return false
+  ::google::protobuf::uint32 tag;
+  while ((tag = input->ReadTag()) != 0) {
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // optional uint32 unixtime = 1;
+      case 1: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::uint32, ::google::protobuf::internal::WireFormatLite::TYPE_UINT32>(
+                 input, &unixtime_)));
+          set_has_unixtime();
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectTag(18)) goto parse_rpc;
+        break;
+      }
+      
+      // optional .dcnode.MsgDCNodeRPC rpc = 2;
+      case 2: {
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
+         parse_rpc:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+               input, mutable_rpc()));
+        } else {
+          goto handle_uninterpreted;
+        }
+        if (input->ExpectAtEnd()) return true;
+        break;
+      }
+      
+      default: {
+      handle_uninterpreted:
+        if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          return true;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+  return true;
+#undef DO_
+}
+
+void MsgExt::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // optional uint32 unixtime = 1;
+  if (has_unixtime()) {
+    ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->unixtime(), output);
+  }
+  
+  // optional .dcnode.MsgDCNodeRPC rpc = 2;
+  if (has_rpc()) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      2, this->rpc(), output);
+  }
+  
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+}
+
+::google::protobuf::uint8* MsgExt::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // optional uint32 unixtime = 1;
+  if (has_unixtime()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->unixtime(), target);
+  }
+  
+  // optional .dcnode.MsgDCNodeRPC rpc = 2;
+  if (has_rpc()) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        2, this->rpc(), target);
+  }
+  
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  return target;
+}
+
+int MsgExt::ByteSize() const {
+  int total_size = 0;
+  
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // optional uint32 unixtime = 1;
+    if (has_unixtime()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::UInt32Size(
+          this->unixtime());
+    }
+    
+    // optional .dcnode.MsgDCNodeRPC rpc = 2;
+    if (has_rpc()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+          this->rpc());
+    }
+    
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void MsgExt::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const MsgExt* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const MsgExt*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void MsgExt::MergeFrom(const MsgExt& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_unixtime()) {
+      set_unixtime(from.unixtime());
+    }
+    if (from.has_rpc()) {
+      mutable_rpc()->::dcnode::MsgDCNodeRPC::MergeFrom(from.rpc());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void MsgExt::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void MsgExt::CopyFrom(const MsgExt& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool MsgExt::IsInitialized() const {
+  
+  if (has_rpc()) {
+    if (!this->rpc().IsInitialized()) return false;
+  }
+  return true;
+}
+
+void MsgExt::Swap(MsgExt* other) {
+  if (other != this) {
+    std::swap(unixtime_, other->unixtime_);
+    std::swap(rpc_, other->rpc_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata MsgExt::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = MsgExt_descriptor_;
+  metadata.reflection = MsgExt_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
 const int MsgDCNode::kSrcFieldNumber;
 const int MsgDCNode::kDstFieldNumber;
 const int MsgDCNode::kTypeFieldNumber;
-const int MsgDCNode::kRpcFieldNumber;
+const int MsgDCNode::kExtFieldNumber;
 const int MsgDCNode::kMsgDataFieldNumber;
 #endif  // !_MSC_VER
 
@@ -566,7 +847,7 @@ MsgDCNode::MsgDCNode()
 }
 
 void MsgDCNode::InitAsDefaultInstance() {
-  rpc_ = const_cast< ::dcnode::MsgDCNodeRPC*>(&::dcnode::MsgDCNodeRPC::default_instance());
+  ext_ = const_cast< ::dcnode::MsgExt*>(&::dcnode::MsgExt::default_instance());
 }
 
 MsgDCNode::MsgDCNode(const MsgDCNode& from)
@@ -580,7 +861,7 @@ void MsgDCNode::SharedCtor() {
   src_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   dst_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   type_ = 1;
-  rpc_ = NULL;
+  ext_ = NULL;
   msg_data_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -600,7 +881,7 @@ void MsgDCNode::SharedDtor() {
     delete msg_data_;
   }
   if (this != default_instance_) {
-    delete rpc_;
+    delete ext_;
   }
 }
 
@@ -637,8 +918,8 @@ void MsgDCNode::Clear() {
       }
     }
     type_ = 1;
-    if (has_rpc()) {
-      if (rpc_ != NULL) rpc_->::dcnode::MsgDCNodeRPC::Clear();
+    if (has_ext()) {
+      if (ext_ != NULL) ext_->::dcnode::MsgExt::Clear();
     }
     if (has_msg_data()) {
       if (msg_data_ != &::google::protobuf::internal::kEmptyString) {
@@ -706,17 +987,17 @@ bool MsgDCNode::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(34)) goto parse_rpc;
+        if (input->ExpectTag(34)) goto parse_ext;
         break;
       }
       
-      // optional .dcnode.MsgDCNodeRPC rpc = 4;
+      // optional .dcnode.MsgExt ext = 4;
       case 4: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
-         parse_rpc:
+         parse_ext:
           DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
-               input, mutable_rpc()));
+               input, mutable_ext()));
         } else {
           goto handle_uninterpreted;
         }
@@ -780,10 +1061,10 @@ void MsgDCNode::SerializeWithCachedSizes(
       3, this->type(), output);
   }
   
-  // optional .dcnode.MsgDCNodeRPC rpc = 4;
-  if (has_rpc()) {
+  // optional .dcnode.MsgExt ext = 4;
+  if (has_ext()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
-      4, this->rpc(), output);
+      4, this->ext(), output);
   }
   
   // optional bytes msg_data = 5;
@@ -826,11 +1107,11 @@ void MsgDCNode::SerializeWithCachedSizes(
       3, this->type(), target);
   }
   
-  // optional .dcnode.MsgDCNodeRPC rpc = 4;
-  if (has_rpc()) {
+  // optional .dcnode.MsgExt ext = 4;
+  if (has_ext()) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
-        4, this->rpc(), target);
+        4, this->ext(), target);
   }
   
   // optional bytes msg_data = 5;
@@ -871,11 +1152,11 @@ int MsgDCNode::ByteSize() const {
         ::google::protobuf::internal::WireFormatLite::EnumSize(this->type());
     }
     
-    // optional .dcnode.MsgDCNodeRPC rpc = 4;
-    if (has_rpc()) {
+    // optional .dcnode.MsgExt ext = 4;
+    if (has_ext()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
-          this->rpc());
+          this->ext());
     }
     
     // optional bytes msg_data = 5;
@@ -921,8 +1202,8 @@ void MsgDCNode::MergeFrom(const MsgDCNode& from) {
     if (from.has_type()) {
       set_type(from.type());
     }
-    if (from.has_rpc()) {
-      mutable_rpc()->::dcnode::MsgDCNodeRPC::MergeFrom(from.rpc());
+    if (from.has_ext()) {
+      mutable_ext()->::dcnode::MsgExt::MergeFrom(from.ext());
     }
     if (from.has_msg_data()) {
       set_msg_data(from.msg_data());
@@ -946,8 +1227,8 @@ void MsgDCNode::CopyFrom(const MsgDCNode& from) {
 bool MsgDCNode::IsInitialized() const {
   if ((_has_bits_[0] & 0x00000005) != 0x00000005) return false;
   
-  if (has_rpc()) {
-    if (!this->rpc().IsInitialized()) return false;
+  if (has_ext()) {
+    if (!this->ext().IsInitialized()) return false;
   }
   return true;
 }
@@ -957,7 +1238,7 @@ void MsgDCNode::Swap(MsgDCNode* other) {
     std::swap(src_, other->src_);
     std::swap(dst_, other->dst_);
     std::swap(type_, other->type_);
-    std::swap(rpc_, other->rpc_);
+    std::swap(ext_, other->ext_);
     std::swap(msg_data_, other->msg_data_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);

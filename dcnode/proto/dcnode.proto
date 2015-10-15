@@ -17,12 +17,17 @@ message MsgDCNodeRPC
 	optional	bytes	request = 4;
 	optional	bytes	response = 5;
 };
+message MsgExt
+{
+	optional	uint32			unixtime = 1;//send time
+	optional	MsgDCNodeRPC	rpc = 2;
+}
 
 message MsgDCNode
 {
 	required	string			src	= 1;
 	optional	string			dst = 2;
     required    MsgDCNodeType   type = 3;
-	optional	MsgDCNodeRPC	rpc = 4;
+	optional	MsgExt			ext = 4;
     optional    bytes           msg_data = 5;
 };

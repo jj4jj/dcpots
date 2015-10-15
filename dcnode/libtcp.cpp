@@ -441,7 +441,10 @@ static void _proc(stcp_t * stcp,const epoll_event & ev)
 		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_SYS_ERR);
 	}
 }
-
+void			stcp_close(stcp_t * stcp, int fd)
+{
+	_close_fd(stcp, fd, stcp_close_reason_type::STCP_BY_SELF);
+}
 int            stcp_poll(stcp_t * stcp, int timeout_us, int max_proc)
 {
 	int ms = timeout_us / 1000;

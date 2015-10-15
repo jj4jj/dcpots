@@ -49,6 +49,7 @@ enum stcp_close_reason_type
 	STCP_POLL_ERR = 4, //refer to errno
 	STCP_INVAL_CALL = 5, //usage err
 	STCP_SYS_ERR = 6, //system call error refer to errno
+	STCP_BY_SELF = 7, //by uplayer
 };
 
 enum stcp_event_type
@@ -82,6 +83,7 @@ int	            stcp_poll(stcp_t *, int timeout_us, int max_proc = 100);
 int				stcp_send(stcp_t *,int fd, const stcp_msg_t & msg);
 int             stcp_connect(stcp_t *, const stcp_addr_t & addr, int retry = 0);
 int				stcp_reconnect(stcp_t* , int fd);
+void			stcp_close(stcp_t *, int fd);
 bool            stcp_is_server(stcp_t *);
 
 const char *	stcp_error(stcp_t *, int fd);

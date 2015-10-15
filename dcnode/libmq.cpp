@@ -141,11 +141,11 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 	while (past_us < timeout_us)
 	{
 		uint64_t msgtype = 0;
-		if (smq->conf.is_server)
+		if (!smq->conf.is_server)
 		{
 			msgtype = getpid();
 		}
-		sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, 0, IPC_NOWAIT);
+		sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, msgtype, IPC_NOWAIT);
 		if (sz <= 0)
 		{
 			if (errno == EINTR)

@@ -8,7 +8,7 @@ static int max_ppsz = 0;
 static int max_ping_time = 100000;
 int mq_cb(smq_t * mq, uint64_t src, const smq_msg_t & msg, void * ud)
 {
-	//LOGP("mq cb msg size:%d src:%lu", msg.sz, src);
+	LOGP("mq cb msg size:%d src:%lu", msg.sz, src);
 	max_ppsz += msg.sz;
 	if (max_ping_time <= 0)
 	{
@@ -96,23 +96,26 @@ int test_node(const char * p)
 	dcnode_config_t dcf;
 	dcf.addr.msgq_key = "./gmon.out";
 	dcf.name = "leaf";
+	if (p)
+	{
+		if (strcmp(p, "l1") == 0)
+		{
+			//client leaf node
+			dcf.addr.msgq_key = "./gmon.out";
+			dcf.addr.parent_addr = "127.0.0.1:8880";
+			dcf.name = "layer1";
+		}
+		else
+		if (strcmp(p, "l2") == 0)
+		{
+			dcf.addr.msgq_key = "";
+			dcf.name = "layer2";
+			dcf.addr.listen_addr = "127.0.0.1:8880";
+		}
+	}
 	auto dc = dcnode_create(dcf);
 	CHECK(!dc)
 	dcnode_set_dispatcher(dc, dc_cb, nullptr);
-	if (strcmp(p, "l1") == 0)
-	{
-		//client leaf node
-		dcf.addr.msgq_key = "./gmon.out";
-		dcf.addr.parent_addr = "127.0.0.1:8880";
-		dcf.name = "layer1";
-	}
-	else
-	if (strcmp(p, "l2") == 0)
-	{
-		dcf.addr.msgq_key = "";
-		dcf.name = "layer2";
-		dcf.addr.listen_addr = "127.0.0.1:8880";
-	}
 	while (true)
 	{
 		dcnode_update(dc, 10000);
