@@ -124,6 +124,7 @@ static inline int _change_dcnode_fsm(dcnode_t * dc, int state) {
 	return _check_dcnode_fsm(dc, true);
 }
 static int _register_name(dcnode_t * dc){
+	LOGP("register name with:%s to parent ", dc->conf.name.c_str());
 	if (_is_root(dc)){
 		return _change_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
 	}

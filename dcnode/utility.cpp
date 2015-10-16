@@ -9,7 +9,7 @@ namespace util {
 	uint64_t	time_unixtime_us(){
 		timeval tv;
 		gettimeofday(&tv, NULL);
-		return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+		return tv.tv_sec * 1000000 + tv.tv_usec ;
 	}
 }
 
