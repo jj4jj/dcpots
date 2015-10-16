@@ -2,8 +2,8 @@
 distribute system basic componets
 
 **DAgent main feature**
-*. lib for distribute agent client
-*. distribute agent server for report bussiness, monitor, machine statistics , python extension etc.
+* lib for distribute agent client
+* distribute agent server for report bussiness, monitor, machine statistics , python extension etc.
 
 
 
@@ -12,7 +12,7 @@ distribute system basic componets
 * DAgent
 * DCNode
 
-"""
+```
 
         1:N communication module
 
@@ -27,11 +27,19 @@ distribute system basic componets
 
 
            leaf node:
-                    send msg
+                    1. register name
+                    2. send msg by msgq to parent
+           agent node:
+                    1. register name
+                    2. send msg by msgq or tcp to parent
+                    3. forward msg [route] to other [known/unknown] node
+           root node:
+                    1. an agent node with no parent node
 
 
 
-"""
+```
+
 
 
 
