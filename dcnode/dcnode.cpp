@@ -86,7 +86,7 @@ static inline uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_m
 	dc->timer_callbacks[cookie] = cb;
 	if (repeat)
 		dc->callback_periods.insert(std::make_pair(cookie, expired_ms));
-
+	LOGP("add callback timer ... cookie:%lu", cookie);
 	return cookie;
 }
 static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
@@ -95,6 +95,7 @@ static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
 		dc->callback_periods.erase(cookie);
 	}
 	dc->timer_callbacks.erase(cookie);
+	LOGP("remove callback timer ... cookie:%lu", cookie);
 }
 
 //leaf: no children(no stcp listen)
@@ -102,6 +103,10 @@ static bool _is_leaf(dcnode_t* dc){
 	return (dc->conf.addr.listen_addr.empty() &&
 			dc->conf.addr.parent_addr.empty() );
 }
+static bool _is_root(dcnode_t* dc){
+	return (dc->conf.addr.parent_addr.empty());
+}
+
 static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce);
 static inline int _change_dcnode_fsm(dcnode_t * dc, int state) {
 	LOGP("_change_dcnode_fsm %d -> %d ", dc->state, state);
@@ -110,6 +115,9 @@ static inline int _change_dcnode_fsm(dcnode_t * dc, int state) {
 	return _check_dcnode_fsm(dc, true);
 }
 static int _register_name(dcnode_t * dc){
+	if (_is_root(dc)){
+		return _change_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
+	}
 	dcnode_msg_t	msg;
 	msg.set_type(dcnode::MSG_REG_NAME);
 	msg.set_src(dc->conf.name);
@@ -121,28 +129,21 @@ static int _register_name(dcnode_t * dc){
 		//pack error
 		return -1;
 	}
-	int ret = 0;
 	dc->state = dcnode_t::DCNODE_NAME_REG_ING;
 	if (_is_leaf(dc))
 	{
 		//to agent
-		ret = smq_send(dc->smq, getpid(), smq_msg_t(buffer, sz));
+		return smq_send(dc->smq, getpid(), smq_msg_t(buffer, sz));
 	}
 	else
 	{
 		if (dc->conf.addr.parent_addr.empty())
 		{
 			//no need
-			_change_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
-			return 0;
+			return _change_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
 		}
 		//to parent
-		ret = stcp_send(dc->stcp, dc->parentfd, stcp_msg_t(buffer, sz));
-	}
-	if (ret)
-	{
-		//send err
-		return ret;
+		return stcp_send(dc->stcp, dc->parentfd, stcp_msg_t(buffer, sz));
 	}
 	return 0;
 }
@@ -253,7 +254,10 @@ static void _start_heart_beat_timer(dcnode_t * dc){
 			}
 		}
 	};
-	_insert_timer_callback(dc, 1000 * dc->conf.max_live_heart_beat_gap, hb_cheker, true);
+	if (dc->conf.max_live_heart_beat_gap > 0 &&
+		dc->conf.max_live_heart_beat_gap > dc->conf.max_live_heart_beat_gap){
+		_insert_timer_callback(dc, 1000 * dc->conf.max_live_heart_beat_gap, hb_cheker, true);
+	}
 }
 static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce){
 	time_t tNow = time(NULL);
@@ -273,9 +277,9 @@ static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce){
 		timeout_time = 2;//2s
 		break;
 	case dcnode_t::DCNODE_NAME_REG:
-		dc->state = dcnode_t::DCNODE_READY;
 		//add timer hb
 		_start_heart_beat_timer(dc);		
+		dc->state = dcnode_t::DCNODE_READY;
 	case dcnode_t::DCNODE_READY:
 		//nothing report parent
 		timeout_time = 30;//20s
@@ -597,7 +601,7 @@ void      dcnode_set_dispatcher(dcnode_t* dc, dcnode_dispatcher_t dspatch, void 
 	dc->dispatcher = dspatch;
 	dc->dispatcher_ud = ud;
 }
-inline uint64_t  dcnode_timer_add(dcnode_t * dc, int delayms, dcnode_timer_callback_t cb, bool repeat) {
+uint64_t  dcnode_timer_add(dcnode_t * dc, int delayms, dcnode_timer_callback_t cb, bool repeat) {
 	return	_insert_timer_callback(dc, delayms, cb, repeat);
 }
 void	  dcnode_timer_cancel(dcnode_t * dc, uint64_t cookie) {

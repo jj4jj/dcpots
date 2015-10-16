@@ -97,7 +97,7 @@ int dc_cb(void * ud, const dcnode_msg_t & msg)
 	return 0;
 }
 
-
+//l3:test callbaker
 int test_node(const char * p)
 {
 	dcnode_config_t dcf;
@@ -106,26 +106,57 @@ int test_node(const char * p)
 	dcf.name = "leaf";
 	dcf.heart_beat_gap = 10;
 	dcf.max_live_heart_beat_gap = 20;
+	int ltest = 0;
 	if (p)
 	{
-		if (strcmp(p, "l1") == 0)
-		{
+		if (strcmp(p, "l1") == 0){
 			//client leaf node
 			dcf.addr.msgq_key = "./gmon.out";
 			dcf.addr.parent_addr = "127.0.0.1:8880";
 			dcf.name = "layer1";
 		}
 		else
-		if (strcmp(p, "l2") == 0)
-		{
+		if (strcmp(p, "l2") == 0){
 			dcf.addr.msgq_key = "";
 			dcf.name = "layer2";
 			dcf.addr.listen_addr = "127.0.0.1:8880";
+		}
+		else 
+		if (strcmp(p, "l3") == 0){
+			dcf.addr.msgq_key = "";
+			dcf.name = "test";
+			dcf.addr.listen_addr = "";
+			dcf.heart_beat_gap = 0;
+			dcf.max_live_heart_beat_gap = 0;
+			ltest = 3;
 		}
 	}
 	auto dc = dcnode_create(dcf);
 	CHECK(!dc)
 	dcnode_set_dispatcher(dc, dc_cb, nullptr);
+	int times = 0;
+	uint64_t t1, t2;
+	if (ltest == 3){
+		LOGP("add timer test in node....");
+		t1 = dcnode_timer_add(dc, 1000, [&times, &t1, &t2, dc](){
+			puts("test timer 1s");
+			times++;
+			if (times > 5 && t2 > 0){
+				puts("cancel t1");
+				dcnode_timer_cancel(dc, t2);
+				t2 = 0;
+			}
+			if (times > 10 && t1 > 0){
+				puts("cancel t1");
+				dcnode_timer_cancel(dc, t1);
+				t1 = 0;
+			}
+
+		}, true);
+		t2 = dcnode_timer_add(dc, 1000 * 3, [](){
+			puts("test timer 3s");
+		}, true);
+	}
 	while (true)
 	{
 		dcnode_update(dc, 10000);
