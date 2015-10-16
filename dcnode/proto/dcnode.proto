@@ -23,11 +23,16 @@ enum MsgOption
 	MSG_OPT_RSP = 2; //this is a response
 	MSG_OPT_PUSH = 3; //push msg 
 }
+message MsgRegName
+{
+	optional	uint64			session = 1;//session id
+}
 message MsgExt
 {
 	optional	uint32			unixtime = 1;//send time
 	optional	MsgDCNodeRPC	rpc = 2;
 	optional	MsgOption		opt = 3;
+	optional	MsgRegName		reg_name = 4;
 }
 
 message MsgDCNode

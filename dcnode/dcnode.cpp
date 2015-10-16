@@ -3,6 +3,18 @@
 #include "libtcp.h"
 #include "error_msg.h"
 #include "utility.hpp"
+#include "libshm.h"
+
+
+struct dcnode_name_map_t {
+	char		name[32];
+	uint64_t	id;
+	dcnode_name_map_t(){
+		bzero(this, sizeof(*this));
+	}
+};
+
+
 
 struct dcnode_t
 {
@@ -45,6 +57,8 @@ struct dcnode_t
 
 	msg_buffer_t										send_buffer;
 	error_msg_t							*				error_msg;
+	//name maping
+	dcnode_name_map_t									* smq_named_mapping;
 
 	dcnode_t()
 	{
@@ -69,6 +83,7 @@ struct dcnode_t
 		error_msg = nullptr;
 		parent_hb_expire_time = 0;
 		parentfd = -1;
+		smq_named_mapping = nullptr;
 	}
 };
 
@@ -334,7 +349,7 @@ static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce){
 	dc->next_stat_time = tNow + timeout_time;
 	return 0;
 }
-static int _update_peer_name(dcnode_t * dc, int sockfd, uint64_t smqid, const string & name){
+static int _update_peer_name(dcnode_t * dc, int sockfd, uint64_t smqid, const dcnode_msg_t & dm){
 	if (sockfd != -1)
 	{
 		//children
@@ -356,6 +371,22 @@ static int _update_peer_name(dcnode_t * dc, int sockfd, uint64_t smqid, const st
 	else // if (smqid > 0)
 	{
 		assert(smqid > 0);
+		//allocate
+		dcnode_name_map_t * nameentry =	_local_name_find(dc, name);
+		if (nameentry){
+			//collision
+			return -1;
+		}
+		static uint64_t s_smq_pid = 0;
+		if (0 == s_smq_pid ){
+			s_smq_pid = time(NULL);
+			s_smq_pid <<= 16;			 
+		}
+		//allocate
+		s_smq_pid++;
+		_local_name_insert(dc, name, s_smq_pid);
+		return 0;
+#if 0
 		auto it = dc->named_smqid.find(name);
 		if (it != dc->named_smqid.end())
 		{
@@ -369,6 +400,7 @@ static int _update_peer_name(dcnode_t * dc, int sockfd, uint64_t smqid, const st
 		}
 		dc->named_smqid[name] = smqid;
 		dc->smqid_map_name[smqid] = name;
+#endif
 	}
 	return 0;
 }
@@ -411,14 +443,15 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 		//insert tcp src -> map name
 		if (dc->state == dcnode_t::DCNODE_NAME_REG_ING)
 		{
-			//got parent name
-			_update_peer_name(dc, sockfd, msgqpid, dm.src());
+			//got parent name , name response . -- responsed
+			//todo
+			_update_peer_name(dc, sockfd, msgqpid, dm);
 			return _change_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
 		}
 		else
 		{
-			//response no stat change - ready
-			int ret = _update_peer_name(dc, sockfd, msgqpid, dm.src());
+			//response to . no stat change - ready
+			int ret = _update_peer_name(dc, sockfd, msgqpid, dm);
 			if (ret == 0) {
 				//response msg get children name
 				_response_msg(dc, sockfd, msgqpid, rspmsg, dm);
@@ -562,6 +595,18 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 			return nullptr;
 		}
 		smq_msg_cb(n->smq, _smq_cb, n);
+
+		if (smc.server_mode){
+			sshm_config_t shm_conf;
+			shm_conf.attach = false;
+			shm_conf.shm_path = conf.addr.msgq_path;
+			shm_conf.shm_size = sizeof(dcnode_name_map_t)*conf.max_register_children;
+			if (sshm_create(shm_conf, &n->smq_named_mapping, shm_conf.attach)){
+				LOGP("create shm error !");
+				dcnode_destroy(n);
+				return nullptr;
+			}
+		}
 	}
 	n->send_buffer.create(conf.max_channel_buff_size);
 	n->error_msg = error_create();
@@ -583,6 +628,9 @@ void      dcnode_destroy(dcnode_t* dc){
 	{
 		error_destroy(dc->error_msg);
 		dc->error_msg = nullptr;
+	}
+	if (n->smq_named_mapping){
+		sshm_destroy(n->smq_named_mapping);
 	}
 	dc->init();
 	delete dc;

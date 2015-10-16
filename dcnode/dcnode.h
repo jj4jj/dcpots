@@ -70,6 +70,7 @@ struct dcnode_config_t
 		addr.msgq_path = "";
 		max_expired_time = 30;
 		max_live_heart_beat_gap = 5 * max_expired_time;
+		
 	}
 };
 
