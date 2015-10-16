@@ -193,16 +193,18 @@ int main(int argc, char* argv[])
 	conf.max_msg_size = 1024 * 1024;
 	ncf.addr.listen_addr = "127.0.0.1:8888";
 	ncf.heart_beat_gap = 60;
-	ncf.max_channel_buff_size = 1024576;
-	ncf.max_register_children = 10;
-	ncf.name = "test1";
+	ncf.max_channel_buff_size = 1048576;
+	ncf.max_register_children = 20;
+	ncf.name = "agent";
 	ncf.addr.msgq_path = "./dcagent";
+	ncf.addr.msgq_push = false;
 
 	if (argc == 2)
 	{
 		//client
 		ncf.addr.listen_addr = "";
-		ncf.name = "test2";
+		ncf.addr.msgq_push = true;
+		ncf.name = "service";
 	}
 
 	int ret = dagent_init(conf);
