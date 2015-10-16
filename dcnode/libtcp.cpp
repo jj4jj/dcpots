@@ -134,6 +134,7 @@ struct stcp_t * stcp_create(const stcp_config_t & conf)
 }
 void            stcp_destroy(stcp_t * stcp)
 {
+	LOGP("stcp destroy ....");
 	if (stcp->listenfd >= 0) close(stcp->listenfd);
 	for (auto & it : stcp->connectings) close(it.first);
 	if (stcp->epfd >= 0) close(stcp->epfd);
@@ -165,13 +166,15 @@ static int _get_sockerror(int fd)
 }
 
 void _free_sock_msg_buffer(stcp_t * stcp, int fd){
-	auto it = stcp->sock_send_buffer.find(fd);
+	auto it = stcp->sock_recv_buffer.find(fd);
 	if (it != stcp->sock_recv_buffer.end()){
+		LOGP("free recv buffer ....fd:%d", fd);
 		delete it->second;
 		stcp->sock_recv_buffer.erase(it);
 	}
 	it = stcp->sock_send_buffer.find(fd);
 	if (it != stcp->sock_send_buffer.end()){
+		LOGP("free send buffer ....fd:%d", fd);
 		delete it->second;
 		stcp->sock_send_buffer.erase(it);
 	}
@@ -195,7 +198,7 @@ msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
 		auto it = stcp->sock_send_buffer.find(fd);
 		if (it == stcp->sock_send_buffer.end()){
 			msg_buffer_t * p = new msg_buffer_t();
-			if (!p || p->create(stcp->conf.max_recv_buff)){
+			if (!p || p->create(stcp->conf.max_send_buff)){
 				return nullptr;
 			}
 			stcp->sock_send_buffer[fd] = p;
@@ -206,6 +209,7 @@ msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
 }
 static void	_close_fd(stcp_t * stcp, int fd, stcp_close_reason_type reason)
 {
+	LOGP("close fd:%d for reason:%d", fd, reason);
 	int error = _get_sockerror(fd);
 	_op_poll(stcp, EPOLL_CTL_DEL, fd);
 	close(fd);
@@ -264,6 +268,8 @@ static int _read_msg_error(stcp_t * stcp, int fd, int read_ret)
 	return 0;
 }
 static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
+	if (buffer->valid_size < buffer->max_size){ buffer->buffer[buffer->max_size - 1] = 'A'; }
+	LOGP("begin dispatch msg size:%d ! last one:%c", buffer->valid_size, buffer->buffer[buffer->max_size-1]);
 	stcp_event_t	sev;
 	sev.type = STCP_READ;
 	sev.fd = fd;
@@ -286,20 +292,27 @@ static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
 			break;
 		}
 	}
-	if (msg_buff_start > 0){
+	if (buffer->valid_size > msg_buff_start){
 		memmove(buffer->buffer,
 			buffer->buffer + msg_buff_start,
 			buffer->valid_size - msg_buff_start);
+		LOGP("memmove size:%d", buffer->valid_size - msg_buff_start);
 		buffer->valid_size -= msg_buff_start;
 	}
+	else {
+		assert(buffer->valid_size == msg_buff_start);
+		buffer->valid_size = 0;
+	}
+	LOGP("end dispatch msg size:%d ! last one:%c", buffer->valid_size, buffer->buffer[buffer->max_size - 1]);
 	return nmsg;
 }
 
 static int _read_tcp_socket(stcp_t * stcp, int fd)
 {
 	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
-	if (buffer) {
+	if (!buffer) {
 		//no buffer
+		LOGP("buffer alloc error !");
 		return -1;
 	}
 	int nmsg = 0;
@@ -318,6 +331,7 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 		}
 		else if (_read_msg_error(stcp, fd, sz)){
 			//read error
+			LOGP("read msg error!");
 			return -1;
 		}
 		//dispatch
@@ -325,6 +339,7 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 			int32_t total = ntohl(*(int32_t*)buffer->buffer);
 			if (total > buffer->max_size){
 				//errror msg , too big 
+				LOGP("read msg error too big!");
 				_close_fd(stcp, fd, stcp_close_reason_type::STCP_MSG_ERR);
 				return -2;
 			}
@@ -541,21 +556,6 @@ int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
 
 	return stcp_reconnect(stcp, fd);
 }
-const char *	stcp_error(stcp_t * stcp, int fd)
-{
-	int error = 0;
-	socklen_t len = sizeof(int);
-	int ret = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len);
-	if (ret == 0)
-	{
-		return strerror_r(error, stcp->misc_buffer.buffer, stcp->misc_buffer.max_size);
-	}
-	else
-	{
-		return strerror_r(errno, stcp->misc_buffer.buffer, stcp->misc_buffer.max_size);
-	}
-}
-
 bool            stcp_is_server(stcp_t * stcp)
 {
 	return stcp->conf.is_server;

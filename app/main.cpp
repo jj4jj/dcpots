@@ -51,15 +51,16 @@ int test_mq(const char * ap)
 	}
 	return 0;
 }
-
+const char * stmsg = "hello,world!";
 int _stcp_cb(stcp_t* stc, const stcp_event_t & ev, void * ud)
 {
 	LOGP("stcp event type:%d fd:%d reason:%d last error msg:%s", ev.type, ev.fd, ev.reason, strerror(ev.error));
 	if (ev.type == stcp_event_type::STCP_CONNECTED){
-		stcp_send(stc, ev.fd, stcp_msg_t("eeeeeeeeeeee", 8));
+		stcp_send(stc, ev.fd, stcp_msg_t(stmsg, strlen(stmsg)+1));
 	}
 	if (ev.type == stcp_event_type::STCP_READ){
-		LOGP("get msg from client:%s", ev.msg->buff);
+		LOGP("ping pang get msg from fd:%d msg:%s",ev.fd, ev.msg->buff);
+		stcp_send(stc, ev.fd, *ev.msg);
 	}
 	return -1;
 }
@@ -79,7 +80,7 @@ int test_tcp(const char * ap)
 	stcp_event_cb(p, _stcp_cb, nullptr);
 	if (!sc.is_server)
 	{
-		int ret = stcp_connect(p, sc.listen_addr, 2);
+		int ret = stcp_connect(p, sc.listen_addr, 5);
 		CHECK(ret)		
 	}
 	while (true)

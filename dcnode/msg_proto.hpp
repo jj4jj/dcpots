@@ -12,7 +12,7 @@ struct msg_buffer_t : public noncopyable {
 	int create(int max_sz)
 	{
 		destroy();
-		char * p = (char*)malloc(max_size);
+		char * p = (char*)malloc(max_sz);
 		if (!p) return -1;
 		max_size = max_sz;
 		valid_size = 0;
@@ -21,7 +21,10 @@ struct msg_buffer_t : public noncopyable {
 	}
 	void destroy()
 	{
-		if (buffer) { free(buffer); buffer = nullptr; max_size = 0; }
+		if (buffer) { 
+			free(buffer); buffer = nullptr;
+			valid_size = max_size = 0; 
+		}
 	}
 	~msg_buffer_t()
 	{

@@ -86,6 +86,4 @@ int				stcp_reconnect(stcp_t* , int fd);
 void			stcp_close(stcp_t *, int fd);
 bool            stcp_is_server(stcp_t *);
 
-const char *	stcp_error(stcp_t *, int fd);
-
 

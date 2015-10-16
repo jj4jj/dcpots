@@ -194,7 +194,7 @@ static int _stcp_sockfd_close(dcnode_t * dc, int fd)
 }
 
 static void _update_hearbeat_timer(dcnode_t * dc, int sockfd, uint64_t msgpid){
-	//response msg
+	LOGP("_update_hearbeat_timer ....");
 	if (_is_leaf(dc)){
 		dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
 	}
@@ -329,6 +329,7 @@ static int _response_msg(dcnode_t * dc, int sockfd, uint64_t msgqpid, dcnode_msg
 	dm.set_type(dmsrc.type());
 	dm.mutable_ext()->set_unixtime(time(NULL));
 	dm.mutable_ext()->set_opt(dcnode::MSG_OPT_RSP);
+	LOGP("response msg from:%s dst:%s", dmsrc.debug(), dm.debug());
 	bool ret = dm.pack(dc->send_buffer);
 	if (!ret){
 		//error pack
@@ -347,6 +348,7 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 	LOGP("hanlde msg size:%d %s", dm.ByteSize(), dm.debug());
 	if (dm.ext().unixtime() > 0 && dm.ext().unixtime() + dc->conf.max_expired_time < time(NULL) ) {
 		//expired msg
+		LOGP("expired msg ....");
 		return -1;
 	}
 	_update_hearbeat_timer(dc, sockfd, msgqpid);
@@ -390,6 +392,7 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 }
 
 static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_sz, const string & dst) {
+	LOGP("foward msg ....");
 	if (_is_leaf(dc))
 	{
 		//to msgq
@@ -428,6 +431,7 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 }
 static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buff, int buff_sz){
 	dcnode_msg_t dm;
+	LOGP("_msg_cb ....msg:size:%d", buff_sz);
 	if (!dm.unpack(buff, buff_sz)) {
 		//error for decode
 		return -1;

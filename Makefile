@@ -3,7 +3,6 @@ build_:
 
 clean:
 	./automake.sh clean
-	rm -rf build/
 
 install:
 	./automake.sh install
