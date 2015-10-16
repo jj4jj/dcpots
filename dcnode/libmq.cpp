@@ -56,7 +56,7 @@ smq_t * smq_create(const smq_config_t & conf)
 {
 	//sender : recver (1:2) : client
 	int prj_id[] = { 1, 2 };
-	if (conf.is_server)
+	if (conf.server_mode)
 	{
 		prj_id[0] = 2;
 		prj_id[1] = 1;
@@ -141,7 +141,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 	while (past_us < timeout_us)
 	{
 		uint64_t msgtype = 0;
-		if (!smq->conf.is_server)
+		if (!smq->conf.server_mode)
 		{
 			msgtype = getpid();
 		}
@@ -202,4 +202,7 @@ int     smq_send(smq_t* smq, uint64_t dst, const smq_msg_t & msg)
 	} while (ret == -1 && errno == EINTR);
 	return ret;
 }
-
+bool	smq_server_mode(smq_t * smq)
+{
+	return smq->conf.server_mode;
+}

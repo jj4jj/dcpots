@@ -33,7 +33,7 @@ int test_mq(const char * ap)
 
 	smq_config_t	sc;
 	sc.key = "./dcagent";
-	sc.is_server = ap ? true : false;
+	sc.server_mode = ap ? true : false;
 	auto p = smq_create(sc);
 	if (!p)
 	{
@@ -41,7 +41,7 @@ int test_mq(const char * ap)
 		return -1;
 	}
 	smq_msg_cb(p, mq_cb, nullptr);
-	if (!sc.is_server)
+	if (!sc.server_mode)
 	{
 		smq_send(p, getpid(), smq_msg_t(test_msg, 1024*10));
 	}
@@ -101,29 +101,32 @@ int dc_cb(void * ud, const dcnode_msg_t & msg)
 int test_node(const char * p)
 {
 	dcnode_config_t dcf;
-	dcf.addr.msgq_key = "./gmon.out";
+	dcf.addr.msgq_path = "./gmon.out";
+	dcf.addr.msgq_push = true;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = "leaf";
 	dcf.heart_beat_gap = 10;
 	dcf.max_live_heart_beat_gap = 20;
 	int ltest = 0;
+	//test auto reconnection 
+	//l1->l2
 	if (p)
 	{
 		if (strcmp(p, "l1") == 0){
-			//client leaf node
-			dcf.addr.msgq_key = "./gmon.out";
+			dcf.addr.msgq_path = "./gmon.out";
+			dcf.addr.msgq_push = false;
 			dcf.addr.parent_addr = "127.0.0.1:8880";
 			dcf.name = "layer1";
 		}
 		else
 		if (strcmp(p, "l2") == 0){
-			dcf.addr.msgq_key = "";
+			dcf.addr.msgq_path = "";
 			dcf.name = "layer2";
 			dcf.addr.listen_addr = "127.0.0.1:8880";
 		}
 		else 
 		if (strcmp(p, "l3") == 0){
-			dcf.addr.msgq_key = "";
+			dcf.addr.msgq_path = "";
 			dcf.name = "test";
 			dcf.addr.listen_addr = "";
 			dcf.heart_beat_gap = 0;
@@ -193,7 +196,7 @@ int main(int argc, char* argv[])
 	ncf.max_channel_buff_size = 1024576;
 	ncf.max_register_children = 10;
 	ncf.name = "test1";
-	ncf.addr.msgq_key = "./dcagent";
+	ncf.addr.msgq_path = "./dcagent";
 
 	if (argc == 2)
 	{

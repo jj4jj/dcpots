@@ -1,5 +1,15 @@
 #!/bin/bash
+
 build()
+{
+    make -C dcnode/proto/
+    #cd -
+    make -C dagent/proto/
+    cd build && cmake ../ && make
+    cd -
+}
+
+rebuild()
 {
     mkdir -p build
     cd tools/cmaketools/
@@ -54,10 +64,10 @@ fi
 
 case $1 in
     build)
-        cd build && make
+        build
         ;;
     rebuild)
-        build
+        rebuild
         ;;
     clean)
         clean

@@ -256,20 +256,20 @@ static int _read_msg_error(stcp_t * stcp, int fd, int read_ret)
 	}
 	else //if (sz < 0 )
 	{
+		if (errno == EINTR) {
+			return 0;
+		}
 		if (errno != EAGAIN &&
-			errno != EINTR &&
 			errno != EWOULDBLOCK )
 		{
 			//error
 			_close_fd(stcp, fd, stcp_close_reason_type::STCP_SYS_ERR);
 			return -2;
 		}
+		return -3;
 	}
-	return 0;
 }
 static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
-	if (buffer->valid_size < buffer->max_size){ buffer->buffer[buffer->max_size - 1] = 'A'; }
-	LOGP("begin dispatch msg size:%d ! last one:%c", buffer->valid_size, buffer->buffer[buffer->max_size-1]);
 	stcp_event_t	sev;
 	sev.type = STCP_READ;
 	sev.fd = fd;
@@ -303,7 +303,6 @@ static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
 		assert(buffer->valid_size == msg_buff_start);
 		buffer->valid_size = 0;
 	}
-	LOGP("end dispatch msg size:%d ! last one:%c", buffer->valid_size, buffer->buffer[buffer->max_size - 1]);
 	return nmsg;
 }
 
@@ -311,14 +310,9 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 {
 	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
 	if (!buffer) {
-		//no buffer
-		LOGP("buffer alloc error !");
 		return -1;
 	}
 	int nmsg = 0;
-	//loop
-		//1. read break
-		//2. dispatch
 	while (buffer->max_size > buffer->valid_size)
 	{
 		int sz = recv(fd, buffer->buffer + buffer->valid_size, 
@@ -330,8 +324,6 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 			continue;
 		}
 		else if (_read_msg_error(stcp, fd, sz)){
-			//read error
-			LOGP("read msg error!");
 			return -1;
 		}
 		//dispatch
@@ -339,7 +331,6 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 			int32_t total = ntohl(*(int32_t*)buffer->buffer);
 			if (total > buffer->max_size){
 				//errror msg , too big 
-				LOGP("read msg error too big!");
 				_close_fd(stcp, fd, stcp_close_reason_type::STCP_MSG_ERR);
 				return -2;
 			}
@@ -399,8 +390,6 @@ static void _connect_check(stcp_t * stcp, int fd)
 static int _write_tcp_socket(stcp_t * stcp, int fd, const char * msg, int sz)
 {
 	//write app buffer ? write tcp socket directly ?
-	//size
-	LOGP("write msg size:%d", sz);
 	stcp_event_t sev;
 	sev.fd = fd;
 	sev.type = stcp_event_type::STCP_WRITE;
@@ -516,6 +505,7 @@ int            stcp_poll(stcp_t * stcp, int timeout_us, int max_proc)
 }
 int				stcp_send(stcp_t * stcp, int fd, const stcp_msg_t & msg)
 {
+	if (fd < 0) {return -1; }
 	return _write_tcp_socket(stcp, fd, msg.buff, msg.buff_sz);
 }
 int				stcp_reconnect(stcp_t* stcp, int fd)
@@ -525,6 +515,9 @@ int				stcp_reconnect(stcp_t* stcp, int fd)
 	if (it != stcp->connectings.end()) {
 		cnx = &it->second;
 	}
+	else{
+		return -1;
+	}
 	socklen_t addrlen = sizeof(cnx->connect_addr);
 	int ret = connect(fd, (sockaddr*)&cnx->connect_addr, addrlen);
 	if (ret && errno != EALREADY &&
@@ -533,6 +526,7 @@ int				stcp_reconnect(stcp_t* stcp, int fd)
 		return -1;
 	}
 	cnx->reconnect++;
+	LOGP("tcp connect fd:%d tried:%d  ....", fd, cnx->reconnect);
 	return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
 }
 int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)

@@ -43,9 +43,11 @@ typedef msgproto_t<dcnode::MsgDCNode>	dcnode_msg_t;
 
 struct dcnode_addr_t
 {
-	string msgq_key;  //key:r -> recv key:s -> send
+	string msgq_path;  //file path for machine sharing
+	bool   msgq_push; //client push mode as a client , not server
 	string listen_addr; //listen ip:port
 	string parent_addr;  //parent ip:port
+	dcnode_addr_t() :msgq_push(true){}
 };
 
 struct dcnode_config_t
@@ -65,7 +67,7 @@ struct dcnode_config_t
 		max_channel_buff_size = 1024 * 1024;
 		addr.listen_addr = "";
 		addr.parent_addr = "";
-		addr.msgq_key = "";
+		addr.msgq_path = "";
 		max_expired_time = 30;
 		max_live_heart_beat_gap = 5 * max_expired_time;
 	}

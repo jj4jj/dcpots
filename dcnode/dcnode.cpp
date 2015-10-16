@@ -2,6 +2,7 @@
 #include "libmq.h"
 #include "libtcp.h"
 #include "error_msg.h"
+#include "utility.hpp"
 
 struct dcnode_t
 {
@@ -27,22 +28,23 @@ struct dcnode_t
 	//timer cb
 	std::multimap<uint64_t, uint64_t>						expiring_callbacks;
 	std::unordered_map<uint64_t, dcnode_timer_callback_t>	timer_callbacks;
-	std::unordered_map<uint64_t, uint64_t>					callback_periods;
+	std::unordered_map<uint64_t, uint64_t>					callback_periods;	//period call back timer
 
-	//smq children (agent)
+	//smq named nodes (agent)
 	std::unordered_map<string, uint64_t>				named_smqid;
 	std::unordered_map<uint64_t, string>				smqid_map_name;
+	std::unordered_map<uint64_t, time_t>				smq_hb_expire_time;	//children heart beat expire info
 
-	//tcp children (agent)
+	//tcp named children (agent)
 	std::unordered_map<string, int>						named_tcpfd;
 	std::unordered_map<int, string>						tcpfd_map_name;
-	//
+	std::unordered_map<int, time_t>						tcp_hb_expire_time;	//children heart beat expire info
+
+	//parent heart beat info
+	time_t												parent_hb_expire_time;
+
 	msg_buffer_t										send_buffer;
 	error_msg_t							*				error_msg;
-	//heart beat info
-	time_t												parent_hb_expire_time;
-	std::unordered_map<uint64_t, time_t>				smq_hb_expire_time;
-	std::unordered_map<int, time_t>						tcp_hb_expire_time;
 
 	dcnode_t()
 	{
@@ -78,15 +80,13 @@ static inline uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_m
 	cookie <<= 1;
 	if (repeat)
 		cookie |= 1;
-	timeval tv;
-	gettimeofday(&tv, NULL);
-	uint64_t expiretimems = tv.tv_sec * 1000 + tv.tv_usec / 1000;
-	expiretimems += expired_ms;
+
+	uint64_t expiretimems = expired_ms + util::time_unixtime_ms();
 	dc->expiring_callbacks.insert(std::make_pair(expiretimems, cookie));
 	dc->timer_callbacks[cookie] = cb;
 	if (repeat)
 		dc->callback_periods.insert(std::make_pair(cookie, expired_ms));
-	LOGP("add callback timer ... cookie:%lu", cookie);
+	LOGP("add callback timer delay:%dms ... cookie:%lu",expired_ms, cookie);
 	return cookie;
 }
 static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
@@ -98,13 +98,22 @@ static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
 	LOGP("remove callback timer ... cookie:%lu", cookie);
 }
 
-//leaf: no children(no stcp listen)
+//leaf: smq client but no any tcp info
 static bool _is_leaf(dcnode_t* dc){
-	return (dc->conf.addr.listen_addr.empty() &&
-			dc->conf.addr.parent_addr.empty() );
+	if (dc->conf.addr.listen_addr.empty() &&	//not tcp server
+		dc->conf.addr.parent_addr.empty()){
+		if (!dc->conf.addr.msgq_path.empty() &&
+			!dc->conf.addr.msgq_push)	//but a smq server
+		{
+			return false;
+		}
+		return true;
+	}
+	return false;
 }
 static bool _is_root(dcnode_t* dc){
-	return (dc->conf.addr.parent_addr.empty());
+	return (dc->conf.addr.parent_addr.empty() &&
+			dc->conf.addr.msgq_push == false);
 }
 
 static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce);
@@ -158,7 +167,7 @@ static int _send_to_parent(dcnode_t * dc, dcnode_msg_t & dm) {
 		//to agent
 		return smq_send(dc->smq, getpid(), smq_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
-	else if (!dc->conf.addr.parent_addr.empty())
+	else if (!dc->conf.addr.parent_addr.empty() && dc->parentfd != -1)
 	{
 		return stcp_send(dc->stcp, dc->parentfd, stcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
@@ -167,8 +176,7 @@ static int _send_to_parent(dcnode_t * dc, dcnode_msg_t & dm) {
 static  int _connect_parent(dcnode_t * dc){
 	if (dc->conf.addr.parent_addr.empty())
 	{
-		_change_dcnode_fsm(dc, dcnode_t::DCNODE_CONNECTED);
-		return 0;
+		return _change_dcnode_fsm(dc, dcnode_t::DCNODE_CONNECTED);
 	}
 	dc->state = dcnode_t::DCNODE_CONNECTING;
 	stcp_addr_t saddr;
@@ -176,9 +184,23 @@ static  int _connect_parent(dcnode_t * dc){
 	saddr.port = strtol(dc->conf.addr.parent_addr.substr(dc->conf.addr.parent_addr.find(':')+1).c_str(),NULL,10);
 	return stcp_connect(dc->stcp, saddr);
 }
-
-static int _stcp_sockfd_close(dcnode_t * dc, int fd)
-{
+static int _smq_msgpid_close(dcnode_t * dc, uint64_t msgpid){
+	auto it = dc->smqid_map_name.find(msgpid);
+	if (it != dc->smqid_map_name.end())
+	{
+		dc->named_smqid.erase(it->second);
+		dc->smqid_map_name.erase(it);
+	}
+	if (msgpid == 0) //parent 
+	{
+		assert(_is_leaf(dc));
+		LOGP("smq parent ndoe closed ....");
+		return _change_dcnode_fsm(dc, dcnode_t::DCNODE_INIT);
+	}
+	dc->smq_hb_expire_time.erase(msgpid);
+	return 0;
+}
+static int _stcp_sockfd_close(dcnode_t * dc, int fd) {
 	auto it = dc->tcpfd_map_name.find(fd);
 	if (it != dc->tcpfd_map_name.end())
 	{
@@ -188,6 +210,7 @@ static int _stcp_sockfd_close(dcnode_t * dc, int fd)
 	if (fd == dc->parentfd)
 	{
 		dc->parentfd = -1;
+		LOGP("parent ndoe closed ....");
 		return _change_dcnode_fsm(dc, dcnode_t::DCNODE_INIT);
 	}
 	dc->tcp_hb_expire_time.erase(fd);
@@ -195,31 +218,47 @@ static int _stcp_sockfd_close(dcnode_t * dc, int fd)
 }
 
 static void _update_hearbeat_timer(dcnode_t * dc, int sockfd, uint64_t msgpid){
-	LOGP("_update_hearbeat_timer ....");
-	if (_is_leaf(dc)){
+	LOGP("_update_hearbeat_timer sockfd:%d msgpid:%lu ....", sockfd, msgpid);
+	if (_is_leaf(dc)) {
 		dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
 	}
 	else if (msgpid > 0) {
-		dc->smq_hb_expire_time[msgpid] = time(NULL) + dc->conf.max_live_heart_beat_gap;
+		if (dc->conf.addr.msgq_push){
+			dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
+		}
+		else{
+			dc->smq_hb_expire_time[msgpid] = time(NULL) + dc->conf.max_live_heart_beat_gap;
+		}
 	}
-	else if (sockfd == dc->parentfd){
-		dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
-	}
-	else {
-		dc->tcp_hb_expire_time[sockfd] = time(NULL) + dc->conf.max_live_heart_beat_gap;
+	else if (sockfd != -1){
+		if (sockfd == dc->parentfd){
+			dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
+		}
+		else{
+			dc->tcp_hb_expire_time[sockfd] = time(NULL) + dc->conf.max_live_heart_beat_gap;
+		}
 	}
 }
 static void _node_expired(dcnode_t * dc, int sockfd = -1, uint64_t msgpid = 0){
 	//erorr log
 	LOGP("node exipred sockfd:%d msgqpid:%lu",sockfd, msgpid);
-	if (_is_leaf(dc)){ //reconnect
-		_change_dcnode_fsm(dc, dcnode_t::DCNODE_INIT);
+	if (sockfd == -1 && msgpid == 0){ //parent node expired
+		if (_is_leaf(dc)){
+			_smq_msgpid_close(dc, 0);
+		}
+		else if(dc->parentfd != -1) { //tcp node close
+			stcp_close(dc->stcp, dc->parentfd);
+		}
+		else {
+			_change_dcnode_fsm(dc, dcnode_t::DCNODE_INIT);
+		}
 	}
-	else if (msgpid > 0) {
-		//how ? update time ? no need
+	else if(msgpid > 0) {
+		_smq_msgpid_close(dc, msgpid);
 	}
-	else { //closed reconnect in fsm
-		stcp_close(dc->stcp, dc->parentfd);
+	else {
+		//children node
+		stcp_close(dc->stcp, sockfd);
 	}
 }
 
@@ -230,8 +269,9 @@ static void _start_heart_beat_timer(dcnode_t * dc){
 		dm.mutable_ext()->set_opt(dcnode::MSG_OPT_REQ);
 		_send_to_parent(dc, dm);		
 	};
-	if (!dc->conf.addr.parent_addr.empty() ||
-		dc->smq)
+	if (dc->conf.heart_beat_gap > 0 && 
+		(!dc->conf.addr.parent_addr.empty() ||	//tcp client
+		  dc->conf.addr.msgq_push))		//mq client
 	{
 		dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
 		_insert_timer_callback(dc, dc->conf.heart_beat_gap * 1000, hb, true);
@@ -241,27 +281,32 @@ static void _start_heart_beat_timer(dcnode_t * dc){
 		time_t tNow = time(NULL);
 		if (dc->parent_hb_expire_time > 0 &&
 			dc->parent_hb_expire_time < tNow){
+			LOGP("parent expired ...");
 			_node_expired(dc, -1, 0);
 		}
 		for (auto & it : dc->smq_hb_expire_time){
 			if (it.second < tNow){
+				LOGP("smq children expired ...");
 				_node_expired(dc, -1, it.first);
 			}
 		}
 		for (auto & it : dc->tcp_hb_expire_time){
 			if (it.second < tNow){
+				LOGP("tcp children expired ...");
 				_node_expired(dc, it.first);
 			}
 		}
 	};
 	if (dc->conf.max_live_heart_beat_gap > 0 &&
-		dc->conf.max_live_heart_beat_gap > dc->conf.max_live_heart_beat_gap){
+		dc->conf.max_live_heart_beat_gap > dc->conf.heart_beat_gap){
 		_insert_timer_callback(dc, 1000 * dc->conf.max_live_heart_beat_gap, hb_cheker, true);
 	}
 }
 static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce){
 	time_t tNow = time(NULL);
-	if (!checkforce && dc->next_stat_time > tNow)
+	if (!checkforce &&
+		dc->next_stat_time > 0 &&
+		dc->next_stat_time > tNow)
 	{
 		return 0;
 	}
@@ -269,6 +314,7 @@ static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce){
 	switch (dc->state)
 	{
 	case dcnode_t::DCNODE_INIT:
+		//add timer hb
 		_connect_parent(dc);
 		timeout_time = 2;//2s
 		break;
@@ -277,8 +323,6 @@ static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce){
 		timeout_time = 2;//2s
 		break;
 	case dcnode_t::DCNODE_NAME_REG:
-		//add timer hb
-		_start_heart_beat_timer(dc);		
 		dc->state = dcnode_t::DCNODE_READY;
 	case dcnode_t::DCNODE_READY:
 		//nothing report parent
@@ -435,7 +479,6 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 }
 static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buff, int buff_sz){
 	dcnode_msg_t dm;
-	LOGP("_msg_cb ....msg:size:%d", buff_sz);
 	if (!dm.unpack(buff, buff_sz)) {
 		//error for decode
 		return -1;
@@ -457,9 +500,6 @@ static int _smq_cb(smq_t * smq, uint64_t src, const smq_msg_t & msg, void * ud) 
 //server
 static int _stcp_cb(stcp_t* server, const stcp_event_t & ev, void * ud) {
 	dcnode_t * dc = (dcnode_t*)ud;
-
-	LOGP("stcp msg ....type:%d fd:%d reason:%d",
-				ev.type, ev.fd, ev.reason);
 	switch (ev.type)
 	{
 	case stcp_event_type::STCP_NEW_CONNX:
@@ -508,12 +548,12 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		}
 		stcp_event_cb(n->stcp, _stcp_cb, n);
 	}
-	if (conf.addr.msgq_key.length())
+	if (conf.addr.msgq_path.length())
 	{
 		smq_config_t smc;
-		smc.key = conf.addr.msgq_key;
+		smc.key = conf.addr.msgq_path;
 		smc.msg_buffsz = conf.max_channel_buff_size;
-		smc.is_server = !_is_leaf(n);
+		smc.server_mode = !_is_leaf(n);
 
 		n->smq = smq_create(smc);
 		if (!n->smq) {
@@ -524,6 +564,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 	}
 	n->send_buffer.create(conf.max_channel_buff_size);
 	n->error_msg = error_create();
+	_start_heart_beat_timer(n);
 	return n;
 }
 void      dcnode_destroy(dcnode_t* dc){
@@ -546,13 +587,11 @@ void      dcnode_destroy(dcnode_t* dc){
 	delete dc;
 }
 static	void _check_timer_callback(dcnode_t * dc){
-	timeval tv;
-	gettimeofday(&tv, NULL);
-	uint64_t currentms = tv.tv_sec * 1000 + tv.tv_usec / 1000;
-	auto itend = dc->expiring_callbacks.upper_bound(currentms);	
+	uint64_t currentms = util::time_unixtime_ms();
 	std::vector<std::pair<uint64_t, uint64_t> >		addagin;
-	for (auto it = dc->expiring_callbacks.begin(); it != itend;)
+	for (auto it = dc->expiring_callbacks.begin(); it != dc->expiring_callbacks.end();)
 	{
+		if (it->first > currentms){ break; }
 		auto previt = it++;
 		uint64_t cookie = previt->second;
 		auto funcit = dc->timer_callbacks.find(cookie);
