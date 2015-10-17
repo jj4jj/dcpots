@@ -25,14 +25,13 @@ enum MsgOption
 }
 message MsgRegName
 {
-	optional	uint64			session = 1;//session id
+	optional	uint64			session = 1;//session id , alloc msgpid
+	optional	int32			ret = 2; //apply result 0:ok
 }
 message MsgExt
 {
 	optional	uint32			unixtime = 1;//send time
-	optional	MsgDCNodeRPC	rpc = 2;
 	optional	MsgOption		opt = 3;
-	optional	MsgRegName		reg_name = 4;
 }
 
 message MsgDCNode
@@ -40,6 +39,9 @@ message MsgDCNode
 	required	string			src	= 1;
 	optional	string			dst = 2;
     required    MsgDCNodeType   type = 3;
-	optional	MsgExt			ext = 4;
-    optional    bytes           msg_data = 5;
+    optional    bytes           msg_data = 4;
+	/////////////////////////////////////////////
+	optional	MsgExt			ext = 5;
+	optional	MsgRegName		reg_name = 6;
+	optional	MsgDCNodeRPC	rpc = 7;
 };

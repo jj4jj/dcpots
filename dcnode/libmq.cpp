@@ -12,7 +12,7 @@ struct smq_t
 	void		*	msg_cb_ud;
 	msgbuf		*	sendbuff;
 	msgbuf		*	recvbuff;
-	
+	uint64_t		session;
 	smq_t()
 	{
 		init();
@@ -23,6 +23,7 @@ struct smq_t
 		msg_cb = nullptr;
 		sendbuff = recvbuff = nullptr;
 		msg_cb_ud = nullptr;
+		session = getpid();
 	}
 };
 int		_msgq_create(key_t key, int flag, size_t max_size)
@@ -143,7 +144,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 		uint64_t msgtype = 0;
 		if (!smq->conf.server_mode)
 		{
-			msgtype = getpid();
+			msgtype = smq->session;
 		}
 		sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, msgtype, IPC_NOWAIT);
 		if (sz <= 0)
@@ -202,7 +203,9 @@ int     smq_send(smq_t* smq, uint64_t dst, const smq_msg_t & msg)
 	} while (ret == -1 && errno == EINTR);
 	return ret;
 }
-bool	smq_server_mode(smq_t * smq)
-{
+bool	smq_server_mode(smq_t * smq){
 	return smq->conf.server_mode;
+}
+void	smq_set_session(smq_t * smq, uint64_t session){
+	smq->session = session;
 }

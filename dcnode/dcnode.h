@@ -1,10 +1,4 @@
 #pragma once
-#include "stdinc.h"
-#include "proto/dcnode.pb.h"
-#include "msg_proto.hpp"
-#include "error_msg.h"
-
-struct dcnode_t;
 //1. swap name with parent (agent),  for address collision 
 //2. leaf (client) will reg its name in local machine .
 //3. parent will known all children name .
@@ -36,6 +30,12 @@ NODE.is_not_ready => dcnode_send maybe error [if dst is knowned].
 
 
 */
+#include "stdinc.h"
+#include "proto/dcnode.pb.h"
+#include "msg_proto.hpp"
+#include "error_msg.h"
+
+struct dcnode_t;
 
 
 
@@ -62,7 +62,7 @@ struct dcnode_config_t
 	dcnode_config_t()
 	{
 		name = "noname";
-		max_register_children = 100;
+		max_register_children = 11024;
 		heart_beat_gap = 60;
 		max_channel_buff_size = 1024 * 1024;
 		addr.listen_addr = "";
@@ -70,7 +70,6 @@ struct dcnode_config_t
 		addr.msgq_path = "";
 		max_expired_time = 30;
 		max_live_heart_beat_gap = 5 * max_expired_time;
-		
 	}
 };
 
@@ -80,6 +79,7 @@ typedef int(*dcnode_dispatcher_t)(void * ud, const dcnode_msg_t & msg);
 dcnode_t* dcnode_create(const dcnode_config_t & conf);
 void      dcnode_destroy(dcnode_t* dc);
 void      dcnode_update(dcnode_t*, int timout_us);
+
 uint64_t  dcnode_timer_add(dcnode_t * ,int delayms , dcnode_timer_callback_t cb, bool repeat = false);
 void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);
 
@@ -87,3 +87,4 @@ void      dcnode_set_dispatcher(dcnode_t*, dcnode_dispatcher_t, void* ud);
 int       dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
 
 error_msg_t * dcnode_error(dcnode_t *);
+bool		  dcnode_stoped(dcnode_t *);

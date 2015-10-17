@@ -31,7 +31,10 @@ clean()
     find . -name '*.pb.cc' | xargs rm -f
     find . -name '*.pb.h'
     find . -name '*.pb.h' | xargs rm -f
+    echo "make clean"
     cd build && make clean
+    echo "clean shm and msg queue"
+    sh tools/clean.sh
 }
 
 inst_all()

@@ -34,7 +34,7 @@ void    smq_msg_cb(smq_t *, smq_msg_cb_t cb, void * ud);
 void    smq_poll(smq_t*, int timeout_us);
 int     smq_send(smq_t*,uint64_t dst, const smq_msg_t & msg);
 bool	smq_server_mode(smq_t *);
-
+void	smq_set_session(smq_t *, uint64_t session); //send or recv type
 //for debug
 //status report
 
