@@ -333,7 +333,7 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 	};
 	if (dc->conf.heart_beat_gap > 0 && 
 		(!dc->conf.addr.parent_addr.empty() ||	//tcp client
-		  dc->conf.addr.msgq_push))		//mq client
+		  (!dc->conf.addr.msgq_path.empty() && dc->conf.addr.msgq_push )))		//mq client
 	{
 		dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
 		_insert_timer_callback(dc, dc->conf.heart_beat_gap * 1000, hb, true);
@@ -378,13 +378,14 @@ static void _rebuild_smq_name_map(dcnode_t *dc){
 	if (!dc->named_smqid.empty()){
 		return;
 	}
+	dc->named_smqid.clear();
 	dcnode_name_map_t * p = dc->smq_name_mapping_shm;
 	for (auto i = 0; i < p->nc; i++){
 		dc->named_smqid[p->names[i].name] = p->names[i].id;
 	}
 }
 static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
-	if (dc->smq_name_mapping_shm){
+	if (dc->smq_name_mapping_shm || !dc->smq){
 		return 0;
 	}
 	sshm_config_t shm_conf;
@@ -413,13 +414,16 @@ static int	_fsm_check(dcnode_t * dc, bool checkforce){
 	case dcnode_t::DCNODE_CONNECTED:
 		return _fsm_register_name(dc);
 	case dcnode_t::DCNODE_NAME_REG:
-		if (_name_smq_maping_shm_create(dc, false)){
-			LOGP("attach shm error !");
-			dc->fsm_state = dcnode_t::DCNODE_ABORT;
-			return -1;
-		}
-		else {
-			_rebuild_smq_name_map(dc);
+		if (dc->smq){
+			//reg name
+			if (_name_smq_maping_shm_create(dc, false)){
+				LOGP("attach shm error !");
+				dc->fsm_state = dcnode_t::DCNODE_ABORT;
+				return -1;
+			}
+			else {
+				_rebuild_smq_name_map(dc);
+			}
 		}
 		dc->fsm_state = dcnode_t::DCNODE_READY;
 		return 0;
@@ -650,7 +654,7 @@ static int _stcp_cb(stcp_t* server, const stcp_event_t & ev, void * ud) {
 }
 static int _check_conf(const dcnode_config_t & conf){
 	if (!conf.addr.parent_addr.empty() &&
-		conf.addr.msgq_push){
+		conf.addr.msgq_push){	//tcp parent and smq using .
 		//invalid node
 		return -1;
 	}
@@ -688,7 +692,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		}
 		stcp_event_cb(n->stcp, _stcp_cb, n);
 	}
-	if (conf.addr.msgq_path.length())
+	if (!conf.addr.msgq_path.empty())
 	{
 		smq_config_t smc;
 		smc.key = conf.addr.msgq_path;

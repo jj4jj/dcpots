@@ -133,10 +133,14 @@ int test_node(const char * p)
 			dcf.max_live_heart_beat_gap = 0;
 			ltest = 3;
 		}
+		else if (strcmp(p, "l4") == 0){
+			dcf.name = "leaf2";
+			ltest = 4;
+		}
 	}
 	auto dc = dcnode_create(dcf);
 	CHECK(!dc)
-	dcnode_set_dispatcher(dc, dc_cb, nullptr);
+	dcnode_set_dispatcher(dc, dc_cb, dc);
 	int times = 0;
 	uint64_t t1, t2;
 	if (ltest == 3){
@@ -160,12 +164,16 @@ int test_node(const char * p)
 			puts("test timer 3s");
 		}, true);
 	}
+	time_t last_time = time(NULL);
 	while (true)
 	{
 		dcnode_update(dc, 10000);
 		if (dcnode_stoped(dc)){
 			LOGP("dcnode stoped ....");
 			return -1;
+		}
+		if (ltest == 4 && last_time + 5 < time(NULL)){
+			CHECK(dcnode_send(dc, "leaf", stmsg, strlen(stmsg)))
 		}
 		usleep(10000);
 	}
