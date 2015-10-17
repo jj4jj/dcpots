@@ -137,11 +137,11 @@ static bool _is_root(dcnode_t* dc){
 			dc->conf.addr.msgq_push == false);
 }
 
-static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce);
+static int	_fsm_check(dcnode_t * dc, bool checkforce);
 static inline int _switch_dcnode_fsm(dcnode_t * dc, int state) {
 	LOGP("switch dcnode fsm %d -> %d ", dc->fsm_state, state);
 	dc->fsm_state = state;
-	return _check_dcnode_fsm(dc, true);
+	return _fsm_check(dc, true);
 }
 static int _fsm_register_name(dcnode_t * dc){
 	LOGP("register name with:%s to parent ", dc->conf.name.c_str());
@@ -353,7 +353,7 @@ static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
 	}
 	return 0;
 }
-static int	_check_dcnode_fsm(dcnode_t * dc, bool checkforce){
+static int	_fsm_check(dcnode_t * dc, bool checkforce){
 	switch (dc->fsm_state)
 	{
 	case dcnode_t::DCNODE_INIT:
@@ -751,7 +751,7 @@ void      dcnode_update(dcnode_t* dc, int timout_us) {
 	//check cb
 	_check_timer_callback(dc);
 
-	_check_dcnode_fsm(dc, false);
+	_fsm_check(dc, false);
 
 	if (dc->stcp) {
 		stcp_poll(dc->stcp, timout_us);
