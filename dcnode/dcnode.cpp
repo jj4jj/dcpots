@@ -572,10 +572,10 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 }
 
 static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_sz, const string & dst) {
-	LOGP("foward msg ....");
 	if (_is_leaf(dc))
 	{
 		//to msgq
+		LOGP("foward msg to -> dst:%s with smq to parent", dst.c_str());
 		return smq_send(dc->smq, smq_session(dc->smq), smq_msg_t(buff, buff_sz));
 	}
 
@@ -583,17 +583,21 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 	auto it = dc->named_smqid.find(dst);
 	if (it != dc->named_smqid.end())
 	{
+		LOGP("foward msg to -> dst:%s with smq [found dst]", dst.c_str());
 		return smq_send(dc->smq, it->second, smq_msg_t(buff, buff_sz));
 	}
 	auto tit = dc->named_tcpfd.find(dst);
 	if (tit != dc->named_tcpfd.end())
 	{
+		LOGP("foward msg to -> dst:%s with tcp [found dst]", dst.c_str());
 		return stcp_send(dc->stcp, tit->second, stcp_msg_t(buff, buff_sz));
 	}
 
 	//to up layer 
-	if (sockfd != dc->parentfd)
+	if (sockfd != dc->parentfd && dc->parentfd != -1)
 	{
+		LOGP("foward msg to -> dst:%s not found name , so report to up layer with tcp:%d...",
+			dst.c_str(), dc->parentfd);
 		stcp_send(dc->stcp, dc->parentfd, stcp_msg_t(buff, buff_sz));
 	}
 	//all children
@@ -605,6 +609,8 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 		{
 			continue;
 		}
+		LOGP("foward msg to -> dst:%s not found name , so report to lower layer with tcp:%d ...",
+			dst.c_str() , it->second);
 		stcp_send(dc->stcp, it->second, stcp_msg_t(buff, buff_sz));
 	}
 	return 0;
