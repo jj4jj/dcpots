@@ -3,7 +3,7 @@
 #include "dcnode/libtcp.h"
 
 
-static int max_ping_pong = 10000;
+//static int max_ping_pong = 10000;
 static int max_ppsz = 0;
 static int max_ping_time = 100000;
 int mq_cb(smq_t * mq, uint64_t src, const smq_msg_t & msg, void * ud)

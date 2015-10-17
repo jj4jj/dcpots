@@ -152,25 +152,24 @@ static int _fsm_register_name(dcnode_t * dc){
 	msg.set_type(dcnode::MSG_REG_NAME);
 	msg.set_src(dc->conf.name);
 	msg.mutable_ext()->set_unixtime(time(NULL));
-	static char buffer[1024];
-	int sz = sizeof(buffer);
-	if (!msg.pack(buffer, sz)) {
+	if (!msg.pack(dc->send_buffer)) {
 		//pack error
 		return -1;
 	}
 	dc->fsm_state = dcnode_t::DCNODE_NAME_REG_ING;
 	if (_is_leaf(dc)) {
 		//to agent
-		return smq_send(dc->smq, smq_session(dc->smq), smq_msg_t(buffer, sz));
+		return smq_send(dc->smq, smq_session(dc->smq),
+			smq_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
 	else {
-		if (dc->conf.addr.parent_addr.empty())
-		{
+		if (dc->conf.addr.parent_addr.empty()){
 			//no need
 			return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
 		}
 		//to parent
-		return stcp_send(dc->stcp, dc->parentfd, stcp_msg_t(buffer, sz));
+		return stcp_send(dc->stcp, dc->parentfd,
+			stcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
 	return 0;
 }
@@ -807,8 +806,7 @@ uint64_t  dcnode_timer_add(dcnode_t * dc, int delayms, dcnode_timer_callback_t c
 void	  dcnode_timer_cancel(dcnode_t * dc, uint64_t cookie) {
 	_remove_timer_callback(dc, cookie);
 }
-static  bool _name_exists(dcnode_t * dc, const char * name)
-{
+static  bool _name_exists(dcnode_t * dc, const char * name){
 	if (!name || !name[0]){
 		return false;
 	}
@@ -821,8 +819,7 @@ static  bool _name_exists(dcnode_t * dc, const char * name)
 	return false;
 }
 
-int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz)
-{
+int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz){
 	if (dc->fsm_state != dcnode_t::DCNODE_READY &&
 		!_name_exists(dc, dst)) {
 		//error not ready (name not reg) 
