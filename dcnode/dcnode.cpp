@@ -346,18 +346,28 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 			LOGP("parent expired ...");
 			_node_expired(dc, dc->parentfd, smq_session(dc->smq));
 		}
+		vector<uint64_t>	msgq_expired;
+		vector<int>			tcp_expired;
 		for (auto & it : dc->smq_hb_expire_time){
 			if (it.second < tNow){
-				LOGP("smq children expired ...");
-				_node_expired(dc, -1, it.first);
+				msgq_expired.push_back(it.first);
 			}
 		}
 		for (auto & it : dc->tcp_hb_expire_time){
 			if (it.second < tNow){
-				LOGP("tcp children expired ...");
-				_node_expired(dc, it.first);
+				tcp_expired.push_back(it.first);
 			}
 		}
+
+		for (auto it : msgq_expired){
+			LOGP("smq children expired :%lu...",it);
+			_node_expired(dc, -1, it);
+		}
+		for (auto it : tcp_expired){			
+			LOGP("tcp children expired :%d...",it);
+			_node_expired(dc, it);
+		}
+
 	};
 	if (dc->conf.max_live_heart_beat_gap > 0 &&
 		dc->conf.max_live_heart_beat_gap > dc->conf.heart_beat_gap){
@@ -481,9 +491,9 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 			}
 			else
 			{
+				session = entry->id;
 				//name is busy , check it expired ?
 				if (dm.reg_name().session() != entry->id){ //first time [init register]
-					time_t tNow = time(NULL);
 					if (dc->smq_hb_expire_time.find(entry->id) != dc->smq_hb_expire_time.end()){
 						//collision , alived node
 						ret = -1;
