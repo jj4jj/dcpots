@@ -17,11 +17,12 @@ int		 sshm_create(const sshm_config_t & conf, void ** p, bool & attached){
 	}
 	int ioflag = 0666;
 	bool exist = _shm_exists(key, ioflag);
+    //if conf.attach , shm must be exist
 	if (exist){
 		attached = true;
 	}
 	else {
-		if (!conf.attach){
+		if (conf.attach){
 			//not exist
 			return -2;
 		}
