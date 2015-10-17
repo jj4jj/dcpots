@@ -473,7 +473,7 @@ static void _proc(stcp_t * stcp,const epoll_event & ev)
 }
 void			stcp_close(stcp_t * stcp, int fd)
 {
-	_close_fd(stcp, fd, stcp_close_reason_type::STCP_BY_SELF);
+	_close_fd(stcp, fd, stcp_close_reason_type::STCP_CLOSE_ACTIVE);
 }
 int            stcp_poll(stcp_t * stcp, int timeout_us, int max_proc)
 {

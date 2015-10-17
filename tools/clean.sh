@@ -1,12 +1,12 @@
 
 echo "clean shm list:"
+echo "----------------------------------------------"
 ipcs -m | awk '{if($6 == 0){print $0}}'
-ipcs -m | awk '{if($6 == 0){print "ipcrm -m",$2}}'
-
+ipcs -m | awk '{if($6 == 0){print "ipcrm -m",$2}}' | sh
 echo "----------------------------------------------"
-echo "clean msgq list:"
-ipcs -q | awk '{if($6 == 0){print $0}}'
-ipcs -q | awk '{if($6 == 0){print "ipcrm -q",$2}}' | sh
+#echo "clean msgq list:"
+#ipcs -q | awk '{if($6 == 0){print $0}}'
+#ipcs -q | awk '{if($6 == 0){print "ipcrm -q",$2}}' | sh
 
-echo "----------------------------------------------"
+#echo "----------------------------------------------"
 

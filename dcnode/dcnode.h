@@ -50,6 +50,7 @@ struct dcnode_addr_t
 	dcnode_addr_t() :msgq_push(true){}
 };
 
+#define DCNODE_MAX_LOCAL_NODES_NUM	(1024)	//max local client in one parent
 struct dcnode_config_t
 {
     dcnode_addr_t  addr; //parent tcp and msgq
@@ -62,7 +63,7 @@ struct dcnode_config_t
 	dcnode_config_t()
 	{
 		name = "noname";
-		max_register_children = 11024;
+		max_register_children = DCNODE_MAX_LOCAL_NODES_NUM;
 		heart_beat_gap = 60;
 		max_channel_buff_size = 1024 * 1024;
 		addr.listen_addr = "";

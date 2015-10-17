@@ -49,7 +49,7 @@ enum stcp_close_reason_type
 	STCP_POLL_ERR = 4, //refer to errno
 	STCP_INVAL_CALL = 5, //usage err
 	STCP_SYS_ERR = 6, //system call error refer to errno
-	STCP_BY_SELF = 7, //by uplayer
+	STCP_CLOSE_ACTIVE = 7, //by uplayer
 };
 
 enum stcp_event_type

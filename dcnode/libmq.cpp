@@ -12,7 +12,7 @@ struct smq_t
 	void		*	msg_cb_ud;
 	msgbuf		*	sendbuff;
 	msgbuf		*	recvbuff;
-	uint64_t		session;
+	uint64_t		session;	//myself id , send and recv msg cookie. in servermode is 0.
 	smq_t()
 	{
 		init();
@@ -23,7 +23,7 @@ struct smq_t
 		msg_cb = nullptr;
 		sendbuff = recvbuff = nullptr;
 		msg_cb_ud = nullptr;
-		session = getpid();
+		session = 0;
 	}
 };
 int		_msgq_create(key_t key, int flag, size_t max_size)
@@ -141,12 +141,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 	int nproc = 0;
 	while (past_us < timeout_us)
 	{
-		uint64_t msgtype = 0;
-		if (!smq->conf.server_mode)
-		{
-			msgtype = smq->session;
-		}
-		sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, msgtype, IPC_NOWAIT);
+		sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT);
 		if (sz <= 0)
 		{
 			if (errno == EINTR)
@@ -157,7 +152,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 			if (errno == E2BIG)
 			{
 				//error for msg too much , clear it then continue;
-				sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, msgtype, IPC_NOWAIT | MSG_NOERROR);
+				sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT | MSG_NOERROR);
 				continue;
 			}
 			else if (errno != ENOMSG)
@@ -206,6 +201,13 @@ int     smq_send(smq_t* smq, uint64_t dst, const smq_msg_t & msg)
 bool	smq_server_mode(smq_t * smq){
 	return smq->conf.server_mode;
 }
+uint64_t	smq_session(smq_t * smq){
+	if (!smq) { return 0; }
+	if (smq->conf.server_mode){ return 0; }
+	return smq->session;
+}
 void	smq_set_session(smq_t * smq, uint64_t session){
-	smq->session = session;
+	if (!smq->conf.server_mode){
+		smq->session = session;
+	}
 }
