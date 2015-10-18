@@ -460,7 +460,7 @@ static int _response_msg(dcnode_t * dc, int sockfd, uint64_t msgqpid, dcnode_msg
 	dm.set_type(dmsrc.type());
 	dm.mutable_ext()->set_unixtime(time(NULL));
 	dm.mutable_ext()->set_opt(dcnode::MSG_OPT_RSP);
-	LOGP("response msg from:%s dst:%s", dmsrc.csDebug(), dm.csDebug());
+	LOGP("response msg from:%s dst:%s", dmsrc.Debug(), dm.Debug());
 	bool ret = dm.Pack(dc->send_buffer);
 	if (!ret){
 		//error pack
@@ -481,7 +481,7 @@ static int _fsm_abort(dcnode_t * dc, int error){
 }
 
 static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const dcnode_msg_t & dm) {
-	LOGP("update name msg:%s",dm.csDebug());
+	LOGP("update name msg:%s",dm.Debug());
 	if (dm.ext().opt() == dcnode::MSG_OPT_REQ){
 		//register children name
 		int ret = 0;
@@ -543,10 +543,10 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 
 //node handle msg
 static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint64_t msgqpid){
-	LOGP("hanlde msg size:%d %s", dm.ByteSize(), dm.csDebug());
+	LOGP("hanlde msg size:%d %s", dm.ByteSize(), dm.Debug());
 	if (dm.ext().unixtime() > 0 && dm.ext().unixtime() + dc->conf.max_expired_time < time(NULL) ) {
 		//expired msg
-		LOGP("expired msg :%s....",dm.csDebug());
+		LOGP("expired msg :%s....",dm.Debug());
 		return -1;
 	}
 	_fsm_update_hearbeat_timer(dc, sockfd, msgqpid);
