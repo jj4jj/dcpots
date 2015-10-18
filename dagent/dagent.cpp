@@ -20,11 +20,11 @@ static inline int	_error(const char * msg, int err = -1, error_msg_t * trace = n
 	ERROR_BT_MSG(AGENT.error_msg, trace, err, msg);
 	return err;
 }
-static int _dispatcher(void * ud, const dcnode_msg_t & msg)
+static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg)
 {
 	assert(ud == &AGENT);
 	dagent_msg_t	dm;
-	if (!dm.unpack(msg.msg_data().c_str(), msg.msg_data().length()))
+	if (!dm.Unpack(msg.buffer, msg.valid_size))
 	{
 		//error pack
 		return _error("msg unpack error !");
@@ -32,7 +32,7 @@ static int _dispatcher(void * ud, const dcnode_msg_t & msg)
 	auto it = AGENT.cbs.find(dm.type());
 	if (it != AGENT.cbs.end())
 	{
-		return it->second(dm, msg.src());
+		return it->second(dm, src);
 	}
 	//not found
 	return _error("not found handler !");
@@ -72,7 +72,7 @@ void    dagent_update(int timeout_ms)
 }
 int     dagent_send(const char * dst, const dagent_msg_t & msg)
 {	
-	if (!msg.pack(AGENT.send_msgbuffer))
+	if (!msg.Pack(AGENT.send_msgbuffer))
 	{
 		//serialize error
 		return -1;

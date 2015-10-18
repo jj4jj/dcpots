@@ -28,10 +28,13 @@ struct stcp_t
 	int				nproc;
 	int				nevts;
 	//////////////////////////////
-	std::unordered_map<int, msg_buffer_t*>	sock_recv_buffer;
-	std::unordered_map<int, msg_buffer_t*>	sock_send_buffer;
+	std::unordered_map<int, msg_buffer_t>	sock_recv_buffer;
+	std::unordered_map<int, msg_buffer_t>	sock_send_buffer;
 	////////////////////////////////////////
 	msg_buffer_t	misc_buffer;
+	stcp_t(){
+		init();
+	}
 	void init()
 	{
 		listenfd = epfd = -1;
@@ -40,7 +43,9 @@ struct stcp_t
 		events = nullptr;
 		nevts = nproc = 0;
 		sock_recv_buffer.clear();
+		sock_send_buffer.clear();
 		connectings.clear();
+		misc_buffer.destroy();
 	}
 };
 
@@ -169,13 +174,13 @@ void _free_sock_msg_buffer(stcp_t * stcp, int fd){
 	auto it = stcp->sock_recv_buffer.find(fd);
 	if (it != stcp->sock_recv_buffer.end()){
 		LOGP("free recv buffer ....fd:%d", fd);
-		delete it->second;
+		it->second.destroy();
 		stcp->sock_recv_buffer.erase(it);
 	}
 	it = stcp->sock_send_buffer.find(fd);
 	if (it != stcp->sock_send_buffer.end()){
 		LOGP("free send buffer ....fd:%d", fd);
-		delete it->second;
+		it->second.destroy();
 		stcp->sock_send_buffer.erase(it);
 	}
 }
@@ -184,27 +189,27 @@ msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
 	if (for_recv){
 		auto it = stcp->sock_recv_buffer.find(fd);
 		if (it == stcp->sock_recv_buffer.end()){
-			msg_buffer_t * p = new msg_buffer_t();
-			if (!p || p->create(stcp->conf.max_recv_buff)){
+			msg_buffer_t buf;
+			if (buf.create(stcp->conf.max_recv_buff)){
 				return nullptr;
 			}
-			stcp->sock_recv_buffer[fd] = p;
-			return p;
+			stcp->sock_recv_buffer[fd] = buf;
+			return &(stcp->sock_recv_buffer[fd]);
 		}
-		return it->second;
+		return &(it->second);
 	}
 	else
 	{
 		auto it = stcp->sock_send_buffer.find(fd);
 		if (it == stcp->sock_send_buffer.end()){
-			msg_buffer_t * p = new msg_buffer_t();
-			if (!p || p->create(stcp->conf.max_send_buff)){
+			msg_buffer_t	buf;
+			if (buf.create(stcp->conf.max_send_buff)){
 				return nullptr;
 			}
-			stcp->sock_send_buffer[fd] = p;
-			return p;
+			stcp->sock_send_buffer[fd] = buf;
+			return &(stcp->sock_send_buffer[fd]);
 		}
-		return it->second;
+		return &(it->second);
 	}
 }
 static void	_close_fd(stcp_t * stcp, int fd, stcp_close_reason_type reason)

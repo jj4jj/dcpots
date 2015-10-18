@@ -91,9 +91,9 @@ int test_tcp(const char * ap)
 	return 0;
 }
 
-int dc_cb(void * ud, const dcnode_msg_t & msg)
+int dc_cb(void * ud, const char* src, const msg_buffer_t & msg)
 {
-	LOGP("dc msg recv :%s", msg.debug());
+	LOGP("dc msg recv :%s", msg.buffer);
 	return 0;
 }
 

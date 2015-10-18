@@ -31,15 +31,10 @@ NODE.is_not_ready => dcnode_send maybe error [if dst is knowned].
 
 */
 #include "stdinc.h"
-#include "proto/dcnode.pb.h"
-#include "msg_proto.hpp"
 #include "error_msg.h"
+#include "msg_proto.hpp"
 
 struct dcnode_t;
-
-
-
-typedef msgproto_t<dcnode::MsgDCNode>	dcnode_msg_t;
 
 struct dcnode_addr_t
 {
@@ -75,7 +70,7 @@ struct dcnode_config_t
 };
 
 typedef	std::function<void()>	dcnode_timer_callback_t;
-typedef int(*dcnode_dispatcher_t)(void * ud, const dcnode_msg_t & msg);
+typedef int(*dcnode_dispatcher_t)(void * ud, const char * src, const msg_buffer_t & msg);
 
 dcnode_t* dcnode_create(const dcnode_config_t & conf);
 void      dcnode_destroy(dcnode_t* dc);

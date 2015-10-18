@@ -1,66 +1,52 @@
 #pragma once
-#include "utility.hpp"
-
-//nocopy
-struct msg_buffer_t : public noncopyable {
+struct msg_buffer_t {
 	char *	buffer;
-	int		max_size;
 	int		valid_size;
-	msg_buffer_t() :buffer(nullptr), max_size(0), valid_size(0)
-	{
-	}
-	int create(int max_sz)
-	{
+	int		max_size;
+	msg_buffer_t(const char * csp = nullptr, int sz = 0) :buffer((char*)csp), valid_size(sz), max_size(0){}
+	int create(int max_sz){
 		destroy();
 		char * p = (char*)malloc(max_sz);
 		if (!p) return -1;
+		bzero(p, max_sz);
+		buffer = p;
 		max_size = max_sz;
 		valid_size = 0;
-		buffer = p;
 		return 0;
 	}
 	void destroy()
 	{
-		if (buffer) { 
+		if (buffer && max_size > 0) { 
 			free(buffer); buffer = nullptr;
 			valid_size = max_size = 0; 
 		}
 	}
-	~msg_buffer_t()
-	{
-		destroy();
-	}
 };
 
 
-
+/////////////////////////////////////////////////////////////////////////
 
 template<class T>
 struct msgproto_t : public T {
-	const char * debug() const
-	{
+	const char * csDebug() const{
 		return T::ShortDebugString().c_str();
 	}
-	bool pack(msg_buffer_t & msgbuf) const
-	{
+	bool Pack(msg_buffer_t & msgbuf) const{
 		int sz = msgbuf.max_size;
-		bool ret = pack(msgbuf.buffer, sz);
+		bool ret = Pack(msgbuf.buffer, sz);
 		if (!ret) return ret;
 		msgbuf.valid_size = sz;
 		return true;
 	}
-	bool unpack(const msg_buffer_t & msgbuf)
-	{
-		return unpack(msgbuf.buffer, msgbuf.valid_size);
+	bool Unpack(const msg_buffer_t & msgbuf){
+		return Unpack(msgbuf.buffer, msgbuf.valid_size);
 	}
-	bool pack(char * buffer, int & sz) const
-	{
+	bool Pack(char * buffer, int & sz) const{
 		bool ret = T::SerializeToArray(buffer, sz);
 		if (ret) sz = T::ByteSize();
 		return ret;
 	}
-	bool unpack(const char * buffer, int sz)
-	{
+	bool Unpack(const char * buffer, int sz){
 		return T::ParseFromArray(buffer, sz);
 	}
 };

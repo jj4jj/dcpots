@@ -1,10 +1,13 @@
 #include "dcnode.h"
+#include "proto/dcnode.pb.h"
+#include "msg_proto.hpp"
 #include "libmq.h"
 #include "libtcp.h"
 #include "error_msg.h"
 #include "utility.hpp"
 #include "libshm.h"
 
+typedef msgproto_t<dcnode::MsgDCNode>	dcnode_msg_t;
 
 struct dcnode_name_map_entry_t {
 	char		name[32];
@@ -152,7 +155,7 @@ static int _fsm_register_name(dcnode_t * dc){
 	msg.set_type(dcnode::MSG_REG_NAME);
 	msg.set_src(dc->conf.name);
 	msg.mutable_ext()->set_unixtime(time(NULL));
-	if (!msg.pack(dc->send_buffer)) {
+	if (!msg.Pack(dc->send_buffer)) {
 		//pack error
 		return -1;
 	}
@@ -176,7 +179,7 @@ static int _fsm_register_name(dcnode_t * dc){
 static int _send_to_parent(dcnode_t * dc, dcnode_msg_t & dm) {
 	dm.set_src(dc->conf.name);
 	dm.mutable_ext()->set_unixtime(time(NULL));
-	if (!dm.pack(dc->send_buffer)){
+	if (!dm.Pack(dc->send_buffer)){
 		//error pack
 		return -1;
 	}
@@ -457,8 +460,8 @@ static int _response_msg(dcnode_t * dc, int sockfd, uint64_t msgqpid, dcnode_msg
 	dm.set_type(dmsrc.type());
 	dm.mutable_ext()->set_unixtime(time(NULL));
 	dm.mutable_ext()->set_opt(dcnode::MSG_OPT_RSP);
-	LOGP("response msg from:%s dst:%s", dmsrc.debug(), dm.debug());
-	bool ret = dm.pack(dc->send_buffer);
+	LOGP("response msg from:%s dst:%s", dmsrc.csDebug(), dm.csDebug());
+	bool ret = dm.Pack(dc->send_buffer);
 	if (!ret){
 		//error pack
 		return -1;
@@ -478,7 +481,7 @@ static int _fsm_abort(dcnode_t * dc, int error){
 }
 
 static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const dcnode_msg_t & dm) {
-	LOGP("update name msg:%s",dm.debug());
+	LOGP("update name msg:%s",dm.csDebug());
 	if (dm.ext().opt() == dcnode::MSG_OPT_REQ){
 		//register children name
 		int ret = 0;
@@ -540,10 +543,10 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 
 //node handle msg
 static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint64_t msgqpid){
-	LOGP("hanlde msg size:%d %s", dm.ByteSize(), dm.debug());
+	LOGP("hanlde msg size:%d %s", dm.ByteSize(), dm.csDebug());
 	if (dm.ext().unixtime() > 0 && dm.ext().unixtime() + dc->conf.max_expired_time < time(NULL) ) {
 		//expired msg
-		LOGP("expired msg :%s....",dm.debug());
+		LOGP("expired msg :%s....",dm.csDebug());
 		return -1;
 	}
 	_fsm_update_hearbeat_timer(dc, sockfd, msgqpid);
@@ -552,7 +555,7 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 	{
 	case dcnode::MSG_DATA:
 		//to up callback 
-		return dc->dispatcher(dc->dispatcher_ud, dm);
+		return dc->dispatcher(dc->dispatcher_ud, dm.src().c_str(), msg_buffer_t(dm.msg_data().data(), dm.msg_data().length()));
 	case dcnode::MSG_REG_NAME:
 		//insert tcp src -> map name
 		return _fsm_update_name(dc, sockfd, msgqpid, dm);
@@ -617,7 +620,7 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 }
 static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buff, int buff_sz){
 	dcnode_msg_t dm;
-	if (!dm.unpack(buff, buff_sz)) {
+	if (!dm.Unpack(buff, buff_sz)) {
 		//error for decode
 		return -1;
 	}
@@ -837,7 +840,7 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz){
 	dm.set_type(dcnode::MSG_DATA);
 	dm.set_msg_data(buff, sz);	
 	dm.mutable_ext()->set_unixtime(time(NULL));
-	if (!dm.pack(dc->send_buffer)){
+	if (!dm.Pack(dc->send_buffer)){
 		//error
 		return -1;
 	}
