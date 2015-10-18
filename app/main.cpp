@@ -223,7 +223,6 @@ int main(int argc, char* argv[])
 	if (ret)
 	{
 		puts("error init!");
-		puts(DAGENT_ERRMSG(" < "));
 		perror("system error ");
 		return -1;
 	}

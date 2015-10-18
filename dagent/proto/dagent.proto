@@ -4,11 +4,11 @@ package dagent;
 
 enum MsgDAgentType
 {
-
+	MSG_DATA = 1; //data
 };
 
 message MsgDAgent
 {
     required    MsgDAgentType   type = 1;
-    optional    bytes           msg = 2;
+    optional    bytes           msg_data = 2;
 };

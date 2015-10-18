@@ -3,7 +3,7 @@
 #include "msg_proto.hpp"
 #include "libmq.h"
 #include "libtcp.h"
-#include "error_msg.h"
+#include "logger.h"
 #include "utility.hpp"
 #include "libshm.h"
 
@@ -67,9 +67,8 @@ struct dcnode_t
 	//parent heart beat info
 	time_t												parent_hb_expire_time;
 
+	//send buffer
 	msg_buffer_t										send_buffer;
-	error_msg_t							*				error_msg;
-
 
 	dcnode_t()
 	{
@@ -89,7 +88,6 @@ struct dcnode_t
 		tcpfd_map_name.clear();
 		smq_hb_expire_time.clear();
 		tcp_hb_expire_time.clear();
-		error_msg = nullptr;
 		parent_hb_expire_time = 0;
 		parentfd = -1;
 		smq_name_mapping_shm = nullptr;
@@ -725,7 +723,6 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		}
 	}
 	n->send_buffer.create(conf.max_channel_buff_size);
-	n->error_msg = error_create();
 	_fsm_start_heart_beat_timer(n);
 	return n;
 }
@@ -739,11 +736,6 @@ void      dcnode_destroy(dcnode_t* dc){
 	{
 		smq_destroy(dc->smq);
 		dc->smq = nullptr;
-	}
-	if (dc->error_msg)
-	{
-		error_destroy(dc->error_msg);
-		dc->error_msg = nullptr;
 	}
 	if (dc->smq_name_mapping_shm){
 		sshm_destroy(dc->smq_name_mapping_shm);
@@ -849,8 +841,5 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz){
 }
 bool		  dcnode_stoped(dcnode_t * dc){
 	return dc->fsm_state == dcnode_t::DCNODE_ABORT;
-}
-error_msg_t * dcnode_error(dcnode_t * dc){
-	return dc->error_msg;
 }
 

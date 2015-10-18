@@ -37,7 +37,7 @@ void protobuf_AssignDesc_dagent_2eproto() {
   MsgDAgent_descriptor_ = file->message_type(0);
   static const int MsgDAgent_offsets_[2] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDAgent, type_),
-    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDAgent, msg_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgDAgent, msg_data_),
   };
   MsgDAgent_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -81,10 +81,10 @@ void protobuf_AddDesc_dagent_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\014dagent.proto\022\006dagent\"=\n\tMsgDAgent\022#\n\004t"
-    "ype\030\001 \002(\0162\025.dagent.MsgDAgentType\022\013\n\003msg\030"
-    "\002 \001(\014*\?\n\rMsgDAgentType\022\031\n\025MSG_DAGENT_HEA"
-    "RT_BEAT\020\001\022\023\n\017MSG_DAGENT_DATA\020\n", 150);
+    "\n\014dagent.proto\022\006dagent\"B\n\tMsgDAgent\022#\n\004t"
+    "ype\030\001 \002(\0162\025.dagent.MsgDAgentType\022\020\n\010msg_"
+    "data\030\002 \001(\014*\035\n\rMsgDAgentType\022\014\n\010MSG_DATA\020"
+    "\001", 121);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "dagent.proto", &protobuf_RegisterTypes);
   MsgDAgent::default_instance_ = new MsgDAgent();
@@ -105,7 +105,6 @@ const ::google::protobuf::EnumDescriptor* MsgDAgentType_descriptor() {
 bool MsgDAgentType_IsValid(int value) {
   switch(value) {
     case 1:
-    case 10:
       return true;
     default:
       return false;
@@ -117,7 +116,7 @@ bool MsgDAgentType_IsValid(int value) {
 
 #ifndef _MSC_VER
 const int MsgDAgent::kTypeFieldNumber;
-const int MsgDAgent::kMsgFieldNumber;
+const int MsgDAgent::kMsgDataFieldNumber;
 #endif  // !_MSC_VER
 
 MsgDAgent::MsgDAgent()
@@ -137,7 +136,7 @@ MsgDAgent::MsgDAgent(const MsgDAgent& from)
 void MsgDAgent::SharedCtor() {
   _cached_size_ = 0;
   type_ = 1;
-  msg_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+  msg_data_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -146,8 +145,8 @@ MsgDAgent::~MsgDAgent() {
 }
 
 void MsgDAgent::SharedDtor() {
-  if (msg_ != &::google::protobuf::internal::kEmptyString) {
-    delete msg_;
+  if (msg_data_ != &::google::protobuf::internal::kEmptyString) {
+    delete msg_data_;
   }
   if (this != default_instance_) {
   }
@@ -177,9 +176,9 @@ MsgDAgent* MsgDAgent::New() const {
 void MsgDAgent::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
     type_ = 1;
-    if (has_msg()) {
-      if (msg_ != &::google::protobuf::internal::kEmptyString) {
-        msg_->clear();
+    if (has_msg_data()) {
+      if (msg_data_ != &::google::protobuf::internal::kEmptyString) {
+        msg_data_->clear();
       }
     }
   }
@@ -209,17 +208,17 @@ bool MsgDAgent::MergePartialFromCodedStream(
         } else {
           goto handle_uninterpreted;
         }
-        if (input->ExpectTag(18)) goto parse_msg;
+        if (input->ExpectTag(18)) goto parse_msg_data;
         break;
       }
 
-      // optional bytes msg = 2;
+      // optional bytes msg_data = 2;
       case 2: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
-         parse_msg:
+         parse_msg_data:
           DO_(::google::protobuf::internal::WireFormatLite::ReadBytes(
-                input, this->mutable_msg()));
+                input, this->mutable_msg_data()));
         } else {
           goto handle_uninterpreted;
         }
@@ -251,10 +250,10 @@ void MsgDAgent::SerializeWithCachedSizes(
       1, this->type(), output);
   }
 
-  // optional bytes msg = 2;
-  if (has_msg()) {
+  // optional bytes msg_data = 2;
+  if (has_msg_data()) {
     ::google::protobuf::internal::WireFormatLite::WriteBytes(
-      2, this->msg(), output);
+      2, this->msg_data(), output);
   }
 
   if (!unknown_fields().empty()) {
@@ -271,11 +270,11 @@ void MsgDAgent::SerializeWithCachedSizes(
       1, this->type(), target);
   }
 
-  // optional bytes msg = 2;
-  if (has_msg()) {
+  // optional bytes msg_data = 2;
+  if (has_msg_data()) {
     target =
       ::google::protobuf::internal::WireFormatLite::WriteBytesToArray(
-        2, this->msg(), target);
+        2, this->msg_data(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -295,11 +294,11 @@ int MsgDAgent::ByteSize() const {
         ::google::protobuf::internal::WireFormatLite::EnumSize(this->type());
     }
 
-    // optional bytes msg = 2;
-    if (has_msg()) {
+    // optional bytes msg_data = 2;
+    if (has_msg_data()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::BytesSize(
-          this->msg());
+          this->msg_data());
     }
 
   }
@@ -332,8 +331,8 @@ void MsgDAgent::MergeFrom(const MsgDAgent& from) {
     if (from.has_type()) {
       set_type(from.type());
     }
-    if (from.has_msg()) {
-      set_msg(from.msg());
+    if (from.has_msg_data()) {
+      set_msg_data(from.msg_data());
     }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
@@ -360,7 +359,7 @@ bool MsgDAgent::IsInitialized() const {
 void MsgDAgent::Swap(MsgDAgent* other) {
   if (other != this) {
     std::swap(type_, other->type_);
-    std::swap(msg_, other->msg_);
+    std::swap(msg_data_, other->msg_data_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

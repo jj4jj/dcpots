@@ -1,5 +1,12 @@
 #include "dagent.h"
-#include "dcnode/error_msg.h"
+#include "dcnode/logger.h"
+
+
+struct dagent_plugin_t {
+	dagent_plugin_type	type;
+	string				path;
+	string				start;
+};
 
 struct dagent_t
 {
@@ -9,19 +16,18 @@ struct dagent_t
 	unordered_map<int, dagent_cb_t>		cbs;
 	//python vm todo
 	msg_buffer_t						send_msgbuffer;
-	error_msg_t					*		error_msg;
+	std::vector<dagent_plugin_t>		plugins;
 };
 
 
 static dagent_t AGENT;
 
-static inline int	_error(const char * msg, int err = -1, error_msg_t * trace = nullptr)
-{
-	ERROR_BT_MSG(AGENT.error_msg, trace, err, msg);
+static inline int	_error(const char * msg, int err = -1, logger_t * trace = nullptr){
+	//LOG_MSG(ERROR_LVL_DEBUG, AGENT.error_msg, trace, err, msg);
+	LOGP("%s",msg);
 	return err;
 }
-static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg)
-{
+static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 	assert(ud == &AGENT);
 	dagent_msg_t	dm;
 	if (!dm.Unpack(msg.buffer, msg.valid_size))
@@ -37,19 +43,15 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg)
 	//not found
 	return _error("not found handler !");
 }
-int     dagent_init(const dagent_config_t & conf)
-{
+int     dagent_init(const dagent_config_t & conf){
 	if (AGENT.node)
 	{
 		return _error("node has been inited !");
 	}
 	if (AGENT.send_msgbuffer.create(conf.max_msg_size))
 		return _error("create send msgbuffer error !");
-	if (!(AGENT.error_msg = error_create(1024)))
-		return _error("create error msg error !");
 	dcnode_t * node = dcnode_create(conf.node_conf);
-	if (!node)
-	{
+	if (!node){
 		//node error
 		return _error("create dcnode error !");
 	}
@@ -59,19 +61,16 @@ int     dagent_init(const dagent_config_t & conf)
 	return 0;
 }
 
-void    dagent_destroy()
-{
+void    dagent_destroy(){
 	dcnode_destroy(AGENT.node);
 	AGENT.node = NULL;
 	AGENT.cbs.clear();
 	AGENT.send_msgbuffer.destroy();
 }
-void    dagent_update(int timeout_ms)
-{
+void    dagent_update(int timeout_ms){
 	dcnode_update(AGENT.node, timeout_ms*1000);	
 }
-int     dagent_send(const char * dst, const dagent_msg_t & msg)
-{	
+int     dagent_send(const char * dst, const dagent_msg_t & msg){	
 	if (!msg.Pack(AGENT.send_msgbuffer))
 	{
 		//serialize error
@@ -79,8 +78,7 @@ int     dagent_send(const char * dst, const dagent_msg_t & msg)
 	}
 	return dcnode_send(AGENT.node, dst, AGENT.send_msgbuffer.buffer, AGENT.send_msgbuffer.valid_size);
 }
-int     dagent_cb_push(int type, dagent_cb_t cb)
-{
+int     dagent_cb_push(int type, dagent_cb_t cb){
 	auto it = AGENT.cbs.find(type);
 	if (it != AGENT.cbs.end())
 	{
@@ -90,8 +88,7 @@ int     dagent_cb_push(int type, dagent_cb_t cb)
 	AGENT.cbs[type] = cb;
 	return 0;
 }
-int     dagent_cb_pop(int type)
-{
+int     dagent_cb_pop(int type){
 	auto it = AGENT.cbs.find(type);
 	if (it != AGENT.cbs.end())
 	{
@@ -101,28 +98,11 @@ int     dagent_cb_pop(int type)
 	//not found
 	return -1;
 }
-
-//reg python file
-int     dagent_init_plugins()
-{
-	//todo
+int     dagent_load_plugin(const char * file){
 	return -1;
 }
-int     dagent_destroy_plugins()
-{
-	//todo
+int     dagent_unload_plugin(const char * file){
 	return -1;
-
-}
-int     dagent_reload_plugins()
-{
-	//todo
-	return -1;
-}
-
-struct error_msg_t * dagent_errmsg()
-{
-	return AGENT.error_msg;
 }
 
 

@@ -31,7 +31,7 @@ NODE.is_not_ready => dcnode_send maybe error [if dst is knowned].
 
 */
 #include "stdinc.h"
-#include "error_msg.h"
+#include "logger.h"
 #include "msg_proto.hpp"
 
 struct dcnode_t;
@@ -82,5 +82,4 @@ void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);
 void      dcnode_set_dispatcher(dcnode_t*, dcnode_dispatcher_t, void* ud);
 int       dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
 
-error_msg_t * dcnode_error(dcnode_t *);
 bool		  dcnode_stoped(dcnode_t *);

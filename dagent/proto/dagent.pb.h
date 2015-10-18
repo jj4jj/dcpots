@@ -37,12 +37,11 @@ void protobuf_ShutdownFile_dagent_2eproto();
 class MsgDAgent;
 
 enum MsgDAgentType {
-  MSG_DAGENT_HEART_BEAT = 1,
-  MSG_DAGENT_DATA = 10
+  MSG_DATA = 1
 };
 bool MsgDAgentType_IsValid(int value);
-const MsgDAgentType MsgDAgentType_MIN = MSG_DAGENT_HEART_BEAT;
-const MsgDAgentType MsgDAgentType_MAX = MSG_DAGENT_DATA;
+const MsgDAgentType MsgDAgentType_MIN = MSG_DATA;
+const MsgDAgentType MsgDAgentType_MAX = MSG_DATA;
 const int MsgDAgentType_ARRAYSIZE = MsgDAgentType_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* MsgDAgentType_descriptor();
@@ -118,28 +117,28 @@ class MsgDAgent : public ::google::protobuf::Message {
   inline ::dagent::MsgDAgentType type() const;
   inline void set_type(::dagent::MsgDAgentType value);
 
-  // optional bytes msg = 2;
-  inline bool has_msg() const;
-  inline void clear_msg();
-  static const int kMsgFieldNumber = 2;
-  inline const ::std::string& msg() const;
-  inline void set_msg(const ::std::string& value);
-  inline void set_msg(const char* value);
-  inline void set_msg(const void* value, size_t size);
-  inline ::std::string* mutable_msg();
-  inline ::std::string* release_msg();
-  inline void set_allocated_msg(::std::string* msg);
+  // optional bytes msg_data = 2;
+  inline bool has_msg_data() const;
+  inline void clear_msg_data();
+  static const int kMsgDataFieldNumber = 2;
+  inline const ::std::string& msg_data() const;
+  inline void set_msg_data(const ::std::string& value);
+  inline void set_msg_data(const char* value);
+  inline void set_msg_data(const void* value, size_t size);
+  inline ::std::string* mutable_msg_data();
+  inline ::std::string* release_msg_data();
+  inline void set_allocated_msg_data(::std::string* msg_data);
 
   // @@protoc_insertion_point(class_scope:dagent.MsgDAgent)
  private:
   inline void set_has_type();
   inline void clear_has_type();
-  inline void set_has_msg();
-  inline void clear_has_msg();
+  inline void set_has_msg_data();
+  inline void clear_has_msg_data();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
-  ::std::string* msg_;
+  ::std::string* msg_data_;
   int type_;
 
   mutable int _cached_size_;
@@ -182,73 +181,73 @@ inline void MsgDAgent::set_type(::dagent::MsgDAgentType value) {
   type_ = value;
 }
 
-// optional bytes msg = 2;
-inline bool MsgDAgent::has_msg() const {
+// optional bytes msg_data = 2;
+inline bool MsgDAgent::has_msg_data() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
-inline void MsgDAgent::set_has_msg() {
+inline void MsgDAgent::set_has_msg_data() {
   _has_bits_[0] |= 0x00000002u;
 }
-inline void MsgDAgent::clear_has_msg() {
+inline void MsgDAgent::clear_has_msg_data() {
   _has_bits_[0] &= ~0x00000002u;
 }
-inline void MsgDAgent::clear_msg() {
-  if (msg_ != &::google::protobuf::internal::kEmptyString) {
-    msg_->clear();
+inline void MsgDAgent::clear_msg_data() {
+  if (msg_data_ != &::google::protobuf::internal::kEmptyString) {
+    msg_data_->clear();
   }
-  clear_has_msg();
+  clear_has_msg_data();
 }
-inline const ::std::string& MsgDAgent::msg() const {
-  return *msg_;
+inline const ::std::string& MsgDAgent::msg_data() const {
+  return *msg_data_;
 }
-inline void MsgDAgent::set_msg(const ::std::string& value) {
-  set_has_msg();
-  if (msg_ == &::google::protobuf::internal::kEmptyString) {
-    msg_ = new ::std::string;
+inline void MsgDAgent::set_msg_data(const ::std::string& value) {
+  set_has_msg_data();
+  if (msg_data_ == &::google::protobuf::internal::kEmptyString) {
+    msg_data_ = new ::std::string;
   }
-  msg_->assign(value);
+  msg_data_->assign(value);
 }
-inline void MsgDAgent::set_msg(const char* value) {
-  set_has_msg();
-  if (msg_ == &::google::protobuf::internal::kEmptyString) {
-    msg_ = new ::std::string;
+inline void MsgDAgent::set_msg_data(const char* value) {
+  set_has_msg_data();
+  if (msg_data_ == &::google::protobuf::internal::kEmptyString) {
+    msg_data_ = new ::std::string;
   }
-  msg_->assign(value);
+  msg_data_->assign(value);
 }
-inline void MsgDAgent::set_msg(const void* value, size_t size) {
-  set_has_msg();
-  if (msg_ == &::google::protobuf::internal::kEmptyString) {
-    msg_ = new ::std::string;
+inline void MsgDAgent::set_msg_data(const void* value, size_t size) {
+  set_has_msg_data();
+  if (msg_data_ == &::google::protobuf::internal::kEmptyString) {
+    msg_data_ = new ::std::string;
   }
-  msg_->assign(reinterpret_cast<const char*>(value), size);
+  msg_data_->assign(reinterpret_cast<const char*>(value), size);
 }
-inline ::std::string* MsgDAgent::mutable_msg() {
-  set_has_msg();
-  if (msg_ == &::google::protobuf::internal::kEmptyString) {
-    msg_ = new ::std::string;
+inline ::std::string* MsgDAgent::mutable_msg_data() {
+  set_has_msg_data();
+  if (msg_data_ == &::google::protobuf::internal::kEmptyString) {
+    msg_data_ = new ::std::string;
   }
-  return msg_;
+  return msg_data_;
 }
-inline ::std::string* MsgDAgent::release_msg() {
-  clear_has_msg();
-  if (msg_ == &::google::protobuf::internal::kEmptyString) {
+inline ::std::string* MsgDAgent::release_msg_data() {
+  clear_has_msg_data();
+  if (msg_data_ == &::google::protobuf::internal::kEmptyString) {
     return NULL;
   } else {
-    ::std::string* temp = msg_;
-    msg_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    ::std::string* temp = msg_data_;
+    msg_data_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
     return temp;
   }
 }
-inline void MsgDAgent::set_allocated_msg(::std::string* msg) {
-  if (msg_ != &::google::protobuf::internal::kEmptyString) {
-    delete msg_;
+inline void MsgDAgent::set_allocated_msg_data(::std::string* msg_data) {
+  if (msg_data_ != &::google::protobuf::internal::kEmptyString) {
+    delete msg_data_;
   }
-  if (msg) {
-    set_has_msg();
-    msg_ = msg;
+  if (msg_data) {
+    set_has_msg_data();
+    msg_data_ = msg_data;
   } else {
-    clear_has_msg();
-    msg_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
+    clear_has_msg_data();
+    msg_data_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   }
 }
 
