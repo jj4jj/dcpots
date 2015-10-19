@@ -1,4 +1,4 @@
-#include "libtcp.h"
+#include "dctcp.h"
 #include "msg_proto.hpp"
 #include "logger.h"
 
@@ -14,14 +14,14 @@ struct stcp_connecting_t {
 	}
 };
 
-struct stcp_t
+struct dctcp_t
 {
-	stcp_config_t	conf;
+	dctcp_config_t	conf;
 	int				epfd;	//epfd for poller
 	int				listenfd;	//listen fd or client fd
 	std::unordered_map<int, stcp_connecting_t>		connectings;
 	///////////////////////////////
-	stcp_event_cb_t	event_cb;
+	dctcp_event_cb_t	event_cb;
 	void		*	event_cb_ud;
 	///////////////////////////////
 	epoll_event	*	events;
@@ -32,7 +32,7 @@ struct stcp_t
 	std::unordered_map<int, msg_buffer_t>	sock_send_buffer;
 	////////////////////////////////////////
 	msg_buffer_t	misc_buffer;
-	stcp_t(){
+	dctcp_t(){
 		init();
 	}
 	void init()
@@ -103,20 +103,20 @@ static int _create_tcpsocket(int sendbuffsize, int recvbuffsize)
 	return fd;
 }
 
-struct stcp_t * stcp_create(const stcp_config_t & conf)
+struct dctcp_t * dctcp_create(const dctcp_config_t & conf)
 {
-	stcp_t * stcp = new stcp_t();
+	dctcp_t * stcp = new dctcp_t();
 	stcp->conf = conf;
 	stcp->events = (epoll_event *)malloc(conf.max_client * sizeof(epoll_event));
-	if (!stcp->events) { stcp_destroy(stcp); return nullptr; }
+	if (!stcp->events) { dctcp_destroy(stcp); return nullptr; }
 
 	stcp->epfd = epoll_create(conf.max_client);
-	if (stcp->epfd < 0) { stcp_destroy(stcp); return nullptr; }
+	if (stcp->epfd < 0) { dctcp_destroy(stcp); return nullptr; }
 
 	if (conf.is_server)
 	{
 		int fd = _create_tcpsocket(conf.max_tcp_send_buff_size, conf.max_tcp_recv_buff_size);
-		if (fd < 0) { stcp_destroy(stcp); return nullptr; }
+		if (fd < 0) { dctcp_destroy(stcp); return nullptr; }
 		stcp->listenfd = fd;
 		sockaddr_in addrin;
 		memset(&addrin, 0, sizeof(addrin));
@@ -124,20 +124,20 @@ struct stcp_t * stcp_create(const stcp_config_t & conf)
 		addrin.sin_port = htons(conf.listen_addr.port);
 		addrin.sin_addr.s_addr = conf.listen_addr.u32ip();
 		int ret = bind(fd, (struct sockaddr *)&addrin, sizeof(struct sockaddr));
-		if (ret) { stcp_destroy(stcp); return nullptr; }
+		if (ret) { dctcp_destroy(stcp); return nullptr; }
 		ret = listen(fd, conf.max_backlog);
-		if (ret) { stcp_destroy(stcp); return nullptr; }
+		if (ret) { dctcp_destroy(stcp); return nullptr; }
 
 		epoll_event evt;
 		evt.events = EPOLLIN | EPOLLET;
 		evt.data.fd = fd;
 		ret = epoll_ctl(stcp->epfd, EPOLL_CTL_ADD, fd, &evt);
-		if (ret) { stcp_destroy(stcp); return nullptr; };
+		if (ret) { dctcp_destroy(stcp); return nullptr; };
 	}
 	stcp->misc_buffer.create(1024 * 64);
 	return stcp;
 }
-void            stcp_destroy(stcp_t * stcp)
+void            dctcp_destroy(dctcp_t * stcp)
 {
 	LOGP("stcp destroy ....");
 	if (stcp->listenfd >= 0) close(stcp->listenfd);
@@ -147,12 +147,12 @@ void            stcp_destroy(stcp_t * stcp)
 	stcp->init();
 	delete stcp;
 }
-void            stcp_event_cb(stcp_t* stcp, stcp_event_cb_t cb, void * ud)
+void            dctcp_event_cb(dctcp_t* stcp, dctcp_event_cb_t cb, void * ud)
 {
 	stcp->event_cb = cb;
 	stcp->event_cb_ud = ud;
 }
-static int _op_poll(stcp_t * stcp, int cmd, int fd, int flag = 0)
+static int _op_poll(dctcp_t * stcp, int cmd, int fd, int flag = 0)
 {
 	epoll_event ev;
 	ev.data.fd = fd;
@@ -170,7 +170,7 @@ static int _get_sockerror(int fd)
 		return errno;
 }
 
-void _free_sock_msg_buffer(stcp_t * stcp, int fd){
+void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
 	auto it = stcp->sock_recv_buffer.find(fd);
 	if (it != stcp->sock_recv_buffer.end()){
 		LOGP("free recv buffer ....fd:%d", fd);
@@ -184,7 +184,7 @@ void _free_sock_msg_buffer(stcp_t * stcp, int fd){
 		stcp->sock_send_buffer.erase(it);
 	}
 }
-msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
+msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool for_recv)
 {
 	if (for_recv){
 		auto it = stcp->sock_recv_buffer.find(fd);
@@ -212,7 +212,7 @@ msg_buffer_t * _get_sock_msg_buffer(stcp_t * stcp, int fd, bool for_recv)
 		return &(it->second);
 	}
 }
-static void	_close_fd(stcp_t * stcp, int fd, stcp_close_reason_type reason)
+static void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason)
 {
 	LOGP("close fd:%d for reason:%d", fd, reason);
 	int error = _get_sockerror(fd);
@@ -222,24 +222,24 @@ static void	_close_fd(stcp_t * stcp, int fd, stcp_close_reason_type reason)
 
 	_free_sock_msg_buffer(stcp, fd);
 	//just notify
-	stcp_event_t  sev;
-	sev.type = stcp_event_type::STCP_CLOSED;
+	dctcp_event_t  sev;
+	sev.type = dctcp_event_type::STCP_CLOSED;
 	sev.fd = fd;
 	sev.reason = reason;
 	sev.error = error;
 	stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 }
 
-static void _new_connx(stcp_t * stcp, int listenfd)
+static void _new_connx(dctcp_t * stcp, int listenfd)
 {
 	struct sockaddr	addr;
 	socklen_t	len = sizeof(addr);
 	int nfd = accept(listenfd, &addr, &len);
 	if (nfd >= 0)
 	{
-		stcp_event_t sev;
+		dctcp_event_t sev;
 		sev.fd = nfd;
-		sev.type = stcp_event_type::STCP_NEW_CONNX;
+		sev.type = dctcp_event_type::STCP_NEW_CONNX;
 		_init_socket_options(nfd, stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
 		//add epollin
 		_op_poll(stcp, EPOLL_CTL_ADD, nfd, EPOLLIN);
@@ -251,12 +251,12 @@ static void _new_connx(stcp_t * stcp, int listenfd)
 	}
 }
 
-static int _read_msg_error(stcp_t * stcp, int fd, int read_ret)
+static int _read_msg_error(dctcp_t * stcp, int fd, int read_ret)
 {
 	if (read_ret == 0)
 	{
 		//peer close
-		_close_fd(stcp, fd, stcp_close_reason_type::STCP_PEER_CLOSE);
+		_close_fd(stcp, fd, dctcp_close_reason_type::STCP_PEER_CLOSE);
 		return -1;
 	}
 	else //if (sz < 0 )
@@ -268,14 +268,14 @@ static int _read_msg_error(stcp_t * stcp, int fd, int read_ret)
 			errno != EWOULDBLOCK )
 		{
 			//error
-			_close_fd(stcp, fd, stcp_close_reason_type::STCP_SYS_ERR);
+			_close_fd(stcp, fd, dctcp_close_reason_type::STCP_SYS_ERR);
 			return -2;
 		}
 		return -3;
 	}
 }
-static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
-	stcp_event_t	sev;
+static int _dispatch_msg(dctcp_t * stcp, int fd, msg_buffer_t * buffer){
+	dctcp_event_t	sev;
 	sev.type = STCP_READ;
 	sev.fd = fd;
 	int nmsg = 0;
@@ -283,7 +283,7 @@ static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
 	int total = ntohl(*(int32_t*)(buffer->buffer));
 	while ( msg_buff_start + total <= buffer->valid_size )
 	{
-		stcp_msg_t smsg(buffer->buffer + msg_buff_start + sizeof(int32_t),
+		dctcp_msg_t smsg(buffer->buffer + msg_buff_start + sizeof(int32_t),
 			total - sizeof(int32_t));
 		sev.msg = &smsg;
 		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
@@ -311,7 +311,7 @@ static int _dispatch_msg(stcp_t * stcp, int fd, msg_buffer_t * buffer){
 	return nmsg;
 }
 
-static int _read_tcp_socket(stcp_t * stcp, int fd)
+static int _read_tcp_socket(dctcp_t * stcp, int fd)
 {
 	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
 	if (!buffer) {
@@ -336,7 +336,7 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 			int32_t total = ntohl(*(int32_t*)buffer->buffer);
 			if (total > buffer->max_size){
 				//errror msg , too big 
-				_close_fd(stcp, fd, stcp_close_reason_type::STCP_MSG_ERR);
+				_close_fd(stcp, fd, dctcp_close_reason_type::STCP_MSG_ERR);
 				return -2;
 			}
 			else if (total > buffer->valid_size){
@@ -351,7 +351,7 @@ static int _read_tcp_socket(stcp_t * stcp, int fd)
 	}
 	return nmsg;
 }
-static void _connect_check(stcp_t * stcp, int fd)
+static void _connect_check(dctcp_t * stcp, int fd)
 {
 	int error = 0;
 	auto it = stcp->connectings.find(fd);
@@ -364,13 +364,13 @@ static void _connect_check(stcp_t * stcp, int fd)
 	socklen_t len = sizeof(int);
 	if (0 == getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len))
 	{
-		stcp_event_t sev;
+		dctcp_event_t sev;
 		sev.fd = fd;
 		if (0 == error)
 		{
 			//clear
 			stcp->connectings.erase(fd);
-			sev.type = stcp_event_type::STCP_CONNECTED;
+			sev.type = dctcp_event_type::STCP_CONNECTED;
 			stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 			_op_poll(stcp, EPOLL_CTL_MOD, fd, EPOLLIN);
 			return;
@@ -382,22 +382,22 @@ static void _connect_check(stcp_t * stcp, int fd)
 		{
 			//reconnect
 			_op_poll(stcp, EPOLL_CTL_DEL, fd);
-			stcp_reconnect(stcp, fd);
+			dctcp_reconnect(stcp, fd);
 		}
 		else
 		{
-			_close_fd(stcp, fd, stcp_close_reason_type::STCP_CONNECT_ERR);
+			_close_fd(stcp, fd, dctcp_close_reason_type::STCP_CONNECT_ERR);
 		}
 	}
 }
 
 //write msg
-static int _write_tcp_socket(stcp_t * stcp, int fd, const char * msg, int sz)
+static int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, int sz)
 {
 	//write app buffer ? write tcp socket directly ?
-	stcp_event_t sev;
+	dctcp_event_t sev;
 	sev.fd = fd;
-	sev.type = stcp_event_type::STCP_WRITE;
+	sev.type = dctcp_event_type::STCP_WRITE;
 
 	int total = sz + sizeof(int32_t);
 	if (total > stcp->conf.max_send_buff)
@@ -417,7 +417,7 @@ RETRY_WRITE_MSG:
 	if (ret == total)
 	{
 		//send ok
-		stcp_msg_t smsg = stcp_msg_t(msg, sz);
+		dctcp_msg_t smsg = dctcp_msg_t(msg, sz);
 		sev.msg = &smsg;
 		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 		return 0;
@@ -429,29 +429,29 @@ RETRY_WRITE_MSG:
 			goto RETRY_WRITE_MSG;
 		}
 		//just send one part , close connection
-		_close_fd(stcp, fd, stcp_close_reason_type::STCP_MSG_ERR);
+		_close_fd(stcp, fd, dctcp_close_reason_type::STCP_MSG_ERR);
 	}
 	//errno 
 	return -2;
 }
-static void _proc(stcp_t * stcp,const epoll_event & ev)
+static void _proc(dctcp_t * stcp,const epoll_event & ev)
 {
 	//schedule
 	//error check
 	if (ev.events & EPOLLRDHUP)
 	{
 		//peer close
-		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_PEER_CLOSE);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_PEER_CLOSE);
 	}
 	else if (ev.events & EPOLLERR)
 	{
 		//error 
-		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_POLL_ERR);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_POLL_ERR);
 	}
 	else if ((ev.events & EPOLLHUP))
 	{
 		//before listen/connect  add in poll ?
-		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_INVAL_CALL);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_INVAL_CALL);
 	}
 	else if (ev.events & EPOLLOUT)
 	{
@@ -461,7 +461,7 @@ static void _proc(stcp_t * stcp,const epoll_event & ev)
 	{
 		if (ev.data.fd == stcp->listenfd)
 		{
-			assert(stcp_is_server(stcp));
+			assert(dctcp_is_server(stcp));
 			//new connection
 			_new_connx(stcp, ev.data.fd);
 		}
@@ -473,14 +473,14 @@ static void _proc(stcp_t * stcp,const epoll_event & ev)
 	else
 	{
 		//error
-		_close_fd(stcp, ev.data.fd, stcp_close_reason_type::STCP_SYS_ERR);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_SYS_ERR);
 	}
 }
-void			stcp_close(stcp_t * stcp, int fd)
+void			dctcp_close(dctcp_t * stcp, int fd)
 {
-	_close_fd(stcp, fd, stcp_close_reason_type::STCP_CLOSE_ACTIVE);
+	_close_fd(stcp, fd, dctcp_close_reason_type::STCP_CLOSE_ACTIVE);
 }
-int            stcp_poll(stcp_t * stcp, int timeout_us, int max_proc)
+int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc)
 {
 	int ms = timeout_us / 1000;
 	if (ms == 0) ms = 1;
@@ -508,12 +508,12 @@ int            stcp_poll(stcp_t * stcp, int timeout_us, int max_proc)
 	}
 	return nproc;
 }
-int				stcp_send(stcp_t * stcp, int fd, const stcp_msg_t & msg)
+int				dctcp_send(dctcp_t * stcp, int fd, const dctcp_msg_t & msg)
 {
 	if (fd < 0) {return -1; }
 	return _write_tcp_socket(stcp, fd, msg.buff, msg.buff_sz);
 }
-int				stcp_reconnect(stcp_t* stcp, int fd)
+int				dctcp_reconnect(dctcp_t* stcp, int fd)
 {
 	auto it = stcp->connectings.find(fd);
 	stcp_connecting_t * cnx = nullptr;
@@ -534,7 +534,7 @@ int				stcp_reconnect(stcp_t* stcp, int fd)
 	LOGP("tcp connect fd:%d tried:%d  ....", fd, cnx->reconnect);
 	return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
 }
-int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
+int             dctcp_connect(dctcp_t * stcp, const dctcp_addr_t & addr, int retry)
 {
 	//allocate
 	int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
@@ -553,9 +553,9 @@ int             stcp_connect(stcp_t * stcp, const stcp_addr_t & addr, int retry)
 	cnx.connect_addr = saddr;
 	stcp->connectings[fd] = cnx;
 
-	return stcp_reconnect(stcp, fd);
+	return dctcp_reconnect(stcp, fd);
 }
-bool            stcp_is_server(stcp_t * stcp)
+bool            dctcp_is_server(dctcp_t * stcp)
 {
 	return stcp->conf.is_server;
 }

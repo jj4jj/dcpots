@@ -1,5 +1,5 @@
-#include "base/libmq.h"
-#include "base/libtcp.h"
+#include "base/dcsmq.h"
+#include "base/dctcp.h"
 #include "base/logger.h"
 #include "dcnode/dcnode.h"
 #include "dagent/dagent.h"
@@ -8,7 +8,7 @@
 //static int max_ping_pong = 10000;
 static int max_ppsz = 0;
 static int max_ping_time = 100000;
-int mq_cb(smq_t * mq, uint64_t src, const smq_msg_t & msg, void * ud)
+int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 {
 	LOGP("mq cb msg size:%d src:%lu", msg.sz, src);
 	max_ppsz += msg.sz;
@@ -18,7 +18,7 @@ int mq_cb(smq_t * mq, uint64_t src, const smq_msg_t & msg, void * ud)
 		exit(0);
 	}
 	max_ping_time--;
-	smq_send(mq, src, msg);
+	dcsmq_send(mq, src, msg);
 	return 0;
 }
 #define CHECK(r)	\
@@ -33,61 +33,61 @@ int test_mq(const char * ap)
 {
 	char * test_msg = (char*)malloc(1024*10);
 
-	smq_config_t	sc;
+	dcsmq_config_t	sc;
 	sc.key = "./dcagent";
 	sc.server_mode = ap ? true : false;
-	auto p = smq_create(sc);
+	auto p = dcsmq_create(sc);
 	if (!p)
 	{
 		LOGP("error create smq errno:%s", strerror(errno));
 		return -1;
 	}
-	smq_msg_cb(p, mq_cb, nullptr);
+	dcsmq_msg_cb(p, mq_cb, nullptr);
 	if (!sc.server_mode)
 	{
-		smq_send(p, getpid(), smq_msg_t(test_msg, 1024*10));
+		dcsmq_send(p, getpid(), dcsmq_msg_t(test_msg, 1024*10));
 	}
 	while (true)
 	{
-		smq_poll(p, 500);
+		dcsmq_poll(p, 500);
 	}
 	return 0;
 }
 const char * stmsg = "hello,world!";
-int _stcp_cb(stcp_t* stc, const stcp_event_t & ev, void * ud)
+int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 {
 	LOGP("stcp event type:%d fd:%d reason:%d last error msg:%s", ev.type, ev.fd, ev.reason, strerror(ev.error));
-	if (ev.type == stcp_event_type::STCP_CONNECTED){
-		stcp_send(stc, ev.fd, stcp_msg_t(stmsg, strlen(stmsg)+1));
+	if (ev.type == dctcp_event_type::STCP_CONNECTED){
+		dctcp_send(stc, ev.fd, dctcp_msg_t(stmsg, strlen(stmsg)+1));
 	}
-	if (ev.type == stcp_event_type::STCP_READ){
+	if (ev.type == dctcp_event_type::STCP_READ){
 		LOGP("ping pang get msg from fd:%d msg:%s",ev.fd, ev.msg->buff);
-		stcp_send(stc, ev.fd, *ev.msg);
+		dctcp_send(stc, ev.fd, *ev.msg);
 	}
 	return -1;
 }
 
 int test_tcp(const char * ap)
 {
-	stcp_config_t sc;
+	dctcp_config_t sc;
 	sc.is_server = ap ? true : false;
 	sc.listen_addr.ip = "127.0.0.1";
 	sc.listen_addr.port = 8888;
-	auto * p = stcp_create(sc);
+	auto * p = dctcp_create(sc);
 	if (!p)
 	{
 		LOGP("create stcp error ! syserror:%s", strerror(errno));
 		return -1;
 	}
-	stcp_event_cb(p, _stcp_cb, nullptr);
+	dctcp_event_cb(p, _dctcp_cb, nullptr);
 	if (!sc.is_server)
 	{
-		int ret = stcp_connect(p, sc.listen_addr, 5);
+		int ret = dctcp_connect(p, sc.listen_addr, 5);
 		CHECK(ret)		
 	}
 	while (true)
 	{
-		stcp_poll(p, 1000);
+		dctcp_poll(p, 1000);
 		usleep(1000);
 	}	
 	return 0;

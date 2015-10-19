@@ -1,13 +1,13 @@
 #pragma once
 #include "stdinc.h"
 
-struct sshm_config_t {
+struct dcshm_config_t {
 	string	shm_path;
 	int		shm_size;
 	bool	attach; //just attach , no create
 };
 struct sshm_t;
-enum shm_error_type {
+enum dcshm_error_type {
 	SHM_OK = 0,
 	SHM_EXIST = 1,
 	SHM_NOT_EXIST = 2,
@@ -16,8 +16,8 @@ enum shm_error_type {
 	SHM_REF_ERRNO = 0x7FFF, //+errno
 };
 
-int			sshm_create(const sshm_config_t & conf, void ** p, bool & attached);
-void		sshm_destroy(void *);
+int			dcshm_create(const dcshm_config_t & conf, void ** p, bool & attached);
+void		dcshm_destroy(void *);
 
 
 

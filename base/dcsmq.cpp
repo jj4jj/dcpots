@@ -1,19 +1,19 @@
-#include "libmq.h"
+#include "dcsmq.h"
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
 
-struct smq_t
+struct dcsmq_t
 {
-	smq_config_t	conf;
+	dcsmq_config_t	conf;
 	int				sender;
 	int				recver;
-	smq_msg_cb_t	msg_cb;
+	dcsmq_msg_cb_t	msg_cb;
 	void		*	msg_cb_ud;
 	msgbuf		*	sendbuff;
 	msgbuf		*	recvbuff;
 	uint64_t		session;	//myself id , send and recv msg cookie. in servermode is 0.
-	smq_t()
+	dcsmq_t()
 	{
 		init();
 	}
@@ -53,7 +53,7 @@ int		_msgq_create(key_t key, int flag, size_t max_size)
 	return id;
 }
 
-smq_t * smq_create(const smq_config_t & conf)
+dcsmq_t * dcsmq_create(const dcsmq_config_t & conf)
 {
 	//sender : recver (1:2) : client
 	int prj_id[] = { 1, 2 };
@@ -86,7 +86,7 @@ smq_t * smq_create(const smq_config_t & conf)
 		//errno
 		return nullptr;
 	}
-	smq_t * smq = new smq_t();
+	dcsmq_t * smq = new dcsmq_t();
 	if (!smq)
 	{
 		//memalloc
@@ -105,7 +105,7 @@ smq_t * smq_create(const smq_config_t & conf)
 	smq->recver = recver;
 	return smq;
 }
-void    smq_destroy(smq_t* smq)
+void    dcsmq_destroy(dcsmq_t* smq)
 {
 	if (smq->sender >= 0)
 	{
@@ -126,12 +126,12 @@ void    smq_destroy(smq_t* smq)
 	smq->init();
 	delete smq;
 }
-void    smq_msg_cb(smq_t * smq, smq_msg_cb_t cb, void * ud)
+void    dcsmq_msg_cb(dcsmq_t * smq, dcsmq_msg_cb_t cb, void * ud)
 {
 	smq->msg_cb = cb;
 	smq->msg_cb_ud = ud;
 }
-void    smq_poll(smq_t*  smq, int timeout_us)
+void    dcsmq_poll(dcsmq_t*  smq, int timeout_us)
 {	
 	//todo with poll
 	timeval tv1,tv2;
@@ -164,7 +164,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 		else
 		{
 			msgbuf * buf = (msgbuf*)(smq->recvbuff);
-			smq->msg_cb(smq, buf->mtype, smq_msg_t(buf->mtext, sz), smq->msg_cb_ud);
+			smq->msg_cb(smq, buf->mtype, dcsmq_msg_t(buf->mtext, sz), smq->msg_cb_ud);
 		}
 		nproc++;
 		if (nproc >= 5)
@@ -177,7 +177,7 @@ void    smq_poll(smq_t*  smq, int timeout_us)
 	}
 }
 
-int     smq_send(smq_t* smq, uint64_t dst, const smq_msg_t & msg)
+int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg)
 {
 	if (msg.sz > smq->conf.msg_buffsz)
 	{
@@ -198,15 +198,15 @@ int     smq_send(smq_t* smq, uint64_t dst, const smq_msg_t & msg)
 	} while (ret == -1 && errno == EINTR);
 	return ret;
 }
-bool	smq_server_mode(smq_t * smq){
+bool	dcsmq_server_mode(dcsmq_t * smq){
 	return smq->conf.server_mode;
 }
-uint64_t	smq_session(smq_t * smq){
+uint64_t	dcsmq_session(dcsmq_t * smq){
 	if (!smq) { return 0; }
 	if (smq->conf.server_mode){ return 0; }
 	return smq->session;
 }
-void	smq_set_session(smq_t * smq, uint64_t session){
+void	dcsmq_set_session(dcsmq_t * smq, uint64_t session){
 	if (!smq->conf.server_mode){
 		smq->session = session;
 	}

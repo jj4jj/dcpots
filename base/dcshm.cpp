@@ -1,4 +1,4 @@
-#include "libshm.h"
+#include "dcshm.h"
 
 
 #pragma pack(1)
@@ -24,7 +24,7 @@ int _shm_stat(key_t k, size_t size = 0, int ioflag = 0){
 		return SHM_OK;
 	}
 }
-int			sshm_create(const sshm_config_t & conf, void ** p, bool & attached){
+int			dcshm_create(const dcshm_config_t & conf, void ** p, bool & attached){
 	key_t key = ftok(conf.shm_path.c_str(), 1);
 	if (key < 0){
 		return SHM_REF_ERRNO + errno;
@@ -65,7 +65,7 @@ int			sshm_create(const sshm_config_t & conf, void ** p, bool & attached){
 		if (realsize > 0 &&
 			realsize != shmp->head.size){ //check size
 			//error attach
-			sshm_destroy(shmp);
+			dcshm_destroy(shmp);
 			return SHM_SIZE_NOT_MATCH;
 		}
 	}
@@ -75,7 +75,7 @@ int			sshm_create(const sshm_config_t & conf, void ** p, bool & attached){
 	*p = &(shmp->data[0]);
 	return SHM_OK;
 }
-void	 sshm_destroy(void * p){
+void	 dcshm_destroy(void * p){
 	if (p){
 		sshm_t * shmp = (sshm_t*)((char*)p - sizeof(sshm_header_t));
 		shmdt(shmp);
