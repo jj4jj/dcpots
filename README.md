@@ -75,7 +75,7 @@ Note.
 * msg persistence
 * dcnode_send should create send msgq , when dcnode ready , send msg with q
 * bench mark todo
-* dagent python export
+* dagent python export [test swig]
 * dagent python plugins
 * add dbproxy for mysql [orm]
 * push service
