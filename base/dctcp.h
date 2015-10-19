@@ -42,25 +42,25 @@ struct dctcp_config_t
 struct dctcp_t;
 enum dctcp_close_reason_type
 {
-	STCP_MSG_OK = 0, //OK
-	STCP_MSG_ERR = 1,	//msg error
-	STCP_CONNECT_ERR = 2, //connect
-	STCP_PEER_CLOSE = 3,
-	STCP_POLL_ERR = 4, //refer to errno
-	STCP_INVAL_CALL = 5, //usage err
-	STCP_SYS_ERR = 6, //system call error refer to errno
-	STCP_CLOSE_ACTIVE = 7, //by uplayer
+	DCTCP_MSG_OK = 0, //OK
+	DCTCP_MSG_ERR = 1,	//msg error
+	DCTCP_CONNECT_ERR = 2, //connect
+	DCTCP_PEER_CLOSE = 3,
+	DCTCP_POLL_ERR = 4, //refer to errno
+	DCTCP_INVAL_CALL = 5, //usage err
+	DCTCP_SYS_ERR = 6, //system call error refer to errno
+	DCTCP_CLOSE_ACTIVE = 7, //by uplayer
 };
 
 enum dctcp_event_type
 {
-	STCP_EVT_INIT = 0,
-    STCP_CONNECTED = 1,
-	STCP_NEW_CONNX,
-	STCP_CLOSED ,
-    STCP_READ ,
-    STCP_WRITE ,
-    STCP_EVENT_MAX
+	DCTCP_EVT_INIT = 0,
+    DCTCP_CONNECTED = 1,
+	DCTCP_NEW_CONNX,
+	DCTCP_CLOSED ,
+    DCTCP_READ ,
+    DCTCP_WRITE ,
+    DCTCP_EVENT_MAX
 };
 
 struct dctcp_event_t
@@ -70,7 +70,7 @@ struct dctcp_event_t
     const dctcp_msg_t *  msg;
 	dctcp_close_reason_type		reason;
 	int							error;
-	dctcp_event_t() :type(STCP_EVT_INIT), msg(nullptr), reason(STCP_MSG_OK), error(0){}
+	dctcp_event_t() :type(DCTCP_EVT_INIT), msg(nullptr), reason(DCTCP_MSG_OK), error(0){}
 };
 
 typedef int (*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);

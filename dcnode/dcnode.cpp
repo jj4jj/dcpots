@@ -650,17 +650,17 @@ static int _stcp_cb(dctcp_t* server, const dctcp_event_t & ev, void * ud) {
 	dcnode_t * dc = (dcnode_t*)ud;
 	switch (ev.type)
 	{
-	case dctcp_event_type::STCP_NEW_CONNX:
+	case dctcp_event_type::DCTCP_NEW_CONNX:
 		//new connection no need build the map , but in reg name
 		break;
-	case dctcp_event_type::STCP_CONNECTED:
+	case dctcp_event_type::DCTCP_CONNECTED:
 		//connected
 		dc->parentfd = ev.fd;
 		return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_CONNECTED);
-	case dctcp_event_type::STCP_READ:
+	case dctcp_event_type::DCTCP_READ:
 		//
 		return _msg_cb(dc, ev.fd, 0, ev.msg->buff, ev.msg->buff_sz);
-	case dctcp_event_type::STCP_CLOSED:
+	case dctcp_event_type::DCTCP_CLOSED:
 		//error record
 		return _stcp_sockfd_close(dc, ev.fd);
 	default: return -1;

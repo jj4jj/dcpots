@@ -223,7 +223,7 @@ static void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason)
 	_free_sock_msg_buffer(stcp, fd);
 	//just notify
 	dctcp_event_t  sev;
-	sev.type = dctcp_event_type::STCP_CLOSED;
+	sev.type = dctcp_event_type::DCTCP_CLOSED;
 	sev.fd = fd;
 	sev.reason = reason;
 	sev.error = error;
@@ -239,7 +239,7 @@ static void _new_connx(dctcp_t * stcp, int listenfd)
 	{
 		dctcp_event_t sev;
 		sev.fd = nfd;
-		sev.type = dctcp_event_type::STCP_NEW_CONNX;
+		sev.type = dctcp_event_type::DCTCP_NEW_CONNX;
 		_init_socket_options(nfd, stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
 		//add epollin
 		_op_poll(stcp, EPOLL_CTL_ADD, nfd, EPOLLIN);
@@ -256,7 +256,7 @@ static int _read_msg_error(dctcp_t * stcp, int fd, int read_ret)
 	if (read_ret == 0)
 	{
 		//peer close
-		_close_fd(stcp, fd, dctcp_close_reason_type::STCP_PEER_CLOSE);
+		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE);
 		return -1;
 	}
 	else //if (sz < 0 )
@@ -268,7 +268,7 @@ static int _read_msg_error(dctcp_t * stcp, int fd, int read_ret)
 			errno != EWOULDBLOCK )
 		{
 			//error
-			_close_fd(stcp, fd, dctcp_close_reason_type::STCP_SYS_ERR);
+			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_SYS_ERR);
 			return -2;
 		}
 		return -3;
@@ -276,7 +276,7 @@ static int _read_msg_error(dctcp_t * stcp, int fd, int read_ret)
 }
 static int _dispatch_msg(dctcp_t * stcp, int fd, msg_buffer_t * buffer){
 	dctcp_event_t	sev;
-	sev.type = STCP_READ;
+	sev.type = DCTCP_READ;
 	sev.fd = fd;
 	int nmsg = 0;
 	int msg_buff_start = 0;
@@ -336,7 +336,7 @@ static int _read_tcp_socket(dctcp_t * stcp, int fd)
 			int32_t total = ntohl(*(int32_t*)buffer->buffer);
 			if (total > buffer->max_size){
 				//errror msg , too big 
-				_close_fd(stcp, fd, dctcp_close_reason_type::STCP_MSG_ERR);
+				_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR);
 				return -2;
 			}
 			else if (total > buffer->valid_size){
@@ -370,7 +370,7 @@ static void _connect_check(dctcp_t * stcp, int fd)
 		{
 			//clear
 			stcp->connectings.erase(fd);
-			sev.type = dctcp_event_type::STCP_CONNECTED;
+			sev.type = dctcp_event_type::DCTCP_CONNECTED;
 			stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 			_op_poll(stcp, EPOLL_CTL_MOD, fd, EPOLLIN);
 			return;
@@ -386,7 +386,7 @@ static void _connect_check(dctcp_t * stcp, int fd)
 		}
 		else
 		{
-			_close_fd(stcp, fd, dctcp_close_reason_type::STCP_CONNECT_ERR);
+			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CONNECT_ERR);
 		}
 	}
 }
@@ -397,7 +397,7 @@ static int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, int sz)
 	//write app buffer ? write tcp socket directly ?
 	dctcp_event_t sev;
 	sev.fd = fd;
-	sev.type = dctcp_event_type::STCP_WRITE;
+	sev.type = dctcp_event_type::DCTCP_WRITE;
 
 	int total = sz + sizeof(int32_t);
 	if (total > stcp->conf.max_send_buff)
@@ -429,7 +429,7 @@ RETRY_WRITE_MSG:
 			goto RETRY_WRITE_MSG;
 		}
 		//just send one part , close connection
-		_close_fd(stcp, fd, dctcp_close_reason_type::STCP_MSG_ERR);
+		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR);
 	}
 	//errno 
 	return -2;
@@ -441,17 +441,17 @@ static void _proc(dctcp_t * stcp,const epoll_event & ev)
 	if (ev.events & EPOLLRDHUP)
 	{
 		//peer close
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_PEER_CLOSE);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE);
 	}
 	else if (ev.events & EPOLLERR)
 	{
 		//error 
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_POLL_ERR);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_POLL_ERR);
 	}
 	else if ((ev.events & EPOLLHUP))
 	{
 		//before listen/connect  add in poll ?
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_INVAL_CALL);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_INVAL_CALL);
 	}
 	else if (ev.events & EPOLLOUT)
 	{
@@ -473,12 +473,12 @@ static void _proc(dctcp_t * stcp,const epoll_event & ev)
 	else
 	{
 		//error
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::STCP_SYS_ERR);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_SYS_ERR);
 	}
 }
 void			dctcp_close(dctcp_t * stcp, int fd)
 {
-	_close_fd(stcp, fd, dctcp_close_reason_type::STCP_CLOSE_ACTIVE);
+	_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CLOSE_ACTIVE);
 }
 int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc)
 {

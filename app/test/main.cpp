@@ -57,10 +57,10 @@ const char * stmsg = "hello,world!";
 int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 {
 	LOGP("stcp event type:%d fd:%d reason:%d last error msg:%s", ev.type, ev.fd, ev.reason, strerror(ev.error));
-	if (ev.type == dctcp_event_type::STCP_CONNECTED){
+	if (ev.type == dctcp_event_type::DCTCP_CONNECTED){
 		dctcp_send(stc, ev.fd, dctcp_msg_t(stmsg, strlen(stmsg)+1));
 	}
-	if (ev.type == dctcp_event_type::STCP_READ){
+	if (ev.type == dctcp_event_type::DCTCP_READ){
 		LOGP("ping pang get msg from fd:%d msg:%s",ev.fd, ev.msg->buff);
 		dctcp_send(stc, ev.fd, *ev.msg);
 	}
