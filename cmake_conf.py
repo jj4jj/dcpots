@@ -6,32 +6,47 @@ LIBS = [
         {
             'name':'dcnode',
             'subdir':'dcnode',
-            'includes':[
-                #'3rd/protobuf/include'
-            ]
+			'includes':[],
         },
         {
             'name':'dagent',
             'subdir':'dagent',
-            'includes':[
-                #'3rd/protobuf/include'
-            ]
+			'includes':[],
         }
 ]
 EXES = [
         {
-            'name':'dcagent',
-            'subdir':'app',
-            'includes': [
-                #'3rd/protobuf/include',
-            ],
-            'linkpaths' : [
-                #'3rd/protobuf/include/lib',
-            ],
+            'name':'testagent',
+            'subdir':'app/test',
+			'includes':[],
+			'linkpaths':[],
             'linklibs' : [
                 'dagent',
                 'dcnode',
                 'protobuf',
             ]
-        }
+        },
+        {
+            'name':'reporter',
+            'subdir':'app/reporter',
+			'includes':[],
+			'linkpaths':[],
+            'linklibs' : [
+                'dagent',
+                'dcnode',
+                'protobuf',
+            ]
+        },
+        {
+            'name':'collector',
+            'subdir':'app/collector',
+			'includes':[],
+			'linkpaths':[],
+            'linklibs' : [
+                'dagent',
+                'dcnode',
+                'protobuf',
+            ]
+        },
+
 ]

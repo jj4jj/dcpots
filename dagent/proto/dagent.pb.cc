@@ -20,7 +20,6 @@ namespace {
 const ::google::protobuf::Descriptor* MsgDAgent_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   MsgDAgent_reflection_ = NULL;
-const ::google::protobuf::EnumDescriptor* MsgDAgentType_descriptor_ = NULL;
 
 }  // namespace
 
@@ -47,7 +46,6 @@ void protobuf_AssignDesc_dagent_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(MsgDAgent));
-  MsgDAgentType_descriptor_ = file->enum_type(0);
 }
 
 namespace {
@@ -78,10 +76,8 @@ void protobuf_AddDesc_dagent_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\014dagent.proto\022\006dagent\"B\n\tMsgDAgent\022#\n\004t"
-    "ype\030\001 \002(\0162\025.dagent.MsgDAgentType\022\020\n\010msg_"
-    "data\030\002 \001(\014*\035\n\rMsgDAgentType\022\014\n\010MSG_DATA\020"
-    "\001", 121);
+    "\n\014dagent.proto\022\006dagent\"+\n\tMsgDAgent\022\014\n\004t"
+    "ype\030\001 \002(\005\022\020\n\010msg_data\030\002 \001(\014", 67);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "dagent.proto", &protobuf_RegisterTypes);
   MsgDAgent::default_instance_ = new MsgDAgent();
@@ -95,19 +91,6 @@ struct StaticDescriptorInitializer_dagent_2eproto {
     protobuf_AddDesc_dagent_2eproto();
   }
 } static_descriptor_initializer_dagent_2eproto_;
-
-const ::google::protobuf::EnumDescriptor* MsgDAgentType_descriptor() {
-  protobuf_AssignDescriptorsOnce();
-  return MsgDAgentType_descriptor_;
-}
-bool MsgDAgentType_IsValid(int value) {
-  switch(value) {
-    case 1:
-      return true;
-    default:
-      return false;
-  }
-}
 
 
 // ===================================================================
@@ -133,7 +116,7 @@ MsgDAgent::MsgDAgent(const MsgDAgent& from)
 
 void MsgDAgent::SharedCtor() {
   _cached_size_ = 0;
-  type_ = 1;
+  type_ = 0;
   msg_data_ = const_cast< ::std::string*>(&::google::protobuf::internal::kEmptyString);
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
@@ -172,7 +155,7 @@ MsgDAgent* MsgDAgent::New() const {
 
 void MsgDAgent::Clear() {
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    type_ = 1;
+    type_ = 0;
     if (has_msg_data()) {
       if (msg_data_ != &::google::protobuf::internal::kEmptyString) {
         msg_data_->clear();
@@ -189,19 +172,14 @@ bool MsgDAgent::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // required .dagent.MsgDAgentType type = 1;
+      // required int32 type = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
-          int value;
           DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
-                   int, ::google::protobuf::internal::WireFormatLite::TYPE_ENUM>(
-                 input, &value)));
-          if (dagent::MsgDAgentType_IsValid(value)) {
-            set_type(static_cast< dagent::MsgDAgentType >(value));
-          } else {
-            mutable_unknown_fields()->AddVarint(1, value);
-          }
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &type_)));
+          set_has_type();
         } else {
           goto handle_uninterpreted;
         }
@@ -241,10 +219,9 @@ bool MsgDAgent::MergePartialFromCodedStream(
 
 void MsgDAgent::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // required .dagent.MsgDAgentType type = 1;
+  // required int32 type = 1;
   if (has_type()) {
-    ::google::protobuf::internal::WireFormatLite::WriteEnum(
-      1, this->type(), output);
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->type(), output);
   }
   
   // optional bytes msg_data = 2;
@@ -261,10 +238,9 @@ void MsgDAgent::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* MsgDAgent::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // required .dagent.MsgDAgentType type = 1;
+  // required int32 type = 1;
   if (has_type()) {
-    target = ::google::protobuf::internal::WireFormatLite::WriteEnumToArray(
-      1, this->type(), target);
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->type(), target);
   }
   
   // optional bytes msg_data = 2;
@@ -285,10 +261,11 @@ int MsgDAgent::ByteSize() const {
   int total_size = 0;
   
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // required .dagent.MsgDAgentType type = 1;
+    // required int32 type = 1;
     if (has_type()) {
       total_size += 1 +
-        ::google::protobuf::internal::WireFormatLite::EnumSize(this->type());
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->type());
     }
     
     // optional bytes msg_data = 2;

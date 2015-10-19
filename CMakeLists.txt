@@ -47,5 +47,7 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
 
 add_subdirectory(dcnode)
 add_subdirectory(dagent)
-add_subdirectory(app)
+add_subdirectory(app/test)
+add_subdirectory(app/reporter)
+add_subdirectory(app/collector)
 

@@ -52,20 +52,20 @@ struct dcnode_config_t
     int max_channel_buff_size;//
     int heart_beat_gap;//seconds
     int max_register_children;//max children
-	int max_expired_time; //expired time s
+	int max_msg_expired_time; //expired time s
 	int max_live_heart_beat_gap; //expire time for close -> 5*max_expire
 	string	name;
 	dcnode_config_t()
 	{
 		name = "noname";
 		max_register_children = DCNODE_MAX_LOCAL_NODES_NUM;
-		heart_beat_gap = 60;
+		heart_beat_gap = 30;
 		max_channel_buff_size = 1024 * 1024;
 		addr.listen_addr = "";
 		addr.parent_addr = "";
 		addr.msgq_path = "";
-		max_expired_time = 30;
-		max_live_heart_beat_gap = 5 * max_expired_time;
+		max_msg_expired_time = 60*30;	//half an hour
+		max_live_heart_beat_gap = 3 * heart_beat_gap;
 	}
 };
 
@@ -82,4 +82,5 @@ void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);
 void      dcnode_set_dispatcher(dcnode_t*, dcnode_dispatcher_t, void* ud);
 int       dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
 
+bool		  dcnode_ready(dcnode_t *);
 bool		  dcnode_stoped(dcnode_t *);

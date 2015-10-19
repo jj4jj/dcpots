@@ -34,24 +34,6 @@ void protobuf_ShutdownFile_dagent_2eproto();
 
 class MsgDAgent;
 
-enum MsgDAgentType {
-  MSG_DATA = 1
-};
-bool MsgDAgentType_IsValid(int value);
-const MsgDAgentType MsgDAgentType_MIN = MSG_DATA;
-const MsgDAgentType MsgDAgentType_MAX = MSG_DATA;
-const int MsgDAgentType_ARRAYSIZE = MsgDAgentType_MAX + 1;
-
-const ::google::protobuf::EnumDescriptor* MsgDAgentType_descriptor();
-inline const ::std::string& MsgDAgentType_Name(MsgDAgentType value) {
-  return ::google::protobuf::internal::NameOfEnum(
-    MsgDAgentType_descriptor(), value);
-}
-inline bool MsgDAgentType_Parse(
-    const ::std::string& name, MsgDAgentType* value) {
-  return ::google::protobuf::internal::ParseNamedEnum<MsgDAgentType>(
-    MsgDAgentType_descriptor(), name, value);
-}
 // ===================================================================
 
 class MsgDAgent : public ::google::protobuf::Message {
@@ -108,12 +90,12 @@ class MsgDAgent : public ::google::protobuf::Message {
   
   // accessors -------------------------------------------------------
   
-  // required .dagent.MsgDAgentType type = 1;
+  // required int32 type = 1;
   inline bool has_type() const;
   inline void clear_type();
   static const int kTypeFieldNumber = 1;
-  inline dagent::MsgDAgentType type() const;
-  inline void set_type(dagent::MsgDAgentType value);
+  inline ::google::protobuf::int32 type() const;
+  inline void set_type(::google::protobuf::int32 value);
   
   // optional bytes msg_data = 2;
   inline bool has_msg_data() const;
@@ -136,7 +118,7 @@ class MsgDAgent : public ::google::protobuf::Message {
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
   
   ::std::string* msg_data_;
-  int type_;
+  ::google::protobuf::int32 type_;
   
   mutable int _cached_size_;
   ::google::protobuf::uint32 _has_bits_[(2 + 31) / 32];
@@ -155,7 +137,7 @@ class MsgDAgent : public ::google::protobuf::Message {
 
 // MsgDAgent
 
-// required .dagent.MsgDAgentType type = 1;
+// required int32 type = 1;
 inline bool MsgDAgent::has_type() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
@@ -166,14 +148,13 @@ inline void MsgDAgent::clear_has_type() {
   _has_bits_[0] &= ~0x00000001u;
 }
 inline void MsgDAgent::clear_type() {
-  type_ = 1;
+  type_ = 0;
   clear_has_type();
 }
-inline dagent::MsgDAgentType MsgDAgent::type() const {
-  return static_cast< dagent::MsgDAgentType >(type_);
+inline ::google::protobuf::int32 MsgDAgent::type() const {
+  return type_;
 }
-inline void MsgDAgent::set_type(dagent::MsgDAgentType value) {
-  GOOGLE_DCHECK(dagent::MsgDAgentType_IsValid(value));
+inline void MsgDAgent::set_type(::google::protobuf::int32 value) {
   set_has_type();
   type_ = value;
 }
@@ -245,10 +226,6 @@ inline ::std::string* MsgDAgent::release_msg_data() {
 namespace google {
 namespace protobuf {
 
-template <>
-inline const EnumDescriptor* GetEnumDescriptor< dagent::MsgDAgentType>() {
-  return dagent::MsgDAgentType_descriptor();
-}
 
 }  // namespace google
 }  // namespace protobuf

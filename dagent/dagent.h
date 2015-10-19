@@ -1,9 +1,6 @@
 #pragma once
-
-#include "dcnode/dcnode.h"
-#include "proto/dagent.pb.h"
-
-typedef msgproto_t<dagent::MsgDAgent>	dagent_msg_t;
+#include "dcnode/stdinc.h"
+#include "dcnode/msg_proto.hpp"
 
 enum dagent_plugin_type {
 	DAGENT_PLUGIN_LUA = 1,
@@ -11,17 +8,31 @@ enum dagent_plugin_type {
 };
 struct dagent_config_t
 {
-    dcnode_config_t node_conf;
-	int				max_msg_size;//1MB	
-	dagent_config_t() :max_msg_size(1048576){}
+	string	name;
+	int		max_msg_size;//1MB	
+	bool	routermode; //just relay msg
+	string	localkey;
+	string	parent;	//parent tcp addr eg.127.0.0.1:8888
+	string	listen;	//listen 127.0.0.1:8888
+	int		hearbeat;//3*heartbeat timeout will set be dead
+	dagent_config_t() :max_msg_size(1048576),routermode(false){
+		name = "noname";
+		max_msg_size = 1048576;
+		routermode = false;
+		parent = "";
+		listen = "";
+		localkey = "";
+		hearbeat = 10;
+	}
 };
 
-typedef int (*dagent_cb_t)(const dagent_msg_t &  msg, const string & src);
+typedef int (*dagent_cb_t)(const msg_buffer_t &  msg, const char * src);
 
 int     dagent_init(const dagent_config_t & conf);
 void    dagent_destroy();
+bool	dagent_ready(); //ready to write ?
 void    dagent_update(int timeout_ms = 10);
-int     dagent_send(const char * dst, const dagent_msg_t & msg);
+int     dagent_send(const char * dst, int type, const msg_buffer_t & msg);
 int     dagent_cb_push(int type, dagent_cb_t cb);
 int     dagent_cb_pop(int type);
 
