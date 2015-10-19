@@ -108,6 +108,8 @@ int test_node(const char * p)
 	dcf.heart_beat_gap = 10;
 	dcf.max_live_heart_beat_gap = 20;
 	int ltest = 0;
+	logger_config_t loger_conf;
+	global_logger_init(loger_conf);
 	//test auto reconnection 
 	//l1->l2
 	if (p)
