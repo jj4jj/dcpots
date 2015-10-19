@@ -1,11 +1,11 @@
 #include "dcnode.h"
 #include "proto/dcnode.pb.h"
-#include "msg_proto.hpp"
-#include "libmq.h"
-#include "libtcp.h"
-#include "logger.h"
-#include "utility.hpp"
-#include "libshm.h"
+#include "base/msg_proto.hpp"
+#include "base/libmq.h"
+#include "base/libtcp.h"
+#include "base/logger.h"
+#include "base/utility.hpp"
+#include "base/libshm.h"
 
 typedef msgproto_t<dcnode::MsgDCNode>	dcnode_msg_t;
 

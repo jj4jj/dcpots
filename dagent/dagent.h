@@ -1,6 +1,6 @@
 #pragma once
-#include "dcnode/stdinc.h"
-#include "dcnode/msg_proto.hpp"
+#include "base/stdinc.h"
+#include "base/msg_buffer.hpp"
 
 enum dagent_plugin_type {
 	DAGENT_PLUGIN_LUA = 1,

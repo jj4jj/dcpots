@@ -20,6 +20,7 @@ ADD_EXECUTABLE(testagent ${cur_SRCS})
 target_link_libraries(testagent
 dagent
 dcnode
+base
 protobuf)
 
 #installing

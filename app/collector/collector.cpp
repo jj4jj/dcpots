@@ -1,5 +1,5 @@
 #include "dagent/dagent.h"
-#include "dcnode/logger.h"
+#include "base/logger.h"
 #include "report_colect.h"
 
 int on_report_set(const msg_buffer_t &  msg, const char * src){

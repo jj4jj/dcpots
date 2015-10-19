@@ -1,5 +1,5 @@
 #include "dagent/dagent.h"
-#include "dcnode/logger.h"
+#include "base/logger.h"
 #include "../collector/report_colect.h"
 
 int reporter_init(const char * keypath, const char * name){

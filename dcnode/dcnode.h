@@ -30,9 +30,9 @@ NODE.is_not_ready => dcnode_send maybe error [if dst is knowned].
 
 
 */
-#include "stdinc.h"
-#include "logger.h"
-#include "msg_proto.hpp"
+#include "base/stdinc.h"
+#include "base/logger.h"
+#include "base/msg_buffer.hpp"
 
 struct dcnode_t;
 

@@ -3,6 +3,11 @@ VERSION='0.0.1'
 DEBUG = 1
 DEFS =['_DCAGENT_DEBUG']
 LIBS = [
+		{
+			'name':'base',
+			'subdir':'base',
+			'includes':[],
+		},
         {
             'name':'dcnode',
             'subdir':'dcnode',
@@ -23,6 +28,7 @@ EXES = [
             'linklibs' : [
                 'dagent',
                 'dcnode',
+				'base',
                 'protobuf',
             ]
         },
@@ -34,6 +40,7 @@ EXES = [
             'linklibs' : [
                 'dagent',
                 'dcnode',
+				'base',
                 'protobuf',
             ]
         },
@@ -45,6 +52,7 @@ EXES = [
             'linklibs' : [
                 'dagent',
                 'dcnode',
+				'base',
                 'protobuf',
             ]
         },

@@ -20,6 +20,7 @@ ADD_EXECUTABLE(reporter ${cur_SRCS})
 target_link_libraries(reporter
 dagent
 dcnode
+base
 protobuf)
 
 #installing

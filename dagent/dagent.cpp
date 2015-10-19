@@ -1,7 +1,9 @@
-#include "dagent.h"
+
 #include "dcnode/dcnode.h"
-#include "dcnode/logger.h"
+#include "base/logger.h"
 #include "proto/dagent.pb.h"
+#include "base/msg_proto.hpp"
+#include "dagent.h"
 
 struct dagent_plugin_t {
 	dagent_plugin_type	type;

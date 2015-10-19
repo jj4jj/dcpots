@@ -20,6 +20,7 @@ ADD_EXECUTABLE(collector ${cur_SRCS})
 target_link_libraries(collector
 dagent
 dcnode
+base
 protobuf)
 
 #installing

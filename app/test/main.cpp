@@ -1,8 +1,8 @@
-#include "dagent/dagent.h"
-#include "dcnode/libmq.h"
-#include "dcnode/libtcp.h"
-#include "dcnode/logger.h"
+#include "base/libmq.h"
+#include "base/libtcp.h"
+#include "base/logger.h"
 #include "dcnode/dcnode.h"
+#include "dagent/dagent.h"
 
 
 //static int max_ping_pong = 10000;

@@ -45,6 +45,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 # install dir
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
 
+add_subdirectory(base)
 add_subdirectory(dcnode)
 add_subdirectory(dagent)
 add_subdirectory(app/test)
