@@ -73,6 +73,7 @@ Note.
 * python extension in agent module
 * same agent [brother] communication with msgq directly [p2p]
 * msg persistence
+* dcnode_send should create send msgq , when dcnode ready , send msg with q
 
 **install requried [dep]**
 * libprotobuf-dev
