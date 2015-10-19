@@ -8,5 +8,5 @@ ${PROJECT_SOURCE_DIR}
 )
 
 #it will generate a static lib for comiling faster
-add_library(base STATIC ${cur_SRCS})
+add_library(dcbase STATIC ${cur_SRCS})
 

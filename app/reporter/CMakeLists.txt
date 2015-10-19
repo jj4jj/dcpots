@@ -20,7 +20,8 @@ ADD_EXECUTABLE(reporter ${cur_SRCS})
 target_link_libraries(reporter
 dagent
 dcnode
-base
+dcbase
+python2.7
 protobuf)
 
 #installing

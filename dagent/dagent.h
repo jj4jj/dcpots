@@ -34,5 +34,3 @@ int     dagent_cb_pop(int type);
 
 //python file load
 int     dagent_load_plugin(const char * file);
-int     dagent_unload_plugin(const char * file);
-

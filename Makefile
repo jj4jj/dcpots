@@ -4,6 +4,9 @@ build_:
 clean:
 	./automake.sh clean
 
+rebuild:
+	./automake.sh rebuild
+
 install:
 	./automake.sh install
 

@@ -183,9 +183,33 @@ int test_node(const char * p)
 	}
 	return 0;
 }
-
+#include "base/script_vm.h"
 static int python_test(){
+	script_vm_config_t smc;
+	smc.type = SCRIPT_VM_PYTHON;
+	script_vm_t * vm = script_vm_create(smc);
+	if (!vm){
+		LOGP("error create vm !");
+		return -1;
+	}
+	int r = script_vm_run_string(vm, "a=20");
+	r |= script_vm_run_string(vm, "print('hello,world!')");
+	r |= script_vm_run_string(vm, "print('hello,world!'+str(a))");
+	LOGP("vm run ret:%d",r);
+	script_vm_destroy(vm);
 
+	LOGP("destroyed vm");
+	smc.path = "./plugins";
+	vm = script_vm_create(smc);
+	if (!vm){
+		LOGP("error create vm agin !");
+		return -1;
+	}
+	r = script_vm_run_string(vm, "a=20");
+	r |= script_vm_run_string(vm, "print('hello,world! %s' % a)");
+	LOGP("vm run ret:%d", r);
+	r = script_vm_run_file(vm, "hello.py");
+	LOGP("vm run ret:%d", r);
 
 	return 0;
 }

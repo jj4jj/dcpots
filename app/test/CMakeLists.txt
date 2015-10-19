@@ -20,7 +20,8 @@ ADD_EXECUTABLE(testagent ${cur_SRCS})
 target_link_libraries(testagent
 dagent
 dcnode
-base
+dcbase
+python2.7
 protobuf)
 
 #installing

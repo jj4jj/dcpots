@@ -62,11 +62,11 @@ do{\
 	//			error_write((erm), (err_no), (killer), "(%lu.%lu:%d|%s:%d)" fmt "\n", tv.tv_sec, tv.tv_usec, getpid(),__FUNCTION__, __LINE__, ##__VA_ARGS__);
 
 #ifndef LOGP
-#define LOGP(format, ...)	\
+#define LOGP(format,...)	\
 do{\
 	const int log_lv_ = LOG_LVL_DEBUG; \
 	timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-	fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+	fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__);\
 } while (0)
 #endif
 

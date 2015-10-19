@@ -155,15 +155,11 @@ int     dagent_load_plugin(const char * file){
 	else if (strstr(file, ".js") + 3 == file + strlen(file)){
 		vm = AGENT.vms[script_vm_type::SCRIPT_VM_JS];
 	}
-
 	if(!vm){
 		LOGP("not found plugin vm file:%s or plugin vm not load", file);
 		return -1;
 	}
-	return script_vm_run(vm, file);
-}
-int     dagent_unload_plugin(const char * file){
-	return -1;
+	return script_vm_run_file(vm, file);
 }
 
 
