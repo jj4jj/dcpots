@@ -184,6 +184,11 @@ int test_node(const char * p)
 	return 0;
 }
 
+static int python_test(){
+
+
+	return 0;
+}
 int main(int argc, char* argv[])
 {
 	int agent_mode = 0;
@@ -200,6 +205,8 @@ int main(int argc, char* argv[])
 		case 'a':
 			agent_mode = 1;
 			break;
+		case 'p':
+			return python_test();
 		default:
 			break;
 		}

@@ -3,15 +3,15 @@
 #include "base/logger.h"
 #include "proto/dagent.pb.h"
 #include "base/msg_proto.hpp"
+#include "base/script_vm.h"
 #include "dagent.h"
 
 struct dagent_plugin_t {
-	dagent_plugin_type	type;
-	string				path;
-	string				start;
+	std::string				file;
 };
 
 typedef msgproto_t<dagent::MsgDAgent>	dagent_msg_t;
+
 
 struct dagent_t
 {
@@ -20,11 +20,15 @@ struct dagent_t
 	unordered_map<int, dagent_cb_t>		cbs;
 	msg_buffer_t						send_msgbuffer;
 	std::vector<dagent_plugin_t>		plugins;
+	script_vm_t	*						vms[script_vm_type::SCRIPT_VM_MAX];
+	dagent_t(){
+		bzero(vms,sizeof(vms));
+		node = nullptr;
+	}
 };
 
 
 static dagent_t AGENT;
-
 static inline int	_error(const char * msg, int err = -1, logger_t * trace = nullptr){
 	//LOG_MSG(ERROR_LVL_DEBUG, AGENT.error_msg, trace, err, msg);
 	LOGP("%s",msg);
@@ -78,14 +82,27 @@ int     dagent_init(const dagent_config_t & conf){
 	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
 	AGENT.node = node;
+	for (int i = script_vm_type::SCRIPT_VM_JS; i < script_vm_type::SCRIPT_VM_MAX; ++i){
+		script_vm_config_t	vmc;
+		vmc.type = (script_vm_type)i;
+		AGENT.vms[i] = script_vm_create(vmc);
+	}
 	return 0;
 }
 
 void    dagent_destroy(){
-	dcnode_destroy(AGENT.node);
-	AGENT.node = NULL;
+	if (AGENT.node){
+		dcnode_destroy(AGENT.node);
+		AGENT.node = nullptr;
+	}
 	AGENT.cbs.clear();
 	AGENT.send_msgbuffer.destroy();
+	for (int i = 0; i < script_vm_type::SCRIPT_VM_MAX; ++i){
+		if (AGENT.vms[i]){
+			script_vm_destroy(AGENT.vms[i]);
+			AGENT.vms[i] = nullptr;
+		}
+	}
 }
 void    dagent_update(int timeout_ms){
 	dcnode_update(AGENT.node, timeout_ms*1000);	
@@ -126,7 +143,24 @@ int     dagent_cb_pop(int type){
 	return -1;
 }
 int     dagent_load_plugin(const char * file){
-	return -1;
+	script_vm_t * vm = nullptr;
+	if (strstr(file, ".py") + 3 == file + strlen(file)){
+		//python
+		vm = AGENT.vms[script_vm_type::SCRIPT_VM_PYTHON];
+	}
+	else if (strstr(file, ".lua") + 4 == file + strlen(file)){
+		//lua
+		vm = AGENT.vms[script_vm_type::SCRIPT_VM_LUA];
+	}
+	else if (strstr(file, ".js") + 3 == file + strlen(file)){
+		vm = AGENT.vms[script_vm_type::SCRIPT_VM_JS];
+	}
+
+	if(!vm){
+		LOGP("not found plugin vm file:%s or plugin vm not load", file);
+		return -1;
+	}
+	return script_vm_run(vm, file);
 }
 int     dagent_unload_plugin(const char * file){
 	return -1;

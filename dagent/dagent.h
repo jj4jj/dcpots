@@ -2,10 +2,6 @@
 #include "base/stdinc.h"
 #include "base/msg_buffer.hpp"
 
-enum dagent_plugin_type {
-	DAGENT_PLUGIN_LUA = 1,
-	DAGENT_PLUGIN_PYTHON = 2,
-};
 struct dagent_config_t
 {
 	string	name;
@@ -36,6 +32,7 @@ int     dagent_send(const char * dst, int type, const msg_buffer_t & msg);
 int     dagent_cb_push(int type, dagent_cb_t cb);
 int     dagent_cb_pop(int type);
 
+//python file load
 int     dagent_load_plugin(const char * file);
 int     dagent_unload_plugin(const char * file);
 

@@ -66,7 +66,7 @@ Note.
 * libpython 2.7.5+
 * cmake 2.6+
 
-**optimal todo**
+**doing / todo**
 * router caching
 * alloc msg buffer with zero copy [by lower layer allocated]
 * msgq name manage
@@ -74,6 +74,8 @@ Note.
 * same agent [brother] communication with msgq directly [p2p]
 * msg persistence
 * dcnode_send should create send msgq , when dcnode ready , send msg with q
+* bench mark todo
 
 **install requried [dep]**
 * libprotobuf-dev
+* python-dev (2.7)
