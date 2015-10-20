@@ -19,8 +19,6 @@ ADD_EXECUTABLE(reporter ${cur_SRCS})
 #assign custrom link lib
 target_link_libraries(reporter
 dagent
-dcnode
-dcbase
 python2.7
 protobuf)
 

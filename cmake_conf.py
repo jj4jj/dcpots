@@ -2,6 +2,9 @@ PROJECT='dcagent'
 VERSION='0.0.1'
 DEBUG = 1
 DEFS =['_DCAGENT_DEBUG']
+VERBOSE = 0
+EXTRA_C_FLAGS = ''
+EXTRA_LD_FLAGS = ''
 LIBS = [
         {
             'name':'dcbase',
@@ -9,21 +12,19 @@ LIBS = [
             'linklibs' : [
                 'protobuf',
                 'python2.7',
-            ]
+            ],
+            'src_dirs':['base'],
+			'extra_srcs': [''],
         },
         {
             'name':'dcnode',
             'subdir':'dcnode',
-            'linklibs' : [
-                'dcbase',
-            ]
+            'src_dirs':['base','dcnode/proto'],
         },
         {
             'name':'dagent',
             'subdir':'dagent',
-            'linklibs' : [
-                'dcnode',
-            ]
+            'src_dirs':['base','dcnode','dcnode/proto','dagent/proto'],
         },
         {
             'name':'dagent_py',
@@ -31,7 +32,7 @@ LIBS = [
             'type': 'SHARED',
             'includes':['base','dcnode','dagent'],
             'linkpaths':[],
-            'src_dirs':['base','dcnode','dagent'],
+            'src_dirs':['base','dcnode','dcnode/proto','dagent','dagent/proto'],
             'linklibs' : [
                 'protobuf','python2.7'
             ]
@@ -44,6 +45,8 @@ EXES = [
             'subdir':'app/test',
             'linklibs' : [
                 'dagent',
+                'python2.7',
+                'protobuf',
             ]
         },
         {
@@ -51,8 +54,6 @@ EXES = [
             'subdir':'app/reporter',
             'linklibs' : [
                 'dagent',
-                'dcnode',
-                'dcbase',
                 'python2.7',
                 'protobuf',
             ]
@@ -62,8 +63,6 @@ EXES = [
             'subdir':'app/collector',
             'linklibs' : [
                 'dagent',
-                'dcnode',
-                'dcbase',
                 'python2.7',
                 'protobuf',
             ]

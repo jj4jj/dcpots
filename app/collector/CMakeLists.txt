@@ -19,8 +19,6 @@ ADD_EXECUTABLE(collector ${cur_SRCS})
 #assign custrom link lib
 target_link_libraries(collector
 dagent
-dcnode
-dcbase
 python2.7
 protobuf)
 

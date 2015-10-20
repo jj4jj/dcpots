@@ -265,7 +265,6 @@ void dagent_export_python(bool for_ext){
 		pyee.desc = "void init() init :must be called by indenpendent extension";
 		vmexport.entries.push_back(pyee);
 
-
 		pyee.func = (void*)(_py_ext_destroy);
 		pyee.name = "destroy";
 		pyee.desc = "void destroy() destory :must be called by indenpendent extension";
@@ -306,7 +305,7 @@ int     dagent_init(const dagent_config_t & conf){
 	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
 	AGENT.node = node;
-	for (int i = script_vm_enm_type::SCRIPT_VM_NONE;conf.extmode && i < script_vm_enm_type::SCRIPT_VM_MAX; ++i){
+	for (int i = script_vm_enm_type::SCRIPT_VM_NONE; !conf.extmode && i < script_vm_enm_type::SCRIPT_VM_MAX; ++i){
 		script_vm_config_t	vmc;
 		vmc.type = (script_vm_enm_type)i;		
 		vmc.path = conf.plugin_path.c_str();
