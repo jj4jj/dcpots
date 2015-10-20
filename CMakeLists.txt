@@ -51,4 +51,4 @@ add_subdirectory(dagent)
 add_subdirectory(app/test)
 add_subdirectory(app/reporter)
 add_subdirectory(app/collector)
-
+add_subdirectory(dagent/python)

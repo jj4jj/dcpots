@@ -107,7 +107,7 @@ static PyObject * _py_pop_cb(PyObject *, PyObject * type){
 static PyObject * _py_send(PyObject *, PyObject * dst_type_msg_size){
 	int type = 0 , size = 0;
 	const char * dst = nullptr , * msg = nullptr;
-	if (PyArg_ParseTuple(dst_type_msg_size, "sisi", &dst, &type, &msg, &size)){
+	if (PyArg_ParseTuple(dst_type_msg_size, "sit#", &dst, &type, &msg, &size)){
 		int ret = dagent_send(dst, type, msg_buffer_t(msg, size));
 		if (ret){
 			LOGP("dagent send error :%d", ret);
@@ -139,39 +139,48 @@ static PyObject * _py_ready(PyObject *, PyObject *){
 	return rest;
 }
 
+static PyObject * _py_ext_init(PyObject *, PyObject * args, PyObject *keywds){
+	dagent_config_t dcf;
+	const char * localkey = "";
+	const char * parent = "";
+	const char * listen = "";
+	const char * name = "pynoname";
+	int routermode = 0;
+	int heartbeat = dcf.heartbeat;
+	static const char *kwlist[] = {  "name", "routermode","localkey", "parent", "listen","heartbeat", NULL };
+	if (!PyArg_ParseTupleAndKeywords(args, keywds, "si|sssi", (char**)kwlist,
+		&name, &routermode, &localkey, &parent, &listen, &heartbeat)){
+		PyErr_SetString(PyExc_TypeError, "param parse error !");
+		return NULL;
+	}
+	dcf.name = name;
+	dcf.routermode = routermode != 0;
+	dcf.localkey = localkey;
+	dcf.parent = parent;
+	dcf.listen = listen;
+	dcf.heartbeat = heartbeat;
+	dcf.extmode = true;
+	int ret = dagent_init(dcf);
+	if (ret){
+		LOGP("dagent init error :%d", ret);
+		PyErr_SetString(PyExc_TypeError, "dagent init error !");
+		return NULL;
+	}
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static PyObject * _py_ext_destroy(PyObject *, PyObject *){
+	dagent_destroy();
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
 static  int _init_py_vm(script_vm_t * vm){
 	if (!vm){
 		return -1;
-	}
-	script_vm_python_export_t & vmexport = AGENT.py_export;
-	vmexport.module = "dagent";
-	script_vm_python_export_t::export_entry_t	pyee;
-	pyee.func = (void*)(_py_push_cb);
-	pyee.name = "push_cb";
-	pyee.desc = "void push_cb(int type, int(const char* src, const char* msg, int sz)) add a cb with type...";
-	vmexport.entries.push_back(pyee);
-	
-	pyee.func = (void*)(_py_pop_cb);
-	pyee.name = "pop_cb";
-	pyee.desc = "void pop_cb(int type) remove the pushed cb with type...";
-	vmexport.entries.push_back(pyee);
-
-	pyee.func = (void*)(_py_send);
-	pyee.name = "send";
-	pyee.desc = "void send(const char* dst, int type, const char* msg, int msg_size) send msg to dst with type ...";
-	vmexport.entries.push_back(pyee);
-
-	pyee.func = (void*)(_py_update);
-	pyee.name = "update";
-	pyee.desc = "void update(int timeout_ms) update agent state ...";
-	vmexport.entries.push_back(pyee);
-
-	pyee.func = (void*)(_py_ready);
-	pyee.name = "ready";
-	pyee.desc = "int ready() query agent state ... [-1:abort,0:not ready:1:ready]";
-	vmexport.entries.push_back(pyee);
-
-	script_vm_export(vm, vmexport);
+	}	
+	dagent_export_python(false);
 	if (script_vm_run_file(vm, "init")){
 		LOGP("init plugin start file error !");
 		return -1;
@@ -197,7 +206,7 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 	auto pyit = AGENT.py_cbs.find(dm.type());
 	if(pyit != AGENT.py_cbs.end()){
 		/* Time to call the callback */
-		PyObject *arglist = Py_BuildValue("(ssi)", src, msg.buffer, msg.valid_size);
+		PyObject *arglist = Py_BuildValue("(ss#)", src, dm.msg_data().data(), dm.msg_data().length());
 		PyObject *result = PyObject_CallObject(pyit->second, arglist);
 		Py_XDECREF(arglist);
 		if (result == NULL){
@@ -215,6 +224,56 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 	//not found
 	return _error("not found handler !");
 }
+
+void dagent_export_python(bool for_ext){
+	script_vm_python_export_t & vmexport = AGENT.py_export;
+	if (!vmexport.entries.empty()){
+		LOGP("repeat export python ...");
+		return;
+	}
+
+	vmexport.module = "dagent";
+	script_vm_python_export_t::export_entry_t	pyee;
+	pyee.func = (void*)(_py_push_cb);
+	pyee.name = "push_cb";
+	pyee.desc = "void push_cb(int type, int(const char* src, const char* msg, int sz)) add a cb with type...";
+	vmexport.entries.push_back(pyee);
+
+	pyee.func = (void*)(_py_pop_cb);
+	pyee.name = "pop_cb";
+	pyee.desc = "void pop_cb(int type) remove the pushed cb with type...";
+	vmexport.entries.push_back(pyee);
+
+	pyee.func = (void*)(_py_send);
+	pyee.name = "send";
+	pyee.desc = "void send(const char* dst, int type, const char* msg, int msg_size) send msg to dst with type ...";
+	vmexport.entries.push_back(pyee);
+
+	pyee.func = (void*)(_py_update);
+	pyee.name = "update";
+	pyee.desc = "void update(int timeout_ms) update agent state ...";
+	vmexport.entries.push_back(pyee);
+
+	pyee.func = (void*)(_py_ready);
+	pyee.name = "ready";
+	pyee.desc = "int ready() query agent state ... [-1:abort,0:not ready:1:ready]";
+	vmexport.entries.push_back(pyee);
+
+	if (for_ext){
+		pyee.func = (void*)(_py_ext_init);
+		pyee.name = "init";
+		pyee.desc = "void init() init :must be called by indenpendent extension";
+		vmexport.entries.push_back(pyee);
+
+
+		pyee.func = (void*)(_py_ext_destroy);
+		pyee.name = "destroy";
+		pyee.desc = "void destroy() destory :must be called by indenpendent extension";
+		vmexport.entries.push_back(pyee);
+	}
+
+	script_vm_export(vmexport);
+}
 int     dagent_init(const dagent_config_t & conf){
 	if (AGENT.node)
 	{
@@ -225,8 +284,8 @@ int     dagent_init(const dagent_config_t & conf){
 	
 	dcnode_config_t	dcf;
 	dcf.name = conf.name;
-	dcf.heart_beat_gap = conf.hearbeat;
-	dcf.max_live_heart_beat_gap = 3 * conf.hearbeat;
+	dcf.heart_beat_gap = conf.heartbeat;
+	dcf.max_live_heart_beat_gap = 3 * conf.heartbeat;
 	if (!conf.parent.empty()){
 		dcf.addr.parent_addr = conf.parent;
 	}
@@ -247,7 +306,7 @@ int     dagent_init(const dagent_config_t & conf){
 	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
 	AGENT.node = node;
-	for (int i = script_vm_enm_type::SCRIPT_VM_NONE; i < script_vm_enm_type::SCRIPT_VM_MAX; ++i){
+	for (int i = script_vm_enm_type::SCRIPT_VM_NONE;conf.extmode && i < script_vm_enm_type::SCRIPT_VM_MAX; ++i){
 		script_vm_config_t	vmc;
 		vmc.type = (script_vm_enm_type)i;		
 		vmc.path = conf.plugin_path.c_str();

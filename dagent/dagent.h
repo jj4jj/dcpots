@@ -10,8 +10,9 @@ struct dagent_config_t
 	string	localkey;
 	string	parent;	//parent tcp addr eg.127.0.0.1:8888
 	string	listen;	//listen 127.0.0.1:8888
-	int		hearbeat;//3*heartbeat timeout will set be dead
+	int		heartbeat;//3*heartbeat timeout will set be dead
 	string	plugin_path;
+	bool	extmode;
 	dagent_config_t() :max_msg_size(1048576),routermode(false){
 		name = "noname";
 		max_msg_size = 1048576;
@@ -19,8 +20,9 @@ struct dagent_config_t
 		parent = "";
 		listen = "";
 		localkey = "";
-		hearbeat = 10;
+		heartbeat = 10;
 		plugin_path = "plugins";
+		extmode = false;
 	}
 };
 
@@ -36,3 +38,5 @@ int     dagent_cb_pop(int type);
 
 //python file load
 int     dagent_load_plugin(const char * file);
+
+void    dagent_export_python(bool for_ext);

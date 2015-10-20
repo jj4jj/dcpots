@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 	dagent_config_t	conf;
 	conf.name = "libagent";
 	conf.localkey = "./dcagent";
-	conf.hearbeat = 10;
+	conf.heartbeat = 10;
 	//an agent
 	if (agent_mode){
 		conf.name = "binagent";

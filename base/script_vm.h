@@ -44,6 +44,6 @@ int				script_vm_run_file(script_vm_t * vm, const char * file);
 int				script_vm_run_string(script_vm_t * vm, const char * str);
 
 //for python
-void			script_vm_export(script_vm_t * vm, const script_vm_python_export_t & export_);
+void			script_vm_export(const script_vm_python_export_t & export_);
 
 

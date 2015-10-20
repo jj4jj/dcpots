@@ -117,7 +117,7 @@ int				script_vm_run_string(script_vm_t * vm, const char * str){
 
 
 //for python
-void					script_vm_export(script_vm_t * vm, const script_vm_python_export_t & export_){
+void					script_vm_export(const script_vm_python_export_t & export_){
 	size_t total_sz = sizeof(PyMethodDef)*(export_.entries.size() + 1);
 	PyMethodDef	* meth_exports = (PyMethodDef*)malloc(total_sz);
 	bzero(meth_exports, total_sz);
