@@ -1,2 +1,0 @@
-# sdv
-simple data visualization
