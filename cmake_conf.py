@@ -6,38 +6,49 @@ LIBS = [
         {
             'name':'dcbase',
             'subdir':'base',
-            'includes':[],
+            'linklibs' : [
+                'protobuf',
+                'python2.7',
+            ]
         },
         {
             'name':'dcnode',
             'subdir':'dcnode',
-            'includes':[],
+            'linklibs' : [
+                'dcbase',
+            ]
         },
         {
             'name':'dagent',
             'subdir':'dagent',
-            'includes':[],
-        }
+            'linklibs' : [
+                'dcnode',
+            ]
+        },
+        {
+            'name':'dagent_py',
+            'subdir':'dagent/python',
+            'type': 'SHARED',
+            'includes':['base','dcnode','dagent'],
+            'linkpaths':[],
+            'src_dirs':['base','dcnode','dagent'],
+            'linklibs' : [
+                'protobuf','python2.7'
+            ]
+        },
+
 ]
 EXES = [
         {
             'name':'testagent',
             'subdir':'app/test',
-            'includes':[],
-            'linkpaths':[],
             'linklibs' : [
                 'dagent',
-                'dcnode',
-                'dcbase',
-                'python2.7',
-                'protobuf',
             ]
         },
         {
             'name':'reporter',
             'subdir':'app/reporter',
-            'includes':[],
-            'linkpaths':[],
             'linklibs' : [
                 'dagent',
                 'dcnode',
@@ -49,8 +60,6 @@ EXES = [
         {
             'name':'collector',
             'subdir':'app/collector',
-            'includes':[],
-            'linkpaths':[],
             'linklibs' : [
                 'dagent',
                 'dcnode',
