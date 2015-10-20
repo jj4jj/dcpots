@@ -59,7 +59,7 @@ int reporter_using(){
 	if (seted){
 		return -1;
 	}
-	else if(dagent_ready()){
+	else if(dagent_ready() == 1){
 		LOGP("dagent is ready , so send msg ....");
 		report_set("online", "200");
 		report_inc("charge", 200);

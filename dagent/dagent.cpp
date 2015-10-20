@@ -210,6 +210,7 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 		PyObject *result = PyObject_CallObject(pyit->second, arglist);
 		Py_XDECREF(arglist);
 		if (result == NULL){
+			PyErr_Print();
 			LOGP("call python cb error !");
 		}
 		else{

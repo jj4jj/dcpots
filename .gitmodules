@@ -1,3 +1,6 @@
 [submodule "tools/cmaketools"]
 	path = tools/cmaketools
 	url = git@github.com:jj4jj/cmaketools.git
+[submodule "tools/sdv"]
+	path = tools/sdv
+	url = git@github.com:jj4jj/sdv.git
