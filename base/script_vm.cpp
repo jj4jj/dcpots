@@ -10,12 +10,12 @@ struct python_vm_t {
 };
 
 struct script_vm_t{
-	script_vm_type	type;
+	script_vm_enm_type	type;
 	std::string		path;
 	python_vm_t	 *	python;
 	script_vm_t(){
 		python = nullptr;
-		type = script_vm_type::SCRIPT_VM_NONE;
+		type = script_vm_enm_type::SCRIPT_VM_NONE;
 	}
 };
 
@@ -85,6 +85,10 @@ void			script_vm_destroy(script_vm_t * vm){
 		delete vm;
 	}
 }
+script_vm_enm_type	script_vm_type(script_vm_t* vm){
+	return vm->type;
+}
+
 int				script_vm_run_file(script_vm_t * vm, const char * file){
 	std::string filepath = file;
 	if (file[0] != '/' && !vm->path.empty()){
@@ -92,6 +96,9 @@ int				script_vm_run_file(script_vm_t * vm, const char * file){
 	}
 	switch (vm->type){
 	case SCRIPT_VM_PYTHON:
+		if (filepath.find(".py") + 3 != filepath.length()){
+			filepath += ".py";
+		}
 		return _run_python_file(vm->python, filepath.c_str());
 	default:
 		LOGP("not support type:%d", vm->type);
@@ -111,5 +118,16 @@ int				script_vm_run_string(script_vm_t * vm, const char * str){
 
 //for python
 void					script_vm_export(script_vm_t * vm, const script_vm_python_export_t & export_){
-	return;
+	size_t total_sz = sizeof(PyMethodDef)*(export_.entries.size() + 1);
+	PyMethodDef	* meth_exports = (PyMethodDef*)malloc(total_sz);
+	bzero(meth_exports, total_sz);
+	for (int i = 0; i < (int)export_.entries.size(); ++i){
+		const auto & entry = export_.entries[i];
+		PyMethodDef & meth = meth_exports[i];
+		meth.ml_doc = entry.desc.c_str();
+		meth.ml_flags = METH_VARARGS;
+		meth.ml_name = entry.name.c_str();
+		meth.ml_meth = (PyCFunction)(entry.func);
+	}
+	Py_InitModule(export_.module.c_str(), meth_exports);
 }

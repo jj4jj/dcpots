@@ -27,6 +27,7 @@ int collector_init(const char * keypath, const char * name){
 	dagent_cb_push(REPORT_MSG_SET, on_report_set);
 	dagent_cb_push(REPORT_MSG_INC, on_report_set);
 	dagent_cb_push(REPORT_MSG_DEC, on_report_set);
+	//
 	return 0;
 }
 void collector_destroy(){

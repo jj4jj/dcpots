@@ -5,7 +5,9 @@
 #include "base/msg_proto.hpp"
 #include "base/script_vm.h"
 #include "dagent.h"
-
+extern "C" {
+#include "python2.7/Python.h"
+}
 struct dagent_plugin_t {
 	std::string				file;
 };
@@ -20,7 +22,10 @@ struct dagent_t
 	unordered_map<int, dagent_cb_t>		cbs;
 	msg_buffer_t						send_msgbuffer;
 	std::vector<dagent_plugin_t>		plugins;
-	script_vm_t	*						vms[script_vm_type::SCRIPT_VM_MAX];
+	script_vm_t	*						vms[script_vm_enm_type::SCRIPT_VM_MAX];
+
+	unordered_map<int, PyObject*>		py_cbs;
+	script_vm_python_export_t			py_export;
 	dagent_t(){
 		bzero(vms,sizeof(vms));
 		node = nullptr;
@@ -34,6 +39,148 @@ static inline int	_error(const char * msg, int err = -1, logger_t * trace = null
 	LOGP("%s",msg);
 	return err;
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////
+bool	_cb_exists(int type){
+	auto it = AGENT.cbs.find(type);
+	if (it != AGENT.cbs.end()){
+		return true;
+	}
+	auto pyit = AGENT.py_cbs.find(type);
+	if (pyit != AGENT.py_cbs.end()){
+		return true;
+	}
+	return false;
+}
+
+
+static int _py_cb_push(int type, PyObject * cb){
+	if (_cb_exists(type)){
+		LOGP("repeat cb push type:%d ", type);
+		return -1;
+	}
+	Py_XINCREF(cb);
+	AGENT.py_cbs[type] = cb;
+	return 0;
+}
+static void _py_cb_pop(int type){
+	auto it = AGENT.py_cbs.find(type);
+	if (it != AGENT.py_cbs.end()){
+		Py_XDECREF(it->second);
+		AGENT.py_cbs.erase(it);
+	}
+}
+//int push_cb(type,cb)
+static PyObject * _py_push_cb(PyObject *, PyObject * type_cb){
+	int ctype = 0;
+	PyObject *cb = nullptr;
+	if (PyArg_ParseTuple(type_cb, "iO:set_callback", &ctype, &cb)){
+		if (!PyCallable_Check(cb)) {
+			PyErr_SetString(PyExc_TypeError, "parameter 2 must be callable");
+			return NULL;
+		}
+		//save the cb to the map > incea 
+		int ret = _py_cb_push(ctype, cb);
+		if (ret){
+			PyErr_SetString(PyExc_TypeError, "py cb push error !");
+			return NULL;
+		}
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	PyErr_SetString(PyExc_TypeError, "parameter parse error");
+	return NULL;
+}
+//pop cb
+static PyObject * _py_pop_cb(PyObject *, PyObject * type){
+	int ctype = 0;
+	if (PyArg_ParseTuple(type, "i", &ctype)){
+		//save the cb to the map > incea 
+		LOGP("pop python cb :%d",ctype);
+		_py_cb_pop(ctype);
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	PyErr_SetString(PyExc_TypeError, "parameter parse error");
+	return NULL;
+}
+static PyObject * _py_send(PyObject *, PyObject * dst_type_msg_size){
+	int type = 0 , size = 0;
+	const char * dst = nullptr , * msg = nullptr;
+	if (PyArg_ParseTuple(dst_type_msg_size, "sisi", &dst, &type, &msg, &size)){
+		int ret = dagent_send(dst, type, msg_buffer_t(msg, size));
+		if (ret){
+			LOGP("dagent send error :%d", ret);
+			PyErr_SetString(PyExc_TypeError, "dagent send error");
+			return NULL;
+		}
+		/* Boilerplate to return "None" */
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	PyErr_SetString(PyExc_TypeError, "parameter parse error");
+	return NULL;
+}
+static PyObject * _py_update(PyObject *, PyObject * timeoutms){
+	int timeout_ms = 10;
+	if (PyArg_ParseTuple(timeoutms, "i", &timeout_ms)){
+		dagent_update(timeout_ms);
+		/* Boilerplate to return "None" */
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+	PyErr_SetString(PyExc_TypeError, "parameter parse error");
+	return NULL;
+}
+static PyObject * _py_ready(PyObject *, PyObject *){
+	int ret = dagent_ready();
+	PyObject * rest = Py_BuildValue("i", ret);
+	Py_INCREF(rest);
+	return rest;
+}
+
+static  int _init_py_vm(script_vm_t * vm){
+	if (!vm){
+		return -1;
+	}
+	script_vm_python_export_t & vmexport = AGENT.py_export;
+	vmexport.module = "dagent";
+	script_vm_python_export_t::export_entry_t	pyee;
+	pyee.func = (void*)(_py_push_cb);
+	pyee.name = "push_cb";
+	pyee.desc = "void push_cb(int type, int(const char* src, const char* msg, int sz)) add a cb with type...";
+	vmexport.entries.push_back(pyee);
+	
+	pyee.func = (void*)(_py_pop_cb);
+	pyee.name = "pop_cb";
+	pyee.desc = "void pop_cb(int type) remove the pushed cb with type...";
+	vmexport.entries.push_back(pyee);
+
+	pyee.func = (void*)(_py_send);
+	pyee.name = "send";
+	pyee.desc = "void send(const char* dst, int type, const char* msg, int msg_size) send msg to dst with type ...";
+	vmexport.entries.push_back(pyee);
+
+	pyee.func = (void*)(_py_update);
+	pyee.name = "update";
+	pyee.desc = "void update(int timeout_ms) update agent state ...";
+	vmexport.entries.push_back(pyee);
+
+	pyee.func = (void*)(_py_ready);
+	pyee.name = "ready";
+	pyee.desc = "int ready() query agent state ... [-1:abort,0:not ready:1:ready]";
+	vmexport.entries.push_back(pyee);
+
+	script_vm_export(vm, vmexport);
+	if (script_vm_run_file(vm, "init")){
+		LOGP("init plugin start file error !");
+		return -1;
+	}
+	return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+
 static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 	assert(ud == &AGENT);
 	dagent_msg_t	dm;
@@ -46,6 +193,24 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 	if (it != AGENT.cbs.end())
 	{
 		return it->second(msg_buffer_t(dm.msg_data().data(),dm.msg_data().length()), src);
+	}
+	auto pyit = AGENT.py_cbs.find(dm.type());
+	if(pyit != AGENT.py_cbs.end()){
+		/* Time to call the callback */
+		PyObject *arglist = Py_BuildValue("(ssi)", src, msg.buffer, msg.valid_size);
+		PyObject *result = PyObject_CallObject(pyit->second, arglist);
+		Py_XDECREF(arglist);
+		if (result == NULL){
+			LOGP("call python cb error !");
+		}
+		else{
+			int ret = 0;
+			PyArg_Parse(result,"i",&ret);
+			Py_XDECREF(result);
+			return ret;
+		}
+		LOGP("call python cb error result !");
+		return -1;
 	}
 	//not found
 	return _error("not found handler !");
@@ -82,10 +247,14 @@ int     dagent_init(const dagent_config_t & conf){
 	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
 	AGENT.node = node;
-	for (int i = script_vm_type::SCRIPT_VM_JS; i < script_vm_type::SCRIPT_VM_MAX; ++i){
+	for (int i = script_vm_enm_type::SCRIPT_VM_NONE; i < script_vm_enm_type::SCRIPT_VM_MAX; ++i){
 		script_vm_config_t	vmc;
-		vmc.type = (script_vm_type)i;
+		vmc.type = (script_vm_enm_type)i;		
+		vmc.path = conf.plugin_path.c_str();
 		AGENT.vms[i] = script_vm_create(vmc);
+		if (i == script_vm_enm_type::SCRIPT_VM_PYTHON){
+			_init_py_vm(AGENT.vms[i]);
+		}
 	}
 	return 0;
 }
@@ -97,7 +266,7 @@ void    dagent_destroy(){
 	}
 	AGENT.cbs.clear();
 	AGENT.send_msgbuffer.destroy();
-	for (int i = 0; i < script_vm_type::SCRIPT_VM_MAX; ++i){
+	for (int i = 0; i < script_vm_enm_type::SCRIPT_VM_MAX; ++i){
 		if (AGENT.vms[i]){
 			script_vm_destroy(AGENT.vms[i]);
 			AGENT.vms[i] = nullptr;
@@ -107,8 +276,16 @@ void    dagent_destroy(){
 void    dagent_update(int timeout_ms){
 	dcnode_update(AGENT.node, timeout_ms*1000);	
 }
-bool	dagent_ready() { //ready to write 
-	return dcnode_ready(AGENT.node);
+int		dagent_ready() { //ready to write 
+	if (dcnode_stoped(AGENT.node)){
+		return -1;
+	}
+	else if (dcnode_ready(AGENT.node)){
+		return 1;
+	}
+	else {
+		return 0;
+	}
 }
 
 int     dagent_send(const char * dst, int type, const msg_buffer_t & msg){
@@ -123,10 +300,9 @@ int     dagent_send(const char * dst, int type, const msg_buffer_t & msg){
 	return dcnode_send(AGENT.node, dst, AGENT.send_msgbuffer.buffer, AGENT.send_msgbuffer.valid_size);
 }
 int     dagent_cb_push(int type, dagent_cb_t cb){
-	auto it = AGENT.cbs.find(type);
-	if (it != AGENT.cbs.end())
-	{
+	if (_cb_exists(type)){
 		//repeat
+		LOGP("repeat cb push type:%d ", type);
 		return -1;
 	}
 	AGENT.cbs[type] = cb;
@@ -146,14 +322,14 @@ int     dagent_load_plugin(const char * file){
 	script_vm_t * vm = nullptr;
 	if (strstr(file, ".py") + 3 == file + strlen(file)){
 		//python
-		vm = AGENT.vms[script_vm_type::SCRIPT_VM_PYTHON];
+		vm = AGENT.vms[script_vm_enm_type::SCRIPT_VM_PYTHON];
 	}
 	else if (strstr(file, ".lua") + 4 == file + strlen(file)){
 		//lua
-		vm = AGENT.vms[script_vm_type::SCRIPT_VM_LUA];
+		vm = AGENT.vms[script_vm_enm_type::SCRIPT_VM_LUA];
 	}
 	else if (strstr(file, ".js") + 3 == file + strlen(file)){
-		vm = AGENT.vms[script_vm_type::SCRIPT_VM_JS];
+		vm = AGENT.vms[script_vm_enm_type::SCRIPT_VM_JS];
 	}
 	if(!vm){
 		LOGP("not found plugin vm file:%s or plugin vm not load", file);
