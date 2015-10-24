@@ -1,14 +1,14 @@
 #D[C]Agent
 D[C]Agent is a distribute system basic comunication componets [agent] solution .
 
-**DAgent main feature**
+##DAgent main feature##
 
 - lib for distribute agent client
 - distribute agent server for report bussiness, monitor, machine statistics , python extension etc.
 
 
 
-**Architecture**
+##Architecture##
 
 - Bussiness Application [reporter , execter , monitor , machine statistics]
 - DAgent [wrap DCNode with python extension]
@@ -61,14 +61,14 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 
 
 
-**depends**
+##depends##
 
 1. libprotobuf 2.6+ (libprotobuf-dev)
 2. libpython 2.7.5+ (python-dev)
 3. cmake 2.6+
 
 
-**doing / done / todo / opt**
+##doing / done / todo / opt##
 
 - router caching [done]
 - alloc msg buffer with zero copy [by lower layer allocated]  [opt]
@@ -83,3 +83,22 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 - add dbproxy for mysql [orm]  [opt]
 - push service [done with sdv]
 - data visualization with echarts [done with sdv]
+
+
+
+
+##build##
+    make rebuild
+
+
+
+##test##
+    ls bin/				#the the test programs 
+	./dagent n	l1		#agent
+	./dagent n  l2		#root
+	./dagent n	l		#leaf
+	mkdir -p /tmp/dagent 	#for path token to key
+	./collector			#collector recv from reporter
+	./reporter			#reporter send to collector
+
+
