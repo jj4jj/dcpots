@@ -49,8 +49,8 @@ int				logger_write(logger_t *, int err, const char* fmt, ...);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define LOG_MSG_FORMAT_PREFIX	"%lu.%lu:%d|%s:%d|%s|"
-#define LOG_MSG_FORMAT_VALUES	err_tv_.tv_sec,err_tv_.tv_usec,getpid(),__FUNCTION__,__LINE__
+#define LOG_MSG_FORMAT_PREFIX	"%lu.%lu:%d|%s:%d|%d:%s|%s|"
+#define LOG_MSG_FORMAT_VALUES	err_tv_.tv_sec,err_tv_.tv_usec,getpid(),__FUNCTION__,__LINE__,errno,strerror(errno)
 
 #ifndef LOG_MSG
 #define LOG_MSG(log_lv_, erm, killer, err_no, format, ...)	\
@@ -68,8 +68,10 @@ do{\
 #define LOGP(format,...)	\
 do{\
 	const int log_lv_ = LOG_LVL_DEBUG; \
-	timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-	fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__);\
+	if ((log_lv_) >= logger_level()){\
+		timeval err_tv_; gettimeofday(&err_tv_, NULL); \
+		fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__);\
+	}\
 } while (0)
 #endif
 

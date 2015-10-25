@@ -1,7 +1,7 @@
 PROJECT='dcagent'
 VERSION='0.0.1'
-DEBUG = 1
-DEFS =['_DCAGENT_DEBUG']
+DEBUG = 0
+DEFS =['']
 VERBOSE = 0
 EXTRA_C_FLAGS = ''
 EXTRA_LD_FLAGS = ''
@@ -67,5 +67,12 @@ EXES = [
                 'protobuf',
             ]
         },
-
+        {
+            'name':'pingpong',
+            'subdir':'app/pingpong',
+            'linklibs' : [
+                'dcnode',
+                'protobuf',
+            ]
+        },
 ]

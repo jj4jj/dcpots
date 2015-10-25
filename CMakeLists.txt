@@ -16,22 +16,22 @@ if(BUILDING_IN_SOURCE)
 endif()
 
 # compile option
-option(DEBUG "Debug mode" 1)
+option(DEBUG "Debug mode" 0)
 option(PCH "Use precompiled headers" 0)
 
-ADD_DEFINITIONS(-D_DCAGENT_DEBUG)
+ADD_DEFINITIONS(-D)
 
 if(DEBUG)
-	message("Build in debug-mode : Yes")
 	set(CMAKE_BUILD_TYPE Debug)
+	message("Build in debug-mode : Yes (default)")
 else()
 	set(CMAKE_BUILD_TYPE Release)
-	message("Build in debug-mode : No (default)")
+	message("Build in debug-mode : No")
 endif()
 
 #debug common
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Wfatal-errors -Wextra -g -rdynamic -gdwarf-2 -g3 -ggdb3 -pg -Wl,-Bdynamic -ldl -lm -lrt -pthread ")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++11 -rdynamic -gdwarf-2 -Wall -Wfatal-errors -pg -Wextra -Wno-unused-parameter -ldl -lm -lrt -pthread ")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Wfatal-errors -Wextra -g -rdynamic -gdwarf-2 -g3 -ggdb3 -Wl,-Bdynamic -ldl -lm -lrt -pthread ")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++11 -rdynamic -gdwarf-2 -Wall -Wfatal-errors -Wextra -Wno-unused-parameter -ldl -lm -lrt -pthread ")
 
 # release mode
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -g --no-warnings -ldl -lm -lrt -pthread")
@@ -52,4 +52,5 @@ add_subdirectory(dagent/python)
 add_subdirectory(app/test)
 add_subdirectory(app/reporter)
 add_subdirectory(app/collector)
+add_subdirectory(app/pingpong)
 
