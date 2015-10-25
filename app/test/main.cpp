@@ -213,6 +213,27 @@ static int python_test(){
 
 	return 0;
 }
+int log_test(){
+	logger_config_t lc;
+	lc.max_file_size = 1024;
+	lc.max_roll = 3;
+	lc.path = "./";
+	lc.pattern = "test.log";
+	int ret = global_logger_init(lc);
+	if (ret){
+		return ret;
+	}
+	int n = 3 * 1000;
+	while (n--){
+		GLOG(LOG_LVL_ERROR, ret, "test logger msg just for size , this is dummy");
+	}
+	return 0;
+}
+int perf_test(const char * arg){
+	return 0;
+}
+
+
 int main(int argc, char* argv[])
 {
 	int agent_mode = 0;
@@ -231,6 +252,10 @@ int main(int argc, char* argv[])
 			break;
 		case 'p':
 			return python_test();
+		case 'l':
+			return log_test();
+		case 'f':
+			return perf_test(argv[1]);
 		default:
 			break;
 		}

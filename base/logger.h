@@ -26,7 +26,11 @@ struct logger_config_t{
 	int		max_roll;
 	int		max_msg_size;
 	int		max_file_size;
-	logger_config_t() :max_roll(20), max_msg_size(1024 * 1024), max_file_size(1024*1024*10){}
+	log_msg_level_type	lv;
+	logger_config_t() :max_roll(20),
+		max_msg_size(1024 * 1024), max_file_size(1024*1024*10){
+		lv = LOG_LVL_TRACE;
+	}
 };
 
 int				global_logger_init(const logger_config_t & conf);
@@ -42,7 +46,6 @@ const char*		logger_msg(logger_t * logger = nullptr);
 int				logger_errno(logger_t * logger = nullptr);
 //set last
 int				logger_write(logger_t *, int err, const char* fmt, ...);
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -70,13 +73,11 @@ do{\
 } while (0)
 #endif
 
-
-#ifndef LOGE
-#define LOGE(log_lv_, err, format, ...)	do{\
+#ifndef GLOG
+#define GLOG(log_lv_, err, format, ...)	do{\
 	if ((log_lv_) >= logger_level()){\
 		timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-		logger_write(nullptr, (err), LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
-		fputs(logger_msg(), stderr); \
+		logger_write(nullptr, (err), LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
 	}\
 } while (0)
 #endif

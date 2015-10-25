@@ -11,7 +11,6 @@ struct logger_t {
 	int			next_rollid;
 	bool		inited;
 	string		logfile;//current
-	log_msg_level_type	 level;
 	logger_t() :last_err(0){
 		pf = nullptr;
 		next_rollid = 1;
@@ -34,32 +33,40 @@ void			global_logger_destroy(){
 	logger_destroy(G_LOGGER);
 	G_LOGGER = nullptr;
 }
-
-logger_t *	logger_create(const logger_config_t & conf){
+FILE * logfile_open(const char * filename, int & nextrollid){
 	FILE * pf = nullptr;
-	int	 nextrollid = 1;
-	string filepath = conf.path + "/" + conf.pattern;
-	if (filepath.length() > 1){
-		pf = fopen(filepath.c_str(), "a+");
-		if (pf == nullptr){
-			LOGE(LOG_LVL_FATAL ,errno,"open file :%s error!",filepath.c_str());
-			return nullptr;
-		}
+	if (nextrollid == 0){
+		pf = fopen(filename, "a");
+	}
+	else {
+		pf = fopen(filename, "w");
+	}
+	if (pf == nullptr){
+		GLOG(LOG_LVL_FATAL, errno, "open file :%s error!", filename);
+		return nullptr;
+	}
+	if (nextrollid == 0){
 		char nextfileid[32];
-		FILE* rfp = fopen(filepath.c_str(), "r");
+		FILE* rfp = fopen(filename, "r");
 		if (rfp){
 			size_t sz = sizeof(nextfileid)-1;
-			char * pbuf = nextfileid;
-			if (getline(&pbuf, &sz, rfp) > 0){
+			char * pnxf = (char*)nextfileid;
+			if (getline(&pnxf, &sz, rfp) > 0){
 				nextrollid = strtoul(nextfileid, nullptr, 10);
 			}
 			fclose(rfp);
 		}
-		if (nextrollid <= 0){
-			//write 1 begin
-			nextrollid = 1;
-			fputs("1", pf);
-		}
+		nextrollid = nextrollid > 0 ? nextrollid : 1;
+	}
+	fprintf(pf, "%d\n", nextrollid);
+	return pf;
+}
+logger_t *	logger_create(const logger_config_t & conf){
+	FILE * pf = nullptr;
+	int	 nextrollid = 0;
+	string filepath = conf.path + "/" + conf.pattern;
+	if (filepath.length() > 1){
+		pf = logfile_open(filepath.c_str(), nextrollid);
 	}
 	logger_t * em = new logger_t();
 	if (!em) return nullptr;
@@ -84,13 +91,13 @@ void			logger_set_level(logger_t * logger, log_msg_level_type level){
 	if (logger == nullptr){
 		logger = G_LOGGER;
 	}
-	logger->level = level;
+	logger->conf.lv = level;
 }
 int				logger_level(logger_t * logger){
 	if (logger == nullptr){
 		logger = G_LOGGER;
 	}
-	return logger->level;
+	return logger->conf.lv;
 }
 
 //last msg
@@ -118,19 +125,21 @@ int				logger_write(logger_t * logger, int err, const char* fmt, ...)
 	va_start(ap, fmt);
 	int n = 0;
 	logger->last_err = err;
-	n = vsnprintf(&(*(logger->last_msg.begin())), logger->last_msg.capacity() - 1, fmt, ap);
+	n = vsnprintf((char*)logger->last_msg.data(), logger->last_msg.capacity() - 1, fmt, ap);
 	va_end(ap);
 	if (logger->pf){
 		fputs(logger->last_msg.c_str(), logger->pf);
 		if (ftell(logger->pf) >= logger->conf.max_file_size){
-			//shift
+			//shift file <>
 			fflush(logger->pf);
-			logger->pf = nullptr;
+			fclose(logger->pf);
 			string nextfile = logger->logfile + "." + std::to_string(logger->next_rollid);
-			logger->next_rollid = (logger->next_rollid + 1) % logger->conf.max_roll + 1;
 			rename(logger->logfile.c_str(), nextfile.c_str());
-			rewind(logger->pf);
-			fputs(std::to_string(logger->next_rollid).c_str(), logger->pf);
+			int nextrollid = (logger->next_rollid + 1) % logger->conf.max_roll;
+			if (nextrollid == 0) nextrollid = 3;
+			if ((logger->pf = logfile_open(logger->logfile.c_str(), nextrollid))){
+				logger->next_rollid = nextrollid;
+			}
 		}
 	}
 	else{

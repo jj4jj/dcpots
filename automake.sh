@@ -62,7 +62,7 @@ list()
 
 if [[ ! -d build ]];then
     echo "init project compiling ..."
-    build
+    rebuild
 fi
 
 case $1 in
