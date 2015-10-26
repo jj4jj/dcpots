@@ -21,6 +21,7 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 		double speed = total / cost_time;
 		printf("pingpong test result msg length:%d count:%d time:%luus speed qpus:%lf qps:%lf\n",
 			msg.valid_size, total, cost_time, speed, speed*1000000);
+		dcnode_abort(dc);
 	}
 	return 0;
 }
@@ -113,15 +114,15 @@ int main(int argc , char * argv[]){
 		LOGP("create dncode error !");
 		return -2;
 	}
-	logger_set_level(nullptr, LOG_LVL_INFO);
 	while (true)
 	{
 		dcnode_update(dc, 1000);
-		if (dcnode_ready(dc) && ping && !start){
+		if (!start && dcnode_ready(dc) && ping){
 			dcnode_send(dc, sname.c_str(), s_send_msg.c_str(), s_send_msg.length());
 			start = true;
+			logger_set_level(nullptr, LOG_LVL_INFO);
 		}
-		if (dcnode_stoped(dc)){
+		if (dcnode_ready(dc) == -1){
 			LOGP("dcnode stoped ....");
 			return -1;
 		}

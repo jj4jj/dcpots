@@ -125,10 +125,17 @@ int				logger_write(logger_t * logger, int err, const char* fmt, ...)
 	va_start(ap, fmt);
 	int n = 0;
 	logger->last_err = err;
-	n = vsnprintf((char*)logger->last_msg.data(), logger->last_msg.capacity() - 1, fmt, ap);
+	char * msg_start = (char*)logger->last_msg.data();
+	n = vsnprintf(msg_start, logger->last_msg.capacity() - 1, fmt, ap);
 	va_end(ap);
+	int available_size = logger->last_msg.capacity() - (n + 2);
+	char errorno_msg_buff[128];
+	if (logger->conf.lv >= LOG_LVL_WARNING && available_size > 16){
+		strerror_r(errno, errorno_msg_buff, sizeof(errorno_msg_buff) - 1);
+		snprintf(&msg_start[n], available_size, "[errno:%d][%s]\n", errno, errorno_msg_buff);
+	}
 	if (logger->pf){
-		fputs(logger->last_msg.c_str(), logger->pf);
+		fputs(msg_start, logger->pf);
 		if (ftell(logger->pf) >= logger->conf.max_file_size){
 			//shift file <>
 			fflush(logger->pf);

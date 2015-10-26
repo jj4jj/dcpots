@@ -82,5 +82,5 @@ void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);
 void      dcnode_set_dispatcher(dcnode_t*, dcnode_dispatcher_t, void* ud);
 int       dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
 
-bool		  dcnode_ready(dcnode_t *);
-bool		  dcnode_stoped(dcnode_t *);
+int		  dcnode_ready(dcnode_t *);
+void	  dcnode_abort(dcnode_t *);

@@ -336,15 +336,7 @@ void    dagent_update(int timeout_ms){
 	dcnode_update(AGENT.node, timeout_ms*1000);	
 }
 int		dagent_ready() { //ready to write 
-	if (dcnode_stoped(AGENT.node)){
-		return -1;
-	}
-	else if (dcnode_ready(AGENT.node)){
-		return 1;
-	}
-	else {
-		return 0;
-	}
+	return dcnode_ready(AGENT.node);
 }
 
 int     dagent_send(const char * dst, int type, const msg_buffer_t & msg){

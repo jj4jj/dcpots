@@ -1,7 +1,7 @@
 PROJECT='dcagent'
 VERSION='0.0.1'
 DEBUG = 0
-DEFS =['']
+DEFS =[]
 VERBOSE = 0
 EXTRA_C_FLAGS = ''
 EXTRA_LD_FLAGS = ''
@@ -14,7 +14,7 @@ LIBS = [
                 'python2.7',
             ],
             'src_dirs':['base'],
-			'extra_srcs': [''],
+            'extra_srcs': [''],
         },
         {
             'name':'dcnode',

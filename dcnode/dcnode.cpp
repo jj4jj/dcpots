@@ -847,11 +847,21 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz){
 	//dc, tcp_src,sockfd, buff, buff_sz, dm.dst()
 	return _forward_msg(dc, -1, dc->send_buffer.buffer, dc->send_buffer.valid_size, string(dst));
 }
-bool		  dcnode_stoped(dcnode_t * dc){
-	return dc->fsm_state == dcnode_t::DCNODE_ABORT;
+
+void	  dcnode_abort(dcnode_t * dc){
+	_fsm_abort(dc, 0);
 }
-bool		  dcnode_ready(dcnode_t *  dc){
-	return dc->fsm_state == dcnode_t::DCNODE_READY;
+//-1:stop ; 0:not ready;1:ready
+int		  dcnode_ready(dcnode_t *  dc){
+	if (dc->fsm_state == dcnode_t::DCNODE_READY){
+		return 1;
+	}
+	else if (dc->fsm_state != dcnode_t::DCNODE_ABORT){
+		return 0;
+	}
+	else {
+		return -1;
+	}
 }
 
 

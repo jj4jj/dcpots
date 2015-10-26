@@ -49,8 +49,8 @@ int				logger_write(logger_t *, int err, const char* fmt, ...);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define LOG_MSG_FORMAT_PREFIX	"%lu.%lu:%d|%s:%d|%d:%s|%s|"
-#define LOG_MSG_FORMAT_VALUES	err_tv_.tv_sec,err_tv_.tv_usec,getpid(),__FUNCTION__,__LINE__,errno,strerror(errno)
+#define LOG_MSG_FORMAT_PREFIX	"%lu.%lu:%d|%s:%d|%s|"
+#define LOG_MSG_FORMAT_VALUES	err_tv_.tv_sec,err_tv_.tv_usec,getpid(),__FUNCTION__,__LINE__
 
 #ifndef LOG_MSG
 #define LOG_MSG(log_lv_, erm, killer, err_no, format, ...)	\

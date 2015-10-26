@@ -172,7 +172,7 @@ int test_node(const char * p)
 	while (true)
 	{
 		dcnode_update(dc, 10000);
-		if (dcnode_stoped(dc)){
+		if (dcnode_ready(dc) == -1){
 			LOGP("dcnode stoped ....");
 			return -1;
 		}
