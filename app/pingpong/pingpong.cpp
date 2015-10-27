@@ -121,19 +121,24 @@ int main(int argc , char * argv[]){
 	if (!ping){
 		logger_set_level(nullptr, LOG_LVL_INFO);
 	}
+	int n = 0;
 	while (true)
 	{
-		dcnode_update(dc, 1000);
+		n = dcnode_update(dc, 100);
 		if (!start && dcnode_ready(dc) == 1 && ping){
 			dcnode_send(dc, sname.c_str(), s_send_msg.c_str(), s_send_msg.length());
 			start = true;
+			ncur = 1;
+			start_time = util::time_unixtime_us();
 			logger_set_level(nullptr, LOG_LVL_INFO);
 		}
 		if (dcnode_ready(dc) == -1){
 			LOGP("dcnode stoped ....");
 			return -1;
 		}
-		usleep(1000);
+		if (n == 0){
+			usleep(100);//0.1s
+		}
 	}
 	return 0;
 }

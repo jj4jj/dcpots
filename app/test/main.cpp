@@ -3,22 +3,29 @@
 #include "base/logger.h"
 #include "dcnode/dcnode.h"
 #include "dagent/dagent.h"
+#include "base/utility.hpp"
 
-
-//static int max_ping_pong = 10000;
+static int max_ping_pong = 100000;
 static int max_ppsz = 0;
-static int max_ping_time = 100000;
+static int pingpong = 0;
+static const char * msgqpath = nullptr;
+static uint64_t start_us = 0;
 int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 {
-	LOGP("mq cb msg size:%d src:%lu", msg.sz, src);
+	//LOGP("mq cb msg size:%d src:%lu", msg.sz, src);
 	max_ppsz += msg.sz;
-	if (max_ping_time <= 0)
+	pingpong++;
+	if (pingpong == 1){
+		start_us = util::time_unixtime_us();
+	}
+	dcsmq_send(mq, src, msg);
+	if (pingpong >= max_ping_pong)
 	{
-		LOGP("mq cb msg size:%d src:%lu total:%d MB", msg.sz, src, max_ppsz/1048576);
+		start_us = util::time_unixtime_us() - start_us;
+		LOGP("mq cb msg size:%d src:%lu total:%d MB time:%ldus pingpong:%d",
+			msg.sz, src, max_ppsz / 1048576, start_us, max_ping_pong);
 		exit(0);
 	}
-	max_ping_time--;
-	dcsmq_send(mq, src, msg);
 	return 0;
 }
 #define CHECK(r)	\
@@ -31,10 +38,11 @@ if (r) {\
 
 int test_mq(const char * ap)
 {
-	char * test_msg = (char*)malloc(1024*10);
+	const int test_msg_len = 1024;
+	char * test_msg = (char*)malloc(test_msg_len);
 
 	dcsmq_config_t	sc;
-	sc.key = "./dcagent";
+	sc.key = msgqpath;
 	sc.server_mode = ap ? true : false;
 	auto p = dcsmq_create(sc);
 	if (!p)
@@ -45,11 +53,13 @@ int test_mq(const char * ap)
 	dcsmq_msg_cb(p, mq_cb, nullptr);
 	if (!sc.server_mode)
 	{
-		dcsmq_send(p, getpid(), dcsmq_msg_t(test_msg, 1024*10));
+		start_us = util::time_unixtime_us();
+		pingpong = 1;
+		dcsmq_send(p, getpid(), dcsmq_msg_t(test_msg, test_msg_len));
 	}
 	while (true)
 	{
-		dcsmq_poll(p, 500);
+		dcsmq_poll(p, 100);//max proc time is 80-> 12.5 000 * 5 = 1.25W
 	}
 	return 0;
 }
@@ -236,7 +246,9 @@ int perf_test(const char * arg){
 
 int main(int argc, char* argv[])
 {
+	global_logger_init(logger_config_t());
 	int agent_mode = 0;
+	msgqpath = argv[0];
 	if (argc >= 2)
 	{
 		switch (argv[1][0])

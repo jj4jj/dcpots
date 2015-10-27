@@ -74,7 +74,7 @@ typedef int(*dcnode_dispatcher_t)(void * ud, const char * src, const msg_buffer_
 
 dcnode_t* dcnode_create(const dcnode_config_t & conf);
 void      dcnode_destroy(dcnode_t* dc);
-void      dcnode_update(dcnode_t*, int timout_us);
+int       dcnode_update(dcnode_t*, int timout_us);
 
 uint64_t  dcnode_timer_add(dcnode_t * ,int delayms , dcnode_timer_callback_t cb, bool repeat = false);
 void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);

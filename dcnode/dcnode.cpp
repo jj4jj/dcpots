@@ -582,11 +582,16 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 }
 
 static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_sz, const string & dst) {
-	if (_is_leaf(dc))
-	{
+	if (_is_leaf(dc)){
 		//to msgq
 		LOGP("foward msg to :%s with smq to parent", dst.c_str());
-		return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t(buff, buff_sz));
+		auto entry = _name_smq_entry_find(dc, dst);
+		if (!entry){
+			return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t(buff, buff_sz));
+		}
+		else {
+			return dcsmq_push(dc->smq, entry->id, dcsmq_msg_t(buff, buff_sz));
+		}
 	}
 
 	//check children name , if not found , send to parent except src
@@ -725,7 +730,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 				LOGP("create shm error !");
 				dcnode_destroy(n);
 				return nullptr;
-			}			
+			}				
 		}
 		else {
 			dcsmq_set_session(n->smq, getpid());	//default session
@@ -786,22 +791,23 @@ static	void _check_timer_callback(dcnode_t * dc){
 		dc->expiring_callbacks.insert(pair);
 	}
 }
-void      dcnode_update(dcnode_t* dc, int timout_us) {
+int      dcnode_update(dcnode_t* dc, int timout_us) {
 	if (dc->fsm_state == dcnode_t::DCNODE_ABORT){
-		return ;
+		return 0;
 	}
 	//check cb
 	_check_timer_callback(dc);
 
 	_fsm_check(dc, false);
-
+	int n = 0;
 	if (dc->stcp) {
-		dctcp_poll(dc->stcp, timout_us);
+		n += dctcp_poll(dc->stcp, timout_us);
 	}
 	if (dc->smq) {
-		dcsmq_poll(dc->smq, timout_us);
+		n += dcsmq_poll(dc->smq, timout_us);
 	}
 	_check_timer_callback(dc);
+	return n;
 }
 
 //typedef int(*dcnode_dispatcher_t)(const char* src, const dcnode_msg_t & msg);

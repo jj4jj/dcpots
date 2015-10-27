@@ -2,9 +2,9 @@
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
+#include "utility.hpp"
 
-struct dcsmq_t
-{
+struct dcsmq_t {
 	dcsmq_config_t	conf;
 	int				sender;
 	int				recver;
@@ -13,12 +13,10 @@ struct dcsmq_t
 	msgbuf		*	sendbuff;
 	msgbuf		*	recvbuff;
 	uint64_t		session;	//myself id , send and recv msg cookie. in servermode is 0.
-	dcsmq_t()
-	{
+	dcsmq_t(){
 		init();
 	}
-	void init()
-	{
+	void init(){
 		sender = recver = -1;
 		msg_cb = nullptr;
 		sendbuff = recvbuff = nullptr;
@@ -26,77 +24,64 @@ struct dcsmq_t
 		session = 0;
 	}
 };
-int		_msgq_create(key_t key, int flag, size_t max_size)
-{
+int		_msgq_create(key_t key, int flag, size_t max_size){
 	int id = msgget(key, flag);
-	if (id < 0)
-	{
+	if (id < 0){
 		//get error
 		return -1;
 	}
 	struct msqid_ds mds;
 	int ret = msgctl(id, IPC_STAT, (struct msqid_ds *)&mds);
-	if (ret != 0)
-	{
+	if (ret != 0){
 		return -2;
 	}
 
-	if (mds.msg_qbytes != max_size)
-	{
+	if (mds.msg_qbytes != max_size){
 		mds.msg_qbytes = max_size;
 		ret = msgctl(id, IPC_SET, (struct msqid_ds *)&mds);
-		if (ret != 0)
-		{
+		if (ret != 0){
 			return -3;
 		}
 	}
 	return id;
 }
 
-dcsmq_t * dcsmq_create(const dcsmq_config_t & conf)
-{
+dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	//sender : recver (1:2) : client
 	int prj_id[] = { 1, 2 };
-	if (conf.server_mode)
-	{
+	if (conf.server_mode){
 		prj_id[0] = 2;
 		prj_id[1] = 1;
 	}
 	int flag = 0666;
-	if (!conf.attach)
-	{
+	if (!conf.attach){
 		flag |= IPC_CREAT;
 	}
 	key_t key = ftok(conf.key.c_str(), prj_id[0]);
-	if (key == -1)
-	{
+	if (key == -1){
 		//error no
 		return nullptr;
 	}
 	int sender = _msgq_create(key, flag, conf.max_queue_buff_size);
-	if (sender < 0)
-	{
+	if (sender < 0){
 		//errno
 		return nullptr;
 	}
 	key = ftok(conf.key.c_str(), prj_id[1]);
 	int recver = _msgq_create(key, flag, conf.max_queue_buff_size);
-	if (recver < 0)
-	{
+	if (recver < 0){
 		//errno
 		return nullptr;
 	}
 	dcsmq_t * smq = new dcsmq_t();
-	if (!smq)
-	{
+	if (!smq){
 		//memalloc
 		return nullptr;
 	}
 	smq->sendbuff = (msgbuf	*)malloc(conf.msg_buffsz);
 	smq->recvbuff = (msgbuf	*)malloc(conf.msg_buffsz);
 	if (!smq->sendbuff ||
-		!smq->recvbuff)
-	{
+		!smq->recvbuff){
 		//mem alloc
 		return nullptr;
 	}
@@ -105,87 +90,84 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf)
 	smq->recver = recver;
 	return smq;
 }
-void    dcsmq_destroy(dcsmq_t* smq)
-{
-	if (smq->sender >= 0)
-	{
+void    dcsmq_destroy(dcsmq_t* smq){
+	if (smq->sender >= 0){
 		//no need
 	}
-	if (smq->recver >= 0)
-	{
+	if (smq->recver >= 0){
 		//no need
 	}
-	if (smq->sendbuff)
-	{
+	if (smq->sendbuff){
 		free(smq->sendbuff);		
 	}
-	if (smq->recvbuff)
-	{
+	if (smq->recvbuff){
 		free(smq->recvbuff);
 	}
 	smq->init();
 	delete smq;
 }
-void    dcsmq_msg_cb(dcsmq_t * smq, dcsmq_msg_cb_t cb, void * ud)
-{
+void    dcsmq_msg_cb(dcsmq_t * smq, dcsmq_msg_cb_t cb, void * ud){
 	smq->msg_cb = cb;
 	smq->msg_cb_ud = ud;
 }
-void    dcsmq_poll(dcsmq_t*  smq, int timeout_us)
-{	
-	//todo with poll
-	timeval tv1,tv2;
-	gettimeofday(&tv1, NULL);
-	int64_t past_us = 0;
-	ssize_t sz = 0;
-	int nproc = 0;
-	while (past_us < timeout_us)
-	{
-		sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT);
-		if (sz <= 0)
-		{
-			if (errno == EINTR)
-			{
+int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){	
+	int64_t past_us = 0, start_us, now_us;
+	start_us = util::time_unixtime_us();
+	ssize_t msg_sz = 0;
+	int nproc = 0, ntotal_proc = 0;
+	while (past_us < max_time_us){
+		msg_sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT);
+		if (msg_sz <= 0){
+			if (errno == EINTR){
 				continue;
 			}
 			else
-			if (errno == E2BIG)
-			{
+			if (errno == E2BIG){
 				//error for msg too much , clear it then continue;
-				sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT | MSG_NOERROR);
+				msg_sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT | MSG_NOERROR);
 				continue;
 			}
-			else if (errno != ENOMSG)
-			{
+			else if (errno != ENOMSG) {
 				//error log for
 			}
 			break;
 		}
-		else
-		{
+		else {
 			msgbuf * buf = (msgbuf*)(smq->recvbuff);
-			smq->msg_cb(smq, buf->mtype, dcsmq_msg_t(buf->mtext, sz), smq->msg_cb_ud);
+			smq->msg_cb(smq, buf->mtype, dcsmq_msg_t(buf->mtext, msg_sz), smq->msg_cb_ud);
 		}
-		nproc++;
-		if (nproc >= 5)
-		{
-			gettimeofday(&tv2, NULL);
-			past_us += (tv2.tv_sec - tv1.tv_sec) * 1000000;
-			past_us += (tv2.tv_usec - tv1.tv_usec);
+		++nproc;
+		++ntotal_proc;
+		if (nproc >= 16){
+			now_us = util::time_unixtime_us();
+			past_us +=  (now_us - start_us);
+			start_us = now_us;
 			nproc = 0;
 		}
 	}
+	return ntotal_proc;
 }
-
-int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg)
-{
-	if (msg.sz > smq->conf.msg_buffsz)
-	{
+int		dcsmq_push(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
+	if (msg.sz > smq->conf.msg_buffsz){
+		return -1;
+	}
+	if (dst == 0){
+		return -2;
+	}
+	smq->sendbuff->mtype = dst;
+	memcpy(smq->sendbuff->mtext, msg.buffer, msg.sz);
+	int ret = 0;
+	do{
+		ret = msgsnd(smq->recver, smq->sendbuff, msg.sz, IPC_NOWAIT);
+	} while (ret == -1 && errno == EINTR);
+	return ret;
+}
+int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
+	if (msg.sz > smq->conf.msg_buffsz){
 		//size error
 		return -1;
 	}
-	if (dst == 0)
-	{
+	if (dst == 0){
 		//dst error
 		return -2;
 	}
