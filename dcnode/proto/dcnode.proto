@@ -30,7 +30,7 @@ message MsgRegName
 }
 message MsgExt
 {
-	optional	uint32			unixtime = 1;//send time
+	required	uint32			unixtime = 1;//send time
 	optional	MsgOption		opt = 3;
 }
 
@@ -41,7 +41,7 @@ message MsgDCNode
     required    MsgDCNodeType   type = 3;
     optional    bytes           msg_data = 4;
 	/////////////////////////////////////////////
-	optional	MsgExt			ext = 5;
+	required	MsgExt			ext = 5;
 	optional	MsgRegName		reg_name = 6;
 	optional	MsgDCNodeRPC	rpc = 7;
 };

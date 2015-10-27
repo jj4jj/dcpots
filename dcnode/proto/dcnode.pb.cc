@@ -161,11 +161,11 @@ void protobuf_AddDesc_dcnode_2eproto() {
     "\n\004name\030\001 \002(\t\022\016\n\006cookie\030\002 \002(\004\022\017\n\007errcode\030"
     "\003 \001(\005\022\017\n\007request\030\004 \001(\014\022\020\n\010response\030\005 \001(\014"
     "\"*\n\nMsgRegName\022\017\n\007session\030\001 \001(\004\022\013\n\003ret\030\002"
-    " \001(\005\":\n\006MsgExt\022\020\n\010unixtime\030\001 \001(\r\022\036\n\003opt\030"
+    " \001(\005\":\n\006MsgExt\022\020\n\010unixtime\030\001 \002(\r\022\036\n\003opt\030"
     "\003 \001(\0162\021.dcnode.MsgOption\"\302\001\n\tMsgDCNode\022\013"
     "\n\003src\030\001 \002(\t\022\013\n\003dst\030\002 \001(\t\022#\n\004type\030\003 \002(\0162\025"
     ".dcnode.MsgDCNodeType\022\020\n\010msg_data\030\004 \001(\014\022"
-    "\033\n\003ext\030\005 \001(\0132\016.dcnode.MsgExt\022$\n\010reg_name"
+    "\033\n\003ext\030\005 \002(\0132\016.dcnode.MsgExt\022$\n\010reg_name"
     "\030\006 \001(\0132\022.dcnode.MsgRegName\022!\n\003rpc\030\007 \001(\0132"
     "\024.dcnode.MsgDCNodeRPC*P\n\rMsgDCNodeType\022\020"
     "\n\014MSG_REG_NAME\020\001\022\022\n\016MSG_HEART_BEAT\020\002\022\013\n\007"
@@ -944,7 +944,7 @@ bool MsgExt::MergePartialFromCodedStream(
   ::google::protobuf::uint32 tag;
   while ((tag = input->ReadTag()) != 0) {
     switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
-      // optional uint32 unixtime = 1;
+      // required uint32 unixtime = 1;
       case 1: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_VARINT) {
@@ -998,7 +998,7 @@ bool MsgExt::MergePartialFromCodedStream(
 
 void MsgExt::SerializeWithCachedSizes(
     ::google::protobuf::io::CodedOutputStream* output) const {
-  // optional uint32 unixtime = 1;
+  // required uint32 unixtime = 1;
   if (has_unixtime()) {
     ::google::protobuf::internal::WireFormatLite::WriteUInt32(1, this->unixtime(), output);
   }
@@ -1017,7 +1017,7 @@ void MsgExt::SerializeWithCachedSizes(
 
 ::google::protobuf::uint8* MsgExt::SerializeWithCachedSizesToArray(
     ::google::protobuf::uint8* target) const {
-  // optional uint32 unixtime = 1;
+  // required uint32 unixtime = 1;
   if (has_unixtime()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteUInt32ToArray(1, this->unixtime(), target);
   }
@@ -1039,7 +1039,7 @@ int MsgExt::ByteSize() const {
   int total_size = 0;
   
   if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
-    // optional uint32 unixtime = 1;
+    // required uint32 unixtime = 1;
     if (has_unixtime()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::UInt32Size(
@@ -1102,6 +1102,7 @@ void MsgExt::CopyFrom(const MsgExt& from) {
 }
 
 bool MsgExt::IsInitialized() const {
+  if ((_has_bits_[0] & 0x00000001) != 0x00000001) return false;
   
   return true;
 }
@@ -1313,7 +1314,7 @@ bool MsgDCNode::MergePartialFromCodedStream(
         break;
       }
       
-      // optional .dcnode.MsgExt ext = 5;
+      // required .dcnode.MsgExt ext = 5;
       case 5: {
         if (::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
             ::google::protobuf::internal::WireFormatLite::WIRETYPE_LENGTH_DELIMITED) {
@@ -1403,7 +1404,7 @@ void MsgDCNode::SerializeWithCachedSizes(
       4, this->msg_data(), output);
   }
   
-  // optional .dcnode.MsgExt ext = 5;
+  // required .dcnode.MsgExt ext = 5;
   if (has_ext()) {
     ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
       5, this->ext(), output);
@@ -1462,7 +1463,7 @@ void MsgDCNode::SerializeWithCachedSizes(
         4, this->msg_data(), target);
   }
   
-  // optional .dcnode.MsgExt ext = 5;
+  // required .dcnode.MsgExt ext = 5;
   if (has_ext()) {
     target = ::google::protobuf::internal::WireFormatLite::
       WriteMessageNoVirtualToArray(
@@ -1521,7 +1522,7 @@ int MsgDCNode::ByteSize() const {
           this->msg_data());
     }
     
-    // optional .dcnode.MsgExt ext = 5;
+    // required .dcnode.MsgExt ext = 5;
     if (has_ext()) {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
@@ -1607,8 +1608,11 @@ void MsgDCNode::CopyFrom(const MsgDCNode& from) {
 }
 
 bool MsgDCNode::IsInitialized() const {
-  if ((_has_bits_[0] & 0x00000005) != 0x00000005) return false;
+  if ((_has_bits_[0] & 0x00000015) != 0x00000015) return false;
   
+  if (has_ext()) {
+    if (!this->ext().IsInitialized()) return false;
+  }
   if (has_rpc()) {
     if (!this->rpc().IsInitialized()) return false;
   }

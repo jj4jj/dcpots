@@ -37,6 +37,10 @@ static dcnode_t* _create(bool ping, const char* name, const char * key,
 	dcf.max_live_heart_beat_gap = 20;
 	dcf.addr.parent_addr = conn_tcp; ;
 	dcf.addr.listen_addr = listen_tcp;
+	if (!dcf.addr.parent_addr.empty()){
+		dcf.addr.msgq_push = false;
+		dcf.addr.msgq_path = "";
+	}
 	auto dc = dcnode_create(dcf);
 	if (!dc){
 		LOGP("creat dcnode error !");
@@ -114,10 +118,13 @@ int main(int argc , char * argv[]){
 		LOGP("create dncode error !");
 		return -2;
 	}
+	if (!ping){
+		logger_set_level(nullptr, LOG_LVL_INFO);
+	}
 	while (true)
 	{
 		dcnode_update(dc, 1000);
-		if (!start && dcnode_ready(dc) && ping){
+		if (!start && dcnode_ready(dc) == 1 && ping){
 			dcnode_send(dc, sname.c_str(), s_send_msg.c_str(), s_send_msg.length());
 			start = true;
 			logger_set_level(nullptr, LOG_LVL_INFO);

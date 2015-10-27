@@ -360,7 +360,7 @@ class MsgExt : public ::google::protobuf::Message {
   
   // accessors -------------------------------------------------------
   
-  // optional uint32 unixtime = 1;
+  // required uint32 unixtime = 1;
   inline bool has_unixtime() const;
   inline void clear_unixtime();
   static const int kUnixtimeFieldNumber = 1;
@@ -492,7 +492,7 @@ class MsgDCNode : public ::google::protobuf::Message {
   inline ::std::string* mutable_msg_data();
   inline ::std::string* release_msg_data();
   
-  // optional .dcnode.MsgExt ext = 5;
+  // required .dcnode.MsgExt ext = 5;
   inline bool has_ext() const;
   inline void clear_ext();
   static const int kExtFieldNumber = 5;
@@ -830,7 +830,7 @@ inline void MsgRegName::set_ret(::google::protobuf::int32 value) {
 
 // MsgExt
 
-// optional uint32 unixtime = 1;
+// required uint32 unixtime = 1;
 inline bool MsgExt::has_unixtime() const {
   return (_has_bits_[0] & 0x00000001u) != 0;
 }
@@ -1076,7 +1076,7 @@ inline ::std::string* MsgDCNode::release_msg_data() {
   }
 }
 
-// optional .dcnode.MsgExt ext = 5;
+// required .dcnode.MsgExt ext = 5;
 inline bool MsgDCNode::has_ext() const {
   return (_has_bits_[0] & 0x00000010u) != 0;
 }
