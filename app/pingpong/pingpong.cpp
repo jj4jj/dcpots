@@ -12,6 +12,12 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 	if (ncur == 1){
 		start_time = util::time_unixtime_us();
 	}
+	if (ncur < 5){
+		LOGP("recv msg from src:%s size:%d", src, msg.valid_size);
+	}
+	else{
+		logger_set_level(nullptr,LOG_LVL_INFO);
+	}
 	if (ncur < total){
 		dcnode_send(dc, src, msg.buffer, msg.valid_size);
 	}
@@ -75,7 +81,7 @@ int main(int argc , char * argv[]){
 	const char * conn_tcpaddr = "";
 
 	if (strcmp(argv[2], "mq") == 0){
-		tcpaddr = "";
+		tcpaddr = (char*)"";
 		if (ping) name = "mqc";
 		else name = "mqs";
 	}
@@ -118,9 +124,6 @@ int main(int argc , char * argv[]){
 		LOGP("create dncode error !");
 		return -2;
 	}
-	if (!ping){
-		logger_set_level(nullptr, LOG_LVL_INFO);
-	}
 	int n = 0;
 	while (true)
 	{
@@ -130,7 +133,6 @@ int main(int argc , char * argv[]){
 			start = true;
 			ncur = 1;
 			start_time = util::time_unixtime_us();
-			logger_set_level(nullptr, LOG_LVL_INFO);
 		}
 		if (dcnode_ready(dc) == -1){
 			LOGP("dcnode stoped ....");

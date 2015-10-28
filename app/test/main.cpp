@@ -4,8 +4,9 @@
 #include "dcnode/dcnode.h"
 #include "dagent/dagent.h"
 #include "base/utility.hpp"
+#include "base/msg_proto.hpp"
 
-static int max_ping_pong = 100000;
+static int max_ping_pong = 1000000;
 static int max_ppsz = 0;
 static int pingpong = 0;
 static const char * msgqpath = nullptr;
@@ -239,7 +240,39 @@ int log_test(){
 	}
 	return 0;
 }
+#include "dcnode/proto/dcnode.pb.h"
 int perf_test(const char * arg){
+	
+	typedef msgproto_t<dcnode::MsgDCNode>	msg_t;
+	start_us = util::time_unixtime_us();
+	int pack_unpack_times = 1000000;
+	msg_buffer_t msgbuf;
+	const char * s_test_msg = "hello,worlddfffxxxxxfggggggggggggggdfxsfsddddddddddddddddddfxxxxxxxxxxxxxxxffffffffffffffffffffffffff";
+	msgbuf.create(10240);
+	uint64_t packsize = 0;
+	for (int i = 0; i < pack_unpack_times; ++i){
+		msg_t	msg;
+		msg.set_dst("hello");
+		msg.set_src("heffff");
+		msg.set_type(dcnode::MSG_DATA);
+		msg.set_msg_data(s_test_msg, strlen(s_test_msg)+1);
+		msg.mutable_ext()->set_unixtime(util::time_unixtime_ms() / 1000);
+		if (!msg.Pack(msgbuf))
+		{
+			printf("error pack!\n");
+		}
+		if (!msg.Unpack(msgbuf)){
+			printf("error unpack!\n");
+		}
+		//
+		packsize += msg.PackSize();
+	}
+	int64_t cost_time = util::time_unixtime_us() - start_us;
+	double speed = pack_unpack_times*1000000.0 / cost_time ;
+	LOGP("print pack size:%lu msg size:%d cost time:%ld total times:%d speed:%lf /s", 
+		packsize,strlen(s_test_msg)+1,
+		cost_time,
+		pack_unpack_times, speed);
 	return 0;
 }
 
