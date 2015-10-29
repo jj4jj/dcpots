@@ -1,6 +1,7 @@
 #include "dctcp.h"
 #include "msg_proto.hpp"
 #include "logger.h"
+#include "profile.h"
 
 //typedef	std::shared_ptr<msg_buffer_t>	msg_buffer_ptr_t;
 
@@ -31,7 +32,7 @@ struct dctcp_t
 	std::unordered_map<int, msg_buffer_t>	sock_recv_buffer;
 	std::unordered_map<int, msg_buffer_t>	sock_send_buffer;
 	////////////////////////////////////////
-	msg_buffer_t	misc_buffer;
+	msg_buffer_t		misc_buffer;
 	dctcp_t(){
 		init();
 	}
@@ -134,7 +135,7 @@ struct dctcp_t * dctcp_create(const dctcp_config_t & conf)
 		ret = epoll_ctl(stcp->epfd, EPOLL_CTL_ADD, fd, &evt);
 		if (ret) { dctcp_destroy(stcp); return nullptr; };
 	}
-	stcp->misc_buffer.create(1024 * 64);
+	stcp->misc_buffer.create(1024 * 1024);
 	return stcp;
 }
 void            dctcp_destroy(dctcp_t * stcp)
@@ -482,8 +483,8 @@ void			dctcp_close(dctcp_t * stcp, int fd)
 }
 int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc)
 {
+	PROFILE_FUNC();
 	int ms = timeout_us / 1000;
-	if (ms == 0) ms = 1;
 	int nproc = 0;
 	for (; stcp->nproc < stcp->nevts && nproc < max_proc; ++(stcp->nproc))
 	{

@@ -1,7 +1,7 @@
 #include "dcnode/dcnode.h"
 #include "base/stdinc.h"
 #include "base/utility.hpp"
-
+#include "base/profile.h"
 static int total = 0;
 static int ncur = 0;
 uint64_t	start_time = 0;
@@ -10,9 +10,12 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 	dcnode_t * dc = (dcnode_t*)(ud);
 	ncur++;
 	if (ncur == 1){
+		if (start_time == 0){
+			logger_set_level(nullptr, LOG_LVL_PROF);
+		}
 		start_time = util::time_unixtime_us();
 	}
-	if (ncur < 5){
+	if (ncur < 3){
 		LOGP("recv msg from src:%s size:%d", src, msg.valid_size);
 	}
 	else{
@@ -39,8 +42,8 @@ static dcnode_t* _create(bool ping, const char* name, const char * key,
 	dcf.addr.msgq_push = ping;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = name;
-	dcf.heart_beat_gap = 10;
-	dcf.max_live_heart_beat_gap = 20;
+	dcf.heart_beat_gap = 2;
+	dcf.max_live_heart_beat_gap = 5;
 	dcf.addr.parent_addr = conn_tcp; ;
 	dcf.addr.listen_addr = listen_tcp;
 	if (!dcf.addr.parent_addr.empty()){
@@ -67,8 +70,9 @@ void usage(){
 }
 
 int main(int argc , char * argv[]){
-	logger_config_t loger_conf;
+	logger_config_t loger_conf;	
 	global_logger_init(loger_conf);
+	logger_set_level(nullptr, LOG_LVL_PROF);
 	if (argc < 5){
 		usage();
 		return -1;
@@ -125,8 +129,12 @@ int main(int argc , char * argv[]){
 		return -2;
 	}
 	int n = 0;
+	if (!ping){
+		logger_set_level(nullptr, LOG_LVL_INFO);
+	}
 	while (true)
 	{
+		PROFILE_FUNC();
 		n = dcnode_update(dc, 100);
 		if (!start && dcnode_ready(dc) == 1 && ping){
 			dcnode_send(dc, sname.c_str(), s_send_msg.c_str(), s_send_msg.length());
@@ -137,9 +145,6 @@ int main(int argc , char * argv[]){
 		if (dcnode_ready(dc) == -1){
 			LOGP("dcnode stoped ....");
 			return -1;
-		}
-		if (n == 0){
-			usleep(100);//0.1s
 		}
 	}
 	return 0;

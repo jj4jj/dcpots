@@ -3,6 +3,7 @@
 struct logger_t;
 
 enum log_msg_level_type {
+	LOG_LVL_PROF = 0,
 	LOG_LVL_TRACE = 1,
 	LOG_LVL_DEBUG = 2,
 	LOG_LVL_INFO = 3,
@@ -12,7 +13,7 @@ enum log_msg_level_type {
 };
 static const char*	STR_LOG_LEVEL(int lv){
 	static const char * s_strlv[] = {
-		"UNKOWN", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
+		"PROF", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
 	};
 	if (lv <= 0 || lv >= (int)(sizeof(s_strlv) / sizeof(s_strlv[0]))){
 		lv = 0;
@@ -63,6 +64,18 @@ do{\
 } while (0)
 #endif
 	//			error_write((erm), (err_no), (killer), "(%lu.%lu:%d|%s:%d)" fmt "\n", tv.tv_sec, tv.tv_usec, getpid(),__FUNCTION__, __LINE__, ##__VA_ARGS__);
+
+#ifndef LOGR
+#define RAW_LOG_MSG_FORMAT_PREFIX	"%lu.%lu:%d|%s|"
+#define RAW_LOG_MSG_FORMAT_VALUES	err_tv_.tv_sec,err_tv_.tv_usec,getpid()
+#define LOGR(log_lv_, format,...)	\
+do{\
+	if ((log_lv_) >= logger_level()){\
+			timeval err_tv_; gettimeofday(&err_tv_, NULL); \
+			fprintf(stderr, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+	}\
+} while (0)
+#endif
 
 #ifndef LOGP
 #define LOGP(format,...)	\

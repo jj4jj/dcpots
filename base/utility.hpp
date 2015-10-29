@@ -15,9 +15,4 @@ namespace util {
 	//time 
 	uint64_t	time_unixtime_ms();
 	uint64_t	time_unixtime_us();
-
-
-
-
-
 };

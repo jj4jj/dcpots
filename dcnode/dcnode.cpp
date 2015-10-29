@@ -6,6 +6,7 @@
 #include "base/logger.h"
 #include "base/utility.hpp"
 #include "base/dcshm.h"
+#include "base/profile.h"
 
 typedef msgproto_t<dcnode::MsgDCNode>	dcnode_msg_t;
 
@@ -122,7 +123,7 @@ static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
 
 //leaf: smq client but no any tcp info
 static bool _is_leaf(dcnode_t* dc){
-	if (dc->conf.addr.listen_addr.empty() &&	//not tcp server
+	if (dc->conf.addr.listen_addr.empty() &&	//not tcp node
 		dc->conf.addr.parent_addr.empty()){
 		if (!dc->conf.addr.msgq_path.empty() &&
 			!dc->conf.addr.msgq_push)	//but a smq server
@@ -408,6 +409,7 @@ static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
 	return 0;
 }
 static int	_fsm_check(dcnode_t * dc, bool checkforce){
+	PROFILE_FUNC();
 	switch (dc->fsm_state)
 	{
 	case dcnode_t::DCNODE_INIT:
@@ -550,6 +552,7 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 
 //node handle msg
 static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint64_t msgqpid){
+	PROFILE_FUNC();
 	if (dm.ext().unixtime() > 0 && dm.ext().unixtime() + dc->conf.max_msg_expired_time < time(NULL) ) {
 		//expired msg
 		LOGP("expired msg :%s",dm.Debug());
@@ -632,6 +635,7 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 }
 static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buff, int buff_sz){
 	dcnode_msg_t dm;
+	PROFILE_FUNC();
 	if (!dm.Unpack(buff, buff_sz)) {
 		//error for decode
 		return -1;
@@ -689,15 +693,14 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 	if (!n) //memerror
 		return nullptr;
 	n->conf = conf;
-	dctcp_config_t sc;
-	sc.max_recv_buff = conf.max_channel_buff_size;
-	sc.max_send_buff = conf.max_channel_buff_size;
-	sc.max_tcp_send_buff_size = conf.max_channel_buff_size;
-	sc.max_tcp_recv_buff_size = conf.max_channel_buff_size;
-
 	if (!_is_leaf(n))
 	{
-		if (conf.addr.listen_addr.length())
+		dctcp_config_t sc;	//tcp node
+		sc.max_recv_buff = conf.max_channel_buff_size;
+		sc.max_send_buff = conf.max_channel_buff_size;
+		sc.max_tcp_send_buff_size = conf.max_channel_buff_size;
+		sc.max_tcp_recv_buff_size = conf.max_channel_buff_size;
+		if (!conf.addr.listen_addr.empty())
 		{
 			sc.is_server = true;
 			dctcp_addr_t saddr;
@@ -758,6 +761,7 @@ void      dcnode_destroy(dcnode_t* dc){
 	delete dc;
 }
 static	void _check_timer_callback(dcnode_t * dc){
+	PROFILE_FUNC();
 	uint64_t currentms = util::time_unixtime_ms();
 	std::vector<std::pair<uint64_t, uint64_t> >		addagin;
 	for (auto it = dc->expiring_callbacks.begin(); it != dc->expiring_callbacks.end();)
@@ -792,6 +796,7 @@ static	void _check_timer_callback(dcnode_t * dc){
 	}
 }
 int      dcnode_update(dcnode_t* dc, int timout_us) {
+	PROFILE_FUNC();
 	if (dc->fsm_state == dcnode_t::DCNODE_ABORT){
 		return 0;
 	}
@@ -800,11 +805,11 @@ int      dcnode_update(dcnode_t* dc, int timout_us) {
 
 	_fsm_check(dc, false);
 	int n = 0;
-	if (dc->stcp) {
-		n += dctcp_poll(dc->stcp, timout_us);
-	}
 	if (dc->smq) {
 		n += dcsmq_poll(dc->smq, timout_us);
+	}
+	if (dc->stcp) {
+		n += dctcp_poll(dc->stcp, timout_us);
 	}
 	_check_timer_callback(dc);
 	return n;
@@ -835,6 +840,7 @@ static  bool _name_exists(dcnode_t * dc, const char * name){
 }
 
 int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz){
+	PROFILE_FUNC();
 	if (dc->fsm_state != dcnode_t::DCNODE_READY &&
 		!_name_exists(dc, dst)) {
 		//error not ready (name not reg) 

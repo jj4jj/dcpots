@@ -3,6 +3,7 @@
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include "utility.hpp"
+#include "profile.h"
 
 struct dcsmq_t {
 	dcsmq_config_t	conf;
@@ -111,6 +112,7 @@ void    dcsmq_msg_cb(dcsmq_t * smq, dcsmq_msg_cb_t cb, void * ud){
 	smq->msg_cb_ud = ud;
 }
 int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){	
+	PROFILE_FUNC();
 	int64_t past_us = 0, start_us, now_us;
 	start_us = util::time_unixtime_us();
 	ssize_t msg_sz = 0;

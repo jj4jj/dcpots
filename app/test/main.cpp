@@ -269,8 +269,8 @@ int perf_test(const char * arg){
 	}
 	int64_t cost_time = util::time_unixtime_us() - start_us;
 	double speed = pack_unpack_times*1000000.0 / cost_time ;
-	LOGP("print pack size:%lu msg size:%d cost time:%ld total times:%d speed:%lf /s", 
-		packsize,strlen(s_test_msg)+1,
+	LOGP("print pack size:%lu msg size:%zd cost time:%ld total times:%d speed:%lf /s", 
+		packsize, strlen(s_test_msg)+1,
 		cost_time,
 		pack_unpack_times, speed);
 	return 0;
