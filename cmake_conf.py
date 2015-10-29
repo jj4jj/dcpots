@@ -10,7 +10,7 @@ LIBS = [
             'name':'dcbase',
             'subdir':'base',
             'linklibs' : [
-                'protobuf',
+                'libprotobuf.a',
                 'python2.7',
             ],
             'src_dirs':['base'],

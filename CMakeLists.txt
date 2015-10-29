@@ -29,12 +29,12 @@ else()
 endif()
 
 #debug common
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Wfatal-errors -Wextra -g -rdynamic -gdwarf-2 -g3 -ggdb3 -pg -Wl,-Bdynamic -ldl -lm -lrt -pthread ")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++11 -rdynamic -gdwarf-2 -g3 -ggdb3 -pg -Wall -Wfatal-errors -Wextra -Wno-unused-parameter -ldl -lm -lrt -pthread ")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Wfatal-errors -Wextra -g -rdynamic -gdwarf-2 -g3 -ggdb3 -pg -Wl,-static -ldl -lm -lrt -pthread ")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++11 -rdynamic -gdwarf-2 -g3 -ggdb3 -pg -Wall -Wfatal-errors -static -Wextra -Wno-unused-parameter -ldl -lm -lrt -pthread ")
 
 # release mode
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -g --no-warnings -ldl -lm -lrt -pthread")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11 -O2 -g --no-warnings -ldl -lm -lrt -pthread")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -g --no-warnings -static -ldl -lm -lrt -pthread")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11 -O2 -g -static --no-warnings -ldl -lm -lrt -pthread")
 
 # output dir
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
@@ -47,7 +47,7 @@ set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
 add_subdirectory(base)
 add_subdirectory(dcnode)
 add_subdirectory(dagent)
-add_subdirectory(dagent/python)
+#add_subdirectory(dagent/python)
 add_subdirectory(app/test)
 add_subdirectory(app/reporter)
 add_subdirectory(app/collector)
