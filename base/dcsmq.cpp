@@ -114,7 +114,7 @@ void    dcsmq_msg_cb(dcsmq_t * smq, dcsmq_msg_cb_t cb, void * ud){
 int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){	
 	PROFILE_FUNC();
 	int64_t past_us = 0, start_us, now_us;
-	start_us = util::time_unixtime_us();
+	start_us = dcsutil::time_unixtime_us();
 	ssize_t msg_sz = 0;
 	int nproc = 0, ntotal_proc = 0;
 	while (past_us < max_time_us){
@@ -141,7 +141,7 @@ int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){
 		++nproc;
 		++ntotal_proc;
 		if (nproc >= 16){
-			now_us = util::time_unixtime_us();
+			now_us = dcsutil::time_unixtime_us();
 			past_us +=  (now_us - start_us);
 			start_us = now_us;
 			nproc = 0;

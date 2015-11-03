@@ -17,12 +17,12 @@ int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 	max_ppsz += msg.sz;
 	pingpong++;
 	if (pingpong == 1){
-		start_us = util::time_unixtime_us();
+		start_us = dcsutil::time_unixtime_us();
 	}
 	dcsmq_send(mq, src, msg);
 	if (pingpong >= max_ping_pong)
 	{
-		start_us = util::time_unixtime_us() - start_us;
+		start_us = dcsutil::time_unixtime_us() - start_us;
 		LOGP("mq cb msg size:%d src:%lu total:%d MB time:%ldus pingpong:%d",
 			msg.sz, src, max_ppsz / 1048576, start_us, max_ping_pong);
 		exit(0);
@@ -54,7 +54,7 @@ int test_mq(const char * ap)
 	dcsmq_msg_cb(p, mq_cb, nullptr);
 	if (!sc.server_mode)
 	{
-		start_us = util::time_unixtime_us();
+		start_us = dcsutil::time_unixtime_us();
 		pingpong = 1;
 		dcsmq_send(p, getpid(), dcsmq_msg_t(test_msg, test_msg_len));
 	}
@@ -244,7 +244,7 @@ int log_test(){
 int perf_test(const char * arg){
 	
 	typedef msgproto_t<dcnode::MsgDCNode>	msg_t;
-	start_us = util::time_unixtime_us();
+	start_us = dcsutil::time_unixtime_us();
 	int pack_unpack_times = 1000000;
 	msg_buffer_t msgbuf;
 	const char * s_test_msg = "hello,worlddfffxxxxxfggggggggggggggdfxsfsddddddddddddddddddfxxxxxxxxxxxxxxxffffffffffffffffffffffffff";
@@ -256,7 +256,7 @@ int perf_test(const char * arg){
 		msg.set_src("heffff");
 		msg.set_type(dcnode::MSG_DATA);
 		msg.set_msg_data(s_test_msg, strlen(s_test_msg)+1);
-		msg.mutable_ext()->set_unixtime(util::time_unixtime_ms() / 1000);
+		msg.mutable_ext()->set_unixtime(dcsutil::time_unixtime_ms() / 1000);
 		if (!msg.Pack(msgbuf))
 		{
 			printf("error pack!\n");
@@ -267,7 +267,7 @@ int perf_test(const char * arg){
 		//
 		packsize += msg.PackSize();
 	}
-	int64_t cost_time = util::time_unixtime_us() - start_us;
+	int64_t cost_time = dcsutil::time_unixtime_us() - start_us;
 	double speed = pack_unpack_times*1000000.0 / cost_time ;
 	LOGP("print pack size:%lu msg size:%zd cost time:%ld total times:%d speed:%lf /s", 
 		packsize, strlen(s_test_msg)+1,

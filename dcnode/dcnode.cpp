@@ -104,7 +104,7 @@ static inline uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_m
 	if (repeat)
 		cookie |= 1;
 
-	uint64_t expiretimems = expired_ms + util::time_unixtime_ms();
+	uint64_t expiretimems = expired_ms + dcsutil::time_unixtime_ms();
 	dc->expiring_callbacks.insert(std::make_pair(expiretimems, cookie));
 	dc->timer_callbacks[cookie] = cb;
 	if (repeat)
@@ -762,7 +762,7 @@ void      dcnode_destroy(dcnode_t* dc){
 }
 static	void _check_timer_callback(dcnode_t * dc){
 	PROFILE_FUNC();
-	uint64_t currentms = util::time_unixtime_ms();
+	uint64_t currentms = dcsutil::time_unixtime_ms();
 	std::vector<std::pair<uint64_t, uint64_t> >		addagin;
 	for (auto it = dc->expiring_callbacks.begin(); it != dc->expiring_callbacks.end();)
 	{

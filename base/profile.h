@@ -10,12 +10,12 @@ struct		profile_t {
 	uint64_t			 start_time;
 	profile_t(const char * file_, const char * funcname_, int line_) :
 		file(file_), funcname(funcname_), line(line_){
-		start_time = util::time_unixtime_us();
+		start_time = dcsutil::time_unixtime_us();
 		LOGR(LOG_LVL_PROF,"%s%s:%d BEGIN",level_s.c_str(), funcname, line);
 		level_s.push_back('\t');
 	}
 	~profile_t(){
-		uint64_t lcost_time = util::time_unixtime_us() - start_time;
+		uint64_t lcost_time = dcsutil::time_unixtime_us() - start_time;
 		level_s.pop_back();
 		LOGR(LOG_LVL_PROF, "%s%s:%d END | COST:%lu us", level_s.c_str(), funcname, line, lcost_time);
 	}

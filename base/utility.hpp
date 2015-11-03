@@ -11,8 +11,10 @@ private: // emphasize the following members are private
 	const noncopyable& operator=(const noncopyable&);
 };
 
-namespace util {
+namespace dcsutil {
 	//time 
 	uint64_t	time_unixtime_ms();
 	uint64_t	time_unixtime_us();
+	int			daemonlize(int closestd = 1, int chrootdir = 0);
+
 };
