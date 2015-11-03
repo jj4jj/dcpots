@@ -23,7 +23,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 	               			agent(root)[smq:pull,tcp:server]
 								|					|			
 								|					|
-	        	agent[tcp:client,tcp:server]  	leaf[smq:push]
+	        	agent[tcp:client,tcp:server]  	smq leaf[smq:push]
 					|					|
          agent[smq:pull,tcp:client] 	|
 			|							|
