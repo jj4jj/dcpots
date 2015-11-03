@@ -27,7 +27,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 					|					|
          agent[smq:pull,tcp:client] 	|
 			|							|
-    leaf[smq:push]    				leaf[tcp:client]
+    smq leaf[smq:push]    			tcp leaf[tcp:client]
 
 
     leaf node:
@@ -74,7 +74,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 - alloc msg buffer with zero copy [by lower layer allocated]  [opt]
 - msgq name manage [opt]
 - python extension in agent module [done]
-- same agent [brother] communication with msgq directly [p2p] [todo]
+- same agent [brother] communication with msgq directly [p2p] [done]
 - msg persistence [opt]
 - dcnode_send should create a send queue . [todo]
 - bench mark todo [doing]
@@ -93,7 +93,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 
 
 ##test##
-    ls bin/				#the the test programs 
+    ls bin/				#show the the test programs 
 	./dagent n	l1		#agent
 	./dagent n  l2		#root
 	./dagent n	l		#leaf

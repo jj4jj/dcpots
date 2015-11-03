@@ -16,6 +16,6 @@ link_directories(
 /usr/local/lib)
 
 target_link_libraries(dcbase
-protobuf
+libprotobuf.a
 python2.7)
 
