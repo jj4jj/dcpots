@@ -73,7 +73,7 @@ int reporter_using(){
 
 int main(int argc, char * argv[]){
 	logger_config_t		logger;
-	logger.path = "./";
+	logger.dir = "./";
 	logger.pattern = "reporter.log";
 	if (global_logger_init(logger)){
 		return -1;

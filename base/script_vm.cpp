@@ -1,8 +1,13 @@
 #include "script_vm.h"
 #include "logger.h"
+
 extern "C" {
 #include "python2.7/Python.h"
 }
+
+#ifdef USING_LUA_EXT
+#include "lua.h"
+#endif
 
 
 struct python_vm_t {

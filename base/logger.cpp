@@ -64,7 +64,7 @@ FILE * logfile_open(const char * filename, int & nextrollid){
 logger_t *	logger_create(const logger_config_t & conf){
 	FILE * pf = nullptr;
 	int	 nextrollid = 0;
-	string filepath = conf.path + "/" + conf.pattern;
+	string filepath = conf.dir + "/" + conf.pattern;
 	if (filepath.length() > 1){
 		pf = logfile_open(filepath.c_str(), nextrollid);
 	}

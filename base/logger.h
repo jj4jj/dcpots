@@ -22,7 +22,7 @@ static const char*	STR_LOG_LEVEL(int lv){
 }
 
 struct logger_config_t{
-	string	path;
+	string	dir;
 	string	pattern;
 	int		max_roll;
 	int		max_msg_size;

@@ -228,7 +228,7 @@ int log_test(){
 	logger_config_t lc;
 	lc.max_file_size = 1024;
 	lc.max_roll = 3;
-	lc.path = "./";
+	lc.dir = "./";
 	lc.pattern = "test.log";
 	int ret = global_logger_init(lc);
 	if (ret){
@@ -275,7 +275,47 @@ int perf_test(const char * arg){
 		pack_unpack_times, speed);
 	return 0;
 }
+#include "base/json_doc.hpp"
+#include "iostream"
+using namespace  std;
+static int json_test(const char * file){
+	json_doc_t jd;
+	jd.parse_file(file);
+	cout<<"jd-hh:"<<jd.HasMember("hh")<<endl;
+	cout << "jd-hh null:" << jd["hh"].IsNull() << endl;
+	cout << "jd-dcagent:" << jd.HasMember("dcagent") << endl;
+	cout << "jd-dcagent null:" << jd[("dcagent")].IsNull() << endl;
+	string s;
+	puts(jd.pretty(s));
 
+	json_doc_t jd2;
+	jd2.AddMember("add3","hello",jd2.GetAllocator());
+	jd2.AddMember("add4-bool", false, jd2.GetAllocator());
+	cout << "jd2-add1 type:" << jd2["add1"].GetType() << endl;
+	cout << "jd2-add2 type:" << jd2["add2"].GetType() << endl;
+
+	rapidjson::SetValueByPointer(jd2, "/foo/0", 456);
+	rapidjson::SetValueByPointer(jd2, "/foo/1", true);
+	rapidjson::SetValueByPointer(jd2, "/foo/2", "44456");
+	rapidjson::SetValueByPointer(jd2, "/foo/3", 125344566786103L);
+	jd2.set("/foo/4", true);
+	json_obj_t * v1 = rapidjson::GetValueByPointer(jd2,"/foo/0");
+	json_obj_t * v2 = rapidjson::GetValueByPointer(jd2, "/foo/1");
+	json_obj_t * v3 = rapidjson::GetValueByPointer(jd2, "/foo/2");
+	json_obj_t * v4 = rapidjson::GetValueByPointer(jd2, "/foo/3");
+	json_obj_t * v5 = jd2.get("/foo/4");
+	json_obj_t * v6 = jd2.get("/foo/5", 12.6);//if empty create
+
+	cout << v1->GetType() << endl <<
+		v2->GetType() << endl <<
+		v3->GetType() << endl <<
+		v4->GetType() << endl <<
+		v5->GetType() << endl <<
+		v6->GetType() << endl;
+
+	jd2.dump_file("test.out.json");
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -301,6 +341,8 @@ int main(int argc, char* argv[])
 			return log_test();
 		case 'f':
 			return perf_test(argv[1]);
+		case 'j':
+			return json_test(argv[2]);
 		default:
 			break;
 		}
