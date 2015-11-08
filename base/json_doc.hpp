@@ -37,18 +37,13 @@ public:
 		if (ParseStream(is).HasParseError()){
 			rapidjson::ParseErrorCode e = rapidjson::Document::GetParseError();
 			size_t o = GetErrorOffset();
-			LOGP("parse json file :%s error info:%0s offset:%d near:%32s", file,
+			LOGP("parse json file :%s error info:%s offset:%zu near:%32s", file,
 				rapidjson::GetParseError_En(e), o, parse_file_buffer.buffer + o);
 			return -1;
 		}
 		return 0;
 	}
 	int					dump_file(const char * file , bool pretty = false){
-		FILE * fp = fopen(file, "w");
-		if (!fp){
-			LOGP("open file :%s for write error !", file);
-			return -1;
-		}
 		rapidjson::StringBuffer sb;
 		if (pretty){
 			rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(sb);
@@ -58,7 +53,7 @@ public:
 			rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
 			Accept(writer);    // Accept() traverses the DOM and generates Handler events.
 		}
-		fputs(sb.GetString(), fp);
+		return dcsutil::writefile(file, sb.GetString(), sb.GetSize());
 	}
 	const	char *		pretty(std::string & str){
 		str = "";
@@ -73,7 +68,7 @@ public:
 		if (ParseStream(ss).HasParseError()){
 			rapidjson::ParseErrorCode e = GetParseError();
 			size_t o = GetErrorOffset();
-			LOGP("parse buffer error info:%0s offset:%d near:%32s",
+			LOGP("parse buffer error info:%s offset:%zu near:%32s",
 				rapidjson::GetParseError_En(e), o, buffer + o);
 			return -1;
 		}

@@ -16,5 +16,6 @@ namespace dcsutil {
 	uint64_t	time_unixtime_ms();
 	uint64_t	time_unixtime_us();
 	int			daemonlize(int closestd = 1, int chrootdir = 0);
-
+	int			readfile(const char * file, char * buffer, size_t sz);
+	int			writefile(const char * file, const char * buffer, size_t sz = 0);
 };

@@ -316,6 +316,35 @@ static int json_test(const char * file){
 	jd2.dump_file("test.out.json");
 	return 0;
 }
+#include "base/xml_doc.h"
+static int xml_test(const char * xmlfile){
+	xml_doc_t xml;
+	if (xml.parse_file(xmlfile)){
+		return -1;
+	}
+	string s;
+	cout << (xml.dumps(s)) <<endl;
+
+	auto n1 = xml.get_node("node1", nullptr,0,"node1text");
+	auto n2 = xml.get_node("node2", nullptr, 0, "node2text");
+	auto n3 = xml.get_node("node3", nullptr, 0, "node3ext");
+	xml.get_attr("attr1", n2, "a1");
+	xml.path_set("node3:hello", "world!");
+	auto n11 = xml.get_node("node11", n1, 0, "node11text");
+	auto n12 = xml.get_node("node12", n1, 0, "node12text");
+
+	xml.path_set("node1.node11.a#0:a", "a0");
+	xml.path_set("node1.node11.a#5:a", "a1");
+	xml.path_set("node1.node11.a#1:a", "a2");
+	xml.path_set("node1.node11.a#2:a", "a3");
+	int na = xml.path_node_array_length("node1.node11.a");
+	cout << "na:" <<na<<endl;
+	xml.add_comment("hello,wolrld, this's a comments for n1!!!!", n11);
+	xml.add_data("dddddddddddddd, this's a data node for n1!!!!", n1);
+
+	cout << (xml.dumps(s));
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -343,6 +372,8 @@ int main(int argc, char* argv[])
 			return perf_test(argv[1]);
 		case 'j':
 			return json_test(argv[2]);
+		case 'x':
+			return xml_test(argv[2]);
 		default:
 			break;
 		}
