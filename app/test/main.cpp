@@ -340,7 +340,7 @@ static int xml_test(const char * xmlfile){
 	int na = xml.path_node_array_length("node1.node11.a");
 	cout << "na:" <<na<<endl;
 	xml.add_comment("hello,wolrld, this's a comments for n1!!!!", n11);
-	xml.add_data("dddddddddddddd, this's a data node for n1!!!!", n1);
+	xml.add_cdata("dddddddddddddd, this's a data node for n1!!!!", n1);
 
 	cout << (xml.dumps(s));
 	return 0;
