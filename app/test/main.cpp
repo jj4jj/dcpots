@@ -375,6 +375,41 @@ static int xml_test(const char * xmlfile){
 	cout << (xml.dumps(s));
 	return 0;
 }
+static int lock_test(const char * pidfile){
+
+	int pid = dcsutil::lockpidfile(pidfile, SIGTERM);
+	if (pid <= 0){
+		LOGP("error:%d lock errno:%d for:%s",pid, errno, strerror(errno));
+		return -2;
+	}
+	if (pid != getpid()){
+		return -3;
+	}
+	else {
+		LOGP("lock file:%s success!", pidfile);
+		while (true){
+			sleep(5);
+		}
+	}
+	return 0;
+}
+static int daemon_test(const char * arg){
+	//dcsutil::daemonlize(0);
+	std::vector<std::string> vs;
+	std::vector<std::string> vss;
+	int n = dcsutil::split("..b.abc..def..", ".", vs);
+	int m = dcsutil::split("ffffdccvf", ".", vss);
+	LOGP("split test ret:%d [0]:%s [1]:%s [2]:%s", n, vs[0].c_str(), vs[1].c_str(), vs[2].c_str());
+	LOGP("split test ret:%d [0]:%s", m, vss[0].c_str());
+	std::string str;
+	LOGP("strtime:%s", dcsutil::strftime(str));
+	LOGP("from_strtime:%u", dcsutil::from_strtime());
+	while (true){
+		//LOGP("test ....");
+		sleep(5);
+	}
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -404,6 +439,11 @@ int main(int argc, char* argv[])
 			return json_test(argv[2]);
 		case 'x':
 			return xml_test(argv[2]);
+		case 'o':
+			return lock_test(argv[2]);
+		case 'd':
+			return daemon_test(argv[2]);
+
 		default:
 			break;
 		}

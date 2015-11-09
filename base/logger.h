@@ -1,5 +1,5 @@
 #pragma once
-#include "stdinc.h"
+#include "utility.hpp"
 struct logger_t;
 
 enum log_msg_level_type {
@@ -50,16 +50,16 @@ int				logger_write(logger_t *, int err, const char* fmt, ...);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define LOG_MSG_FORMAT_PREFIX	"%lu.%lu:%d|%s:%d|%s|"
-#define LOG_MSG_FORMAT_VALUES	err_tv_.tv_sec,err_tv_.tv_usec,getpid(),__FUNCTION__,__LINE__
+#define LOG_MSG_FORMAT_PREFIX	"%s.%lu:%d|%s:%d|%s|"
+#define LOG_MSG_FORMAT_VALUES	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec),err_tv_.tv_usec,getpid(),__FUNCTION__,__LINE__
 
 #ifndef LOG_MSG
 #define LOG_MSG(log_lv_, erm, killer, err_no, format, ...)	\
 do{\
 	if ((lv) >= logger_level((erm)))\
 	{\
-		timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-		fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)),##__VA_ARGS__); \
+		timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
+		fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
 	}\
 } while (0)
 #endif
@@ -71,7 +71,7 @@ do{\
 #define LOGR(log_lv_, format,...)	\
 do{\
 	if ((log_lv_) >= logger_level()){\
-			timeval err_tv_; gettimeofday(&err_tv_, NULL); \
+			timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
 			fprintf(stderr, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
 	}\
 } while (0)
@@ -82,8 +82,8 @@ do{\
 do{\
 	const int log_lv_ = LOG_LVL_DEBUG; \
 	if ((log_lv_) >= logger_level()){\
-		timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-		fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__);\
+		timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
+		fprintf(stderr, LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
 	}\
 } while (0)
 #endif
@@ -91,7 +91,7 @@ do{\
 #ifndef GLOG
 #define GLOG(log_lv_, err, format, ...)	do{\
 	if ((log_lv_) >= logger_level()){\
-		timeval err_tv_; gettimeofday(&err_tv_, NULL); \
+		timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
 		logger_write(nullptr, (err), LOG_MSG_FORMAT_PREFIX format "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
 	}\
 } while (0)
