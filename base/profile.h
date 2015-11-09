@@ -21,6 +21,7 @@ struct		profile_t {
 	}
 };
 
+#define PROFILE_ON
 #ifdef PROFILE_ON
 #define PROFILE_FUNC() profile_t _func_prof_(__FILE__,__FUNCTION__,__LINE__)
 #else

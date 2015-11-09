@@ -6,7 +6,7 @@
 #include "base/utility.hpp"
 #include "base/msg_proto.hpp"
 
-static int max_ping_pong = 1000000;
+static int max_ping_pong = 100000;
 static int max_ppsz = 0;
 static int pingpong = 0;
 static const char * msgqpath = nullptr;
@@ -20,6 +20,9 @@ int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 		start_us = dcsutil::time_unixtime_us();
 	}
 	dcsmq_send(mq, src, msg);
+	if (pingpong > 5){
+		logger_set_level(NULL, LOG_LVL_INFO);
+	}
 	if (pingpong >= max_ping_pong)
 	{
 		start_us = dcsutil::time_unixtime_us() - start_us;
@@ -65,19 +68,45 @@ int test_mq(const char * ap)
 	return 0;
 }
 const char * stmsg = "hello,world!";
+static int tcp_server_mode = 1;
 int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 {
-	LOGP("stcp event type:%d fd:%d reason:%d last error msg:%s", ev.type, ev.fd, ev.reason, strerror(ev.error));
+	//LOGP("stcp event type:%d fd:%d reason:%d last error msg:%s", ev.type, ev.fd, ev.reason, strerror(ev.error));
 	if (ev.type == dctcp_event_type::DCTCP_CONNECTED){
-		dctcp_send(stc, ev.fd, dctcp_msg_t(stmsg, strlen(stmsg)+1));
+		tcp_server_mode = 0;
+		for (int i = 0; i < 60; i++){
+			dctcp_send(stc, ev.fd, dctcp_msg_t(stmsg, strlen(stmsg) + 1));
+		}
+		start_us = dcsutil::time_unixtime_us();
 	}
+
 	if (ev.type == dctcp_event_type::DCTCP_READ){
 		LOGP("ping pang get msg from fd:%d msg:%s",ev.fd, ev.msg->buff);
+		
+		pingpong++;
+		if (pingpong == 1 && tcp_server_mode){
+			start_us = dcsutil::time_unixtime_us();
+		}
+		//LOGP("mq cb msg size:%d src:%lu", msg.sz, src);		
+		max_ppsz += ev.msg->buff_sz;
+		if (pingpong > 5){
+			logger_set_level(NULL, LOG_LVL_INFO);
+		}
+		if (pingpong >= max_ping_pong)
+		{
+			logger_set_level(NULL, LOG_LVL_PROF);
+			if (!tcp_server_mode){
+				dctcp_send(stc, ev.fd, *ev.msg);
+			}
+			start_us = dcsutil::time_unixtime_us() - start_us;
+			LOGP("mq cb msg size:%d total:%d MB time:%ldus pingpong:%d",
+				ev.msg->buff_sz,  max_ppsz / 1048576, start_us, max_ping_pong);
+			exit(0);
+		}
 		dctcp_send(stc, ev.fd, *ev.msg);
 	}
-	return -1;
+	return 0;
 }
-
 int test_tcp(const char * ap)
 {
 	dctcp_config_t sc;
@@ -96,10 +125,11 @@ int test_tcp(const char * ap)
 		int ret = dctcp_connect(p, sc.listen_addr, 5);
 		CHECK(ret)		
 	}
+	logger_set_level(NULL, LOG_LVL_PROF);
 	while (true)
 	{
 		dctcp_poll(p, 1000);
-		usleep(1000);
+		usleep(10);
 	}	
 	return 0;
 }

@@ -154,7 +154,7 @@ static int _get_sockerror(int fd){
 		return errno;
 }
 
-void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
+static void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
 	auto it = stcp->sock_recv_buffer.find(fd);
 	if (it != stcp->sock_recv_buffer.end()){
 		LOGP("free recv buffer ....fd:%d", fd);
@@ -168,7 +168,7 @@ void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
 		stcp->sock_send_buffer.erase(it);
 	}
 }
-msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool for_recv){
+static msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool for_recv){
 	if (for_recv){
 		auto it = stcp->sock_recv_buffer.find(fd);
 		if (it == stcp->sock_recv_buffer.end()){
