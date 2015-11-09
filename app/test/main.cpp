@@ -81,7 +81,7 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 int test_tcp(const char * ap)
 {
 	dctcp_config_t sc;
-	sc.is_server = ap ? true : false;
+	sc.server_mode = ap ? true : false;
 	sc.listen_addr.ip = "127.0.0.1";
 	sc.listen_addr.port = 8888;
 	auto * p = dctcp_create(sc);
@@ -91,7 +91,7 @@ int test_tcp(const char * ap)
 		return -1;
 	}
 	dctcp_event_cb(p, _dctcp_cb, nullptr);
-	if (!sc.is_server)
+	if (!sc.server_mode)
 	{
 		int ret = dctcp_connect(p, sc.listen_addr, 5);
 		CHECK(ret)		

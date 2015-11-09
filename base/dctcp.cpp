@@ -114,7 +114,7 @@ struct dctcp_t * dctcp_create(const dctcp_config_t & conf)
 	stcp->epfd = epoll_create(conf.max_client);
 	if (stcp->epfd < 0) { dctcp_destroy(stcp); return nullptr; }
 
-	if (conf.is_server)
+	if (conf.server_mode)
 	{
 		int fd = _create_tcpsocket(conf.max_tcp_send_buff_size, conf.max_tcp_recv_buff_size);
 		if (fd < 0) { dctcp_destroy(stcp); return nullptr; }
@@ -558,5 +558,5 @@ int             dctcp_connect(dctcp_t * stcp, const dctcp_addr_t & addr, int ret
 }
 bool            dctcp_is_server(dctcp_t * stcp)
 {
-	return stcp->conf.is_server;
+	return stcp->conf.server_mode;
 }

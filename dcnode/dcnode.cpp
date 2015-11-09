@@ -702,7 +702,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		sc.max_tcp_recv_buff_size = conf.max_channel_buff_size;
 		if (!conf.addr.listen_addr.empty())
 		{
-			sc.is_server = true;
+			sc.server_mode = true;
 			dctcp_addr_t saddr;
 			const string & listenaddr = conf.addr.listen_addr;
 			saddr.ip = listenaddr.substr(0, listenaddr.find(':'));

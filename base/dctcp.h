@@ -20,7 +20,7 @@ struct dctcp_addr_t
 };
 struct dctcp_config_t
 {
-    int is_server; //0:client, 1:server
+    int server_mode; //0:client, 1:server
     int max_recv_buff;
     int max_send_buff;
 	int max_backlog;
@@ -35,7 +35,7 @@ struct dctcp_config_t
 		max_recv_buff = max_send_buff = 1024 * 100; //100K
 		max_tcp_send_buff_size = 1024 * 100; //100K
 		max_tcp_recv_buff_size = 640 * 100; //600K
-		is_server = 0;
+		server_mode = 0;
 	}
 };
 
@@ -65,9 +65,9 @@ enum dctcp_event_type
 
 struct dctcp_event_t
 {
-    dctcp_event_type		type;
-	int					fd;
-    const dctcp_msg_t *  msg;
+    dctcp_event_type			type;
+	int							fd;
+    const dctcp_msg_t *			msg;
 	dctcp_close_reason_type		reason;
 	int							error;
 	dctcp_event_t() :type(DCTCP_EVT_INIT), msg(nullptr), reason(DCTCP_MSG_OK), error(0){}
@@ -75,15 +75,15 @@ struct dctcp_event_t
 
 typedef int (*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
 
-struct dctcp_t * dctcp_create(const dctcp_config_t & conf);
-void            dctcp_destroy(dctcp_t * );
-void            dctcp_event_cb(dctcp_t*, dctcp_event_cb_t cb, void *ud);
-//return proced
-int	            dctcp_poll(dctcp_t *, int timeout_us, int max_proc = 100);
-int				dctcp_send(dctcp_t *,int fd, const dctcp_msg_t & msg);
-int             dctcp_connect(dctcp_t *, const dctcp_addr_t & addr, int retry = 0);
-int				dctcp_reconnect(dctcp_t* , int fd);
-void			dctcp_close(dctcp_t *, int fd);
-bool            dctcp_is_server(dctcp_t *);
+struct dctcp_t *	dctcp_create(const dctcp_config_t & conf);
+void				dctcp_destroy(dctcp_t * );
+void				dctcp_event_cb(dctcp_t*, dctcp_event_cb_t cb, void *ud);
+//return proced events
+int					dctcp_poll(dctcp_t *, int timeout_us, int max_proc = 100);
+int					dctcp_send(dctcp_t *,int fd, const dctcp_msg_t & msg);
+int					dctcp_connect(dctcp_t *, const dctcp_addr_t & addr, int retry = 0);
+int					dctcp_reconnect(dctcp_t* , int fd);
+void				dctcp_close(dctcp_t *, int fd);
+bool				dctcp_is_server(dctcp_t *);
 
 
