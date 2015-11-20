@@ -116,6 +116,7 @@ int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for sele
 	row_store.fields_count = mysql_field_count(_THIS_HANDLE->mysql_conn);
 	bool	need_more = true;
 	int		ret = 0;
+	string table_name = "";
 	MYSQL_FIELD * fields_all = mysql_fetch_fields(res_set);
 	if (row_store.row_total == 0 || row_store.fields_count == 0){
 		goto FREE_RESULT;
@@ -129,11 +130,15 @@ int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for sele
 	}
 	for (size_t i = 0; i < row_store.fields_count; ++i){
 		row_store.fields_name[i] = fields_all[i].name;
+		if (table_name.empty()){
+			table_name = fields_all[i].table;
+			row_store.table_name = table_name.c_str();
+		}
 	}
 	for (; row_store.row_offset < row_store.row_total && need_more; ++row_store.row_offset){
 		row_store.row_data = (const char **)mysql_fetch_row(res_set);
 		row_store.row_length = mysql_fetch_lengths(res_set);
-		need_more = row_store.row_offset < row_store.row_total;
+		need_more = (row_store.row_offset + 1) < row_store.row_total;
 		cb(ud, need_more, row_store);
 	}
 	ret = (int)row_store.row_offset;
