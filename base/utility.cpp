@@ -8,15 +8,15 @@ namespace dcsutil {
 	uint64_t	time_unixtime_us(){
 		timeval tv;
 		gettimeofday(&tv, NULL);
-		return tv.tv_sec * 1000000 + tv.tv_usec ;
+		return tv.tv_sec * 1000000 + tv.tv_usec;
 	}
 
-	int			daemonlize(int closestd , int chrootdir){
+	int			daemonlize(int closestd, int chrootdir){
 #if _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
 		return daemon(!chrootdir, !closestd);
 #else
 		assert("not implement in this platform , using nohup & launch it ?")
-		return -404;//todo 
+			return -404;//todo 
 #endif
 	}
 
@@ -26,14 +26,14 @@ namespace dcsutil {
 		if (!fp){
 			LOGP("open file£º%s error:%d", file, errno);
 			return -1;
-		}		
+		}
 		int n;
 		size_t tsz = 0;
 		while ((n = fread(buffer + tsz, 1, sz - tsz, fp))){
 			if (n > 0){
 				tsz += n;
 			}
-			else if(errno != EINTR &&
+			else if (errno != EINTR &&
 				errno != EAGAIN) {
 				LOGP("read file:%s ret:%d error :%d total sz:%zu", file, n, errno, tsz);
 				break;
@@ -166,8 +166,7 @@ namespace dcsutil {
 		return mktime(&stm);
 	}
 
-
-
+	
 
 }
 

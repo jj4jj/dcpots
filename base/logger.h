@@ -77,6 +77,15 @@ do{\
 } while (0)
 #endif
 
+#ifndef LOGSTR
+#define LOGSTR(str,tag,format,...)	\
+do{\
+	timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
+	snprintf((char*)str.data(), str.capacity() - 1, LOG_MSG_FORMAT_PREFIX format, tag, LOG_MSG_FORMAT_VALUES, ##__VA_ARGS__); \
+} while (0)
+#endif
+
+
 #ifndef LOGP
 #define LOGP(format,...)	\
 do{\

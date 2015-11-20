@@ -1,17 +1,18 @@
 #pragma  once
 #include "stdinc.h"
 
-class noncopyable
-{
-protected:
-	noncopyable() {}
-	~noncopyable() {}
-private: // emphasize the following members are private  
-	noncopyable(const noncopyable&);
-	const noncopyable& operator=(const noncopyable&);
-};
+NS_BEGIN(dcsutil)
 
-namespace dcsutil {
+	class noncopyable
+	{
+	protected:
+		noncopyable() {}
+		~noncopyable() {}
+	private: // emphasize the following members are private  
+		noncopyable(const noncopyable&);
+		const noncopyable& operator=(const noncopyable&);
+	};
+
 	//time 
 	uint64_t		time_unixtime_ms();
 	uint64_t		time_unixtime_us();
@@ -23,4 +24,6 @@ namespace dcsutil {
 	int				split(const std::string & str, const string & sep, std::vector<std::string> & vs);
 	const char*		strftime(std::string & str, time_t unixtime = 0, const char * format = "%Y-%m-%d %H:%M:%S");
 	time_t			from_strtime(const char * strtime = "1970-1-1 08:00:00");
-};
+
+
+NS_END()

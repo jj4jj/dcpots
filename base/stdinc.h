@@ -93,3 +93,20 @@ using std::bitset;
 #define restrict 
 #endif
 
+#ifndef INOUT
+#define INOUT
+#endif
+
+#ifndef OUT
+#define OUT
+#endif
+
+#ifndef IN
+#define IN
+#endif
+
+
+///////////////////////////////////////////////////////
+#define NS_BEGIN(ns)	namespace ns {
+#define NS_END()		};
+
