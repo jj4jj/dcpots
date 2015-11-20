@@ -20,7 +20,8 @@ ADD_EXECUTABLE(testagent ${cur_SRCS})
 target_link_libraries(testagent
 dagent
 python2.7
-protobuf)
+protobuf
+mysqlclient)
 
 #installing
 INSTALL(TARGETS testagent DESTINATION bin/)

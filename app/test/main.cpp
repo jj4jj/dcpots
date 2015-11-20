@@ -5,6 +5,7 @@
 #include "dagent/dagent.h"
 #include "base/utility.hpp"
 #include "base/msg_proto.hpp"
+#include "base/utility_mysql.h"
 
 static int max_ping_pong = 100000;
 static int max_ppsz = 0;
@@ -403,10 +404,60 @@ static int daemon_test(const char * arg){
 	LOGP("split test ret:%d [0]:%s", m, vss[0].c_str());
 	std::string str;
 	LOGP("strtime:%s", dcsutil::strftime(str));
-	LOGP("from_strtime:%u", dcsutil::from_strtime());
+	LOGP("from_strtime:%lu", dcsutil::from_strtime());
 	while (true){
 		//LOGP("test ....");
 		sleep(5);
+	}
+	return 0;
+}
+static int mysql_test(const char * p){
+	using namespace dcsutil;
+	mysqlclient_t	mc;
+	mysqlclient_t::cnnx_conf_t	conf;
+	conf.ip = "127.0.0.1";
+	conf.uname = "test";
+	conf.passwd = "123456";
+	conf.port = 3306;
+	if (mc.init(conf)){
+		return -1;
+	}
+	int ret = mc.execute(
+		"use test;");
+	if (ret < 0){
+		std::cerr << ret << " error:"<< mc.err_msg() << endl;
+		return -1;
+	}
+	ret = mc.execute(" create table if not exists `mc_hello` (`h1` int not null);");
+	if (ret < 0){
+		std::cerr << ret << " error:" << mc.err_msg() << endl;
+		return -1;
+	}
+	ret = mc.execute("insert into mc_hello values(24);");
+	if (ret < 0){
+		std::cerr << ret << " error:" << mc.err_msg() << endl;
+		return -1;
+	}
+	std::cout << "affects:" << ret << endl;
+	ret = mc.execute("select h1 from `mc_hello`;");
+	if (ret < 0){
+		std::cerr << ret << " error:" << mc.err_msg() << endl;
+		return -1;
+	}
+	struct _test {
+		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::mysqlclient_row_t & row){
+			LOGP("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
+				ud,row.row_data[0],row.row_length[0],row.fields_name[0],row.row_total, row.row_offset, need_more);
+			if (row.row_offset > 5){
+				need_more = false;
+			}
+		}
+	};
+
+	ret = mc.result(NULL, _test::cb);
+	if (ret < 0){
+		std::cerr << ret << " error:" << mc.err_msg() << endl;
+		return -1;
 	}
 	return 0;
 }
@@ -443,6 +494,8 @@ int main(int argc, char* argv[])
 			return lock_test(argv[2]);
 		case 'd':
 			return daemon_test(argv[2]);
+		case 'M':
+			return mysql_test(argv[2]);
 
 		default:
 			break;

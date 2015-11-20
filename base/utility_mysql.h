@@ -40,6 +40,7 @@ struct mysqlclient_t {
 	~mysqlclient_t();
 	int			init(const cnnx_conf_t & conf);
 	int			execute(const std::string & sql);
+	size_t		affects();
 	int			commit();//if not auto commit
 
 	//return 1:fetch next, return 0:

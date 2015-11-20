@@ -81,7 +81,7 @@ do{\
 #define LOGSTR(str,tag,format,...)	\
 do{\
 	timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-	snprintf((char*)str.data(), str.capacity() - 1, LOG_MSG_FORMAT_PREFIX format, tag, LOG_MSG_FORMAT_VALUES, ##__VA_ARGS__); \
+	snprintf((char*)str.data(), str.capacity() - 1, LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES, tag, ##__VA_ARGS__); \
 } while (0)
 #endif
 
