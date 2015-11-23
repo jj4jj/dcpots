@@ -1,5 +1,4 @@
 #pragma once
-
 #include "stdinc.h"
 
 struct dcsmq_t;
@@ -14,7 +13,7 @@ struct dcsmq_config_t
 	dcsmq_config_t()
 	{
 		msg_buffsz = 1024 * 1024;
-		max_queue_buff_size = 10 * 1024 * 1024; //2MB
+		max_queue_buff_size = 10 * 1024 * 1024; //10MB
 		server_mode = false;
 		attach = false;
 	}

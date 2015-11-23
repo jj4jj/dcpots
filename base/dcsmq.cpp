@@ -1,9 +1,7 @@
 #include "dcsmq.h"
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/msg.h>
 #include "utility.hpp"
 #include "profile.h"
+#include <sys/msg.h>
 
 struct dcsmq_t {
 	dcsmq_config_t	conf;
@@ -176,8 +174,7 @@ int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
 	smq->sendbuff->mtype = dst;	
 	memcpy(smq->sendbuff->mtext, msg.buffer, msg.sz);
 	int ret = 0;
-	do 
-	{
+	do {
 		ret = msgsnd(smq->sender, smq->sendbuff, msg.sz, IPC_NOWAIT);
 	} while (ret == -1 && errno == EINTR);
 	return ret;
