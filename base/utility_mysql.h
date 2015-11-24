@@ -26,6 +26,7 @@ struct mysqlclient_t {
 		int     port;
 		int     wait_timeout;
 		int     intr_timeout;
+		int		ping_chkgap;
 		long    cliflag;
 		cnnx_conf_t()
 		{
@@ -33,6 +34,7 @@ struct mysqlclient_t {
 			ip = uname = passwd = dbname = unisock = "";
 			auto_commit = auto_reconnect = true;
 			char_set = "utf8";
+			ping_chkgap = 10;//10s
 		}
 	};
 	void	*	handle;
@@ -43,13 +45,15 @@ struct mysqlclient_t {
 	int			execute(const std::string & sql);
 	size_t		affects();
 	int			commit();//if not auto commit
-
+	int			ping(); //return 1:reconnected, 0:status ok; -1: ping error
 	//return 1:fetch next, return 0:
 	typedef void	result_cb_func_t(void* ud, OUT bool & need_more, const mysqlclient_row_t & row);
 	int				result(void * ud, result_cb_func_t cb);//get result for select
 	//error sth 
 	int				err_no();
 	const char *	err_msg();
+	//mysql conn
+	void *			mysql_handle();
 };
 
 NS_END()

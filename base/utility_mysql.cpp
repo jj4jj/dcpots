@@ -10,10 +10,13 @@ NS_BEGIN(dcsutil)
 static const int MAX_MYSQL_ERR_MSG_SZ = 1024;
 struct mysqlclient_impl_t {
 	MYSQL *			mysql_conn;
+	///////////////////////////////////////////////////////////
 	mysqlclient_t::cnnx_conf_t		conf;
 	std::string		error_msg;
+	time_t			last_ping_time;
 	mysqlclient_impl_t() {
 		mysql_conn = NULL;
+		last_ping_time = 0;
 		error_msg.reserve(MAX_MYSQL_ERR_MSG_SZ);
 	}
 };
@@ -24,19 +27,26 @@ struct mysqlclient_impl_t {
 mysqlclient_t::mysqlclient_t(){
 	handle = new mysqlclient_impl_t();
 }
-mysqlclient_t::~mysqlclient_t(){
+
+inline	void	mysqlclient_cleanup(void *handle){
 	if (_THIS_HANDLE){
 		if (_THIS_HANDLE->mysql_conn){
 			mysql_close(_THIS_HANDLE->mysql_conn);
 			_THIS_HANDLE->mysql_conn = NULL;
 		}
-		delete _THIS_HANDLE;
 	}
+}
+
+mysqlclient_t::~mysqlclient_t(){
+	mysqlclient_cleanup(handle);
+	if(_THIS_HANDLE)
+		delete _THIS_HANDLE;
 }
 //
 int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
-	//_THIS_HANDLE->conf = conf;
-	//_THIS_HANDLE->mysql_conn 
+	if (_THIS_HANDLE){
+		delete _THIS_HANDLE;
+	}
 	auto conn = mysql_init(NULL);
 	if (!conn){
 		LOG_S("mysql client init error ");
@@ -103,7 +113,21 @@ int		mysqlclient_t::commit(){//if not auto commit
 	}
 	return 0;
 }
-
+int		mysqlclient_t::ping(){
+	time_t tnow = time(NULL);
+	if (tnow < _THIS_HANDLE->last_ping_time + _THIS_HANDLE->conf.ping_chkgap)	
+		return 0;
+	_THIS_HANDLE->last_ping_time = tnow;
+	unsigned long mtid1 = mysql_thread_id(_THIS_HANDLE->mysql_conn);
+	int ret = mysql_ping(_THIS_HANDLE->mysql_conn);
+	if (ret){
+		LOG_S("mysql server ping error !");
+		return -1;
+	}
+	unsigned long mtid2 = mysql_thread_id(_THIS_HANDLE->mysql_conn);
+	if (mtid2 != mtid1)	return 1;
+	return 0;
+}
 int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for select
 	MYSQL_RES *res_set = mysql_store_result(_THIS_HANDLE->mysql_conn);
 	if (res_set == NULL){
@@ -147,12 +171,14 @@ FREE_RESULT:
 	mysql_free_result(res_set);
 	return ret;
 }
-
 int				mysqlclient_t::err_no(){
 	return mysql_errno(_THIS_HANDLE->mysql_conn);
 }
 const char *	mysqlclient_t::err_msg(){
 	return _THIS_HANDLE->error_msg.c_str();
+}
+void *			mysqlclient_t::mysql_handle(){
+	return _THIS_HANDLE->mysql_conn;
 }
 
 
