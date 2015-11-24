@@ -700,18 +700,20 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		sc.max_send_buff = conf.max_channel_buff_size;
 		sc.max_tcp_send_buff_size = conf.max_channel_buff_size;
 		sc.max_tcp_recv_buff_size = conf.max_channel_buff_size;
+		n->stcp = dctcp_create(sc);
+		if (!n->stcp) {
+			dcnode_destroy(n); return nullptr;
+		}
 		if (!conf.addr.listen_addr.empty())
 		{
-			sc.server_mode = true;
 			dctcp_addr_t saddr;
 			const string & listenaddr = conf.addr.listen_addr;
 			saddr.ip = listenaddr.substr(0, listenaddr.find(':'));
 			saddr.port = strtol(listenaddr.substr(listenaddr.find(':') + 1).c_str(), nullptr, 10);
-			sc.listen_addr = saddr;
-		}
-		n->stcp = dctcp_create(sc);
-		if (!n->stcp) {
-			dcnode_destroy(n); return nullptr;
+			int fd = dctcp_listen(n->stcp, saddr);
+			if (fd < 0) {
+				dcnode_destroy(n); return nullptr;
+			}
 		}
 		dctcp_event_cb(n->stcp, _stcp_cb, n);
 	}

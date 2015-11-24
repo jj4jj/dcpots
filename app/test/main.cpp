@@ -111,19 +111,20 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 int test_tcp(const char * ap)
 {
 	dctcp_config_t sc;
-	sc.server_mode = ap ? true : false;
-	sc.listen_addr.ip = "127.0.0.1";
-	sc.listen_addr.port = 8888;
+	dctcp_addr_t listen_addr;
+	listen_addr.ip = "127.0.0.1";
+	listen_addr.port = 8888;
 	auto * p = dctcp_create(sc);
-	if (!p)
-	{
+	if (!p){
 		LOGP("create stcp error ! syserror:%s", strerror(errno));
 		return -1;
 	}
+	if (ap){
+		dctcp_listen(p, listen_addr);
+	}
 	dctcp_event_cb(p, _dctcp_cb, nullptr);
-	if (!sc.server_mode)
-	{
-		int ret = dctcp_connect(p, sc.listen_addr, 5);
+	if (!ap){
+		int ret = dctcp_connect(p, listen_addr, 5);
 		CHECK(ret)		
 	}
 	logger_set_level(NULL, LOG_LVL_PROF);
