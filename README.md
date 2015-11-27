@@ -1,7 +1,7 @@
 #D[C]Agent
 D[C]Agent is a distribute system basic comunication componets [agent] solution .
 
-##DAgent main feature##
+##DCAgent main feature##
 
 - lib for distribute agent client
 - distribute agent server for report bussiness, monitor, machine statistics , python extension etc.
@@ -11,7 +11,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 ##Architecture##
 
 - Bussiness Application [reporter , execter , monitor , machine statistics]
-- DAgent [wrap DCNode with python extension]
+- DCAgent [wrap DCNode with python extension]
 - DCNode [local:system mq, remote:tcp]
 
 ```
@@ -21,7 +21,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 
 
 	               			agent(root)[smq:pull,tcp:server]
-								|					|			
+								|					|
 								|					|
 	        	agent[tcp:client,tcp:server]  	smq leaf[smq:push]
 					|					|
@@ -72,23 +72,24 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 
 - router caching [done]
 - alloc msg buffer with zero copy [by lower layer allocated]  [opt]
-- msgq name manage [opt]
-- python extension in agent module [done]
+- msgq name manage      [done]
+- python extension in agent module  [done]
 - same agent [brother] communication with msgq directly [p2p] [done]
 - msg persistence [opt]
 - dcnode_send should create a send queue . [todo]
 - bench mark todo [doing]
 - dagent python export [test swig? ]  [done]
 - dagent python plugins   [done]
-- add dbproxy for mysql [orm]  [opt]
-- push service [done with sdv]
-- data visualization with echarts [done with sdv]
+- add dbproxy for mysql [orm]  [done]
+- push service [done with (sdv)[https://github.com/jj4jj/sdv.git] ]
+- data visualization with echarts [done with (sdv)[https://github.com/jj4jj/sdv.git]]
 
 
 
 
 ##build##
-    make rebuild
+    make clean
+    make
 
 
 
