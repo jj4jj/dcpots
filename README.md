@@ -88,7 +88,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 
 
 ##build##
-    make clean
+    make clean #optional
     make
 
 
