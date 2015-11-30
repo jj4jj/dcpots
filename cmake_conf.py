@@ -1,10 +1,11 @@
 PROJECT='dcagent'
 VERSION='0.0.1'
-DEBUG = 0
-DEFS =[]
-VERBOSE = 0
+DEBUG = 0	#0/1
+DEFS = []
+VERBOSE = 'off'	#on/off
 EXTRA_C_FLAGS = ''
-EXTRA_LD_FLAGS = ''
+EXTRA_CXX_FLAGS = '-std=c++11'
+EXTRA_LD_FLAGS = '-ldl -lm -lrt -pthread'
 LIBS = [
         {
             'name':'dcbase',

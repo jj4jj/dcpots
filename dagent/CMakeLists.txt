@@ -14,9 +14,6 @@ set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
 /usr/include
-/usr/local/include
-/usr/local/include/libbson-1.0
-/usr/local/include/libmongoc-1.0
 )
 
 add_library(dagent STATIC ${cur_SRCS})

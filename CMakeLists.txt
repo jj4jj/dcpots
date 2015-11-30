@@ -16,10 +16,11 @@ if(BUILDING_IN_SOURCE)
 endif()
 
 # compile option
-option(DEBUG "Debug mode" 1)
+option(DEBUG "Debug mode" 0)
 option(PCH "Use precompiled headers" 0)
 
 
+SET( CMAKE_VERBOSE_MAKEFILE off)
 
 if(DEBUG)
 	set(CMAKE_BUILD_TYPE Debug)
@@ -29,13 +30,14 @@ else()
 	message("Build in debug-mode : No")
 endif()
 
+set(CMAKE_COMM_FLAGS "")
 #debug common
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -Wall -Wfatal-errors -Wextra -g -rdynamic -gdwarf-2 -g3 -ggdb3 -Wl,-Bdynamic -ldl -lm -lrt -pthread ")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++11 -rdynamic -gdwarf-2 -Wall -Wfatal-errors -Wextra -Wno-unused-parameter -ldl -lm -lrt -pthread ")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_COMM_FLAGS} -g3 -ggdb3 -Wall -Wfatal-errors -Wextra  -rdynamic -ldl -lm -lrt -pthread")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  ${CMAKE_COMM_FLAGS} -g3 -ggdb3 -Wall -Wfatal-errors -Wextra -std=c++11 -rdynamic -ldl -lm -lrt -pthread")
 
 # release mode
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2 -g --no-warnings -ldl -lm -lrt -pthread")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11 -O2 -g --no-warnings -ldl -lm -lrt -pthread")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_COMM_FLAGS} -O2 -g   -rdynamic -ldl -lm -lrt -pthread")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_COMM_FLAGS} -O2 -g -std=c++11  -rdynamic -ldl -lm -lrt -pthread")
 
 # output dir
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
