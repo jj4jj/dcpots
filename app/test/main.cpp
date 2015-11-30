@@ -446,7 +446,7 @@ static int mysql_test(const char * p){
 		return -1;
 	}
 	struct _test {
-		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::mysqlclient_row_t & row){
+		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::table_row_t & row){
 			LOGP("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
 				ud,row.row_data[0],row.row_length[0],row.fields_name[0],row.row_total, row.row_offset, need_more);
 			if (row.row_offset > 5){
@@ -462,6 +462,40 @@ static int mysql_test(const char * p){
 	}
 	return 0;
 }
+#include "utility_mongo.h"
+static int mongo_test(const char * p){
+	dcsutil::mongo_client_config_t conf;
+	dcsutil::mongo_client_t		mg;
+	conf.mongo_uri = "mongo://127.0.0.1:27017";
+	conf.multi_thread = 1;
+	if (mg.init(conf)){
+		LOGP("init error !");
+		return -1;
+	}
+	using namespace dcsutil;
+	mongo_client_t::commnd_t cmd;
+	cmd.db = "test";
+	cmd.coll = "test";
+	cmd.cmd = "insert({'hello':'world'})";
+
+	struct _test_cb {
+		static void cb(void * ud, const dcsutil::mongo_client_t::result_t & rst){
+			LOGP("rst response:%s  error:%s", rst.rst.c_str(), rst.err_msg.c_str());
+		}
+	};
+	if (mg.excute(cmd, _test_cb::cb, 0)){
+		LOGP("excute error !");
+	}
+	while (true){
+		if (mg.poll() == 0){
+			usleep(1000000);
+		}
+		if (!mg.running()){
+			break;
+		}
+	}
+	return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -470,6 +504,10 @@ int main(int argc, char* argv[])
 	msgqpath = argv[0];
 	if (argc >= 2)
 	{
+		if (strstr(argv[1], "mongo")){
+			return mongo_test(argv[2]);
+		}
+
 		switch (argv[1][0])
 		{
 		case 'm':
@@ -496,7 +534,7 @@ int main(int argc, char* argv[])
 		case 'd':
 			return daemon_test(argv[2]);
 		case 'M':
-			return mysql_test(argv[2]);
+			return mysql_test(argv[2]);	
 
 		default:
 			break;

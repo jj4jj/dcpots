@@ -4,7 +4,7 @@
 NS_BEGIN(dcsutil)
 
 struct mysqlclient_t {
-	struct mysqlclient_row_t {
+	struct table_row_t {
 		size_t			fields_count;
 		const char * *	fields_name;
 		const char * *  row_data;
@@ -37,8 +37,10 @@ struct mysqlclient_t {
 			ping_chkgap = 10;//10s
 		}
 	};
+private:
 	void	*	handle;
 	//////////////////////////////////
+public:
 	mysqlclient_t();
 	~mysqlclient_t();
 	int			init(const cnnx_conf_t & conf);
@@ -47,7 +49,7 @@ struct mysqlclient_t {
 	int			commit();//if not auto commit
 	int			ping(); //return 1:reconnected, 0:status ok; -1: ping error
 	//return 1:fetch next, return 0:
-	typedef void	result_cb_func_t(void* ud, OUT bool & need_more, const mysqlclient_row_t & row);
+	typedef void	result_cb_func_t(void* ud, OUT bool & need_more, const table_row_t & row);
 	int				result(void * ud, result_cb_func_t cb);//get result for select
 	//error sth 
 	int				err_no();

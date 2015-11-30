@@ -134,7 +134,7 @@ int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for sele
 		LOG_S("mysql_store_result failed ");
 		return -1;
 	}
-	struct mysqlclient_row_t row_store;
+	struct table_row_t row_store;
 	row_store.row_offset = 0;
 	row_store.row_total = mysql_num_rows(res_set);
 	row_store.fields_count = mysql_field_count(_THIS_HANDLE->mysql_conn);

@@ -35,6 +35,7 @@ using std::set;
 #include <iterator>
 #include <bitset>
 #include <stack>
+#include <queue>
 
 /////////////////////////std=c++11/////////////////
 #include <memory>
@@ -53,6 +54,18 @@ using std::bitset;
 #include <iostream>
 #include <fstream>
 
+//--------------------c++11 thread-----------------
+#include <thread>
+#include <mutex> 
+#include <condition_variable>
+#include <atomic>
+//---------------c++11 code converting ------------
+//#include <codecvt>		//codecvt_utf8/16 8<->16
+#include <regex>		//using ECMAScript grammar
+
+//---------------c++11 time during ----------------
+//duration	time_point  high_resolution_clock
+#include <chrono>	//std::chrono
 
 //------------------linux system call -------------
 //-------------------------------------------------
@@ -80,7 +93,7 @@ using std::bitset;
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <linux/un.h>
+#include <sys/un.h>
 #include <sys/mman.h>
 #include <netinet/tcp.h>
 
