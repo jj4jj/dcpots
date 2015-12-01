@@ -19,8 +19,6 @@ namespace dcsutil {
 			return -404;//todo 
 #endif
 	}
-
-
 	int			readfile(const char * file, char * buffer, size_t sz){
 		FILE * fp = fopen(file, "r");
 		if (!fp){
@@ -154,7 +152,7 @@ namespace dcsutil {
 	}
 	time_t			from_strtime(const char * strtime){
 		int Y = 0, M = 0, D = 0, h = 0, m = 0, s = 0;
-		sscanf(strtime, "%4d-%2d-%2d %02d:%02d:%02d", &Y, &M, &D, &h, &m, &s);
+		sscanf(strtime, "%4d-%2d-%2dT%02d:%02d:%02d", &Y, &M, &D, &h, &m, &s);
 		struct tm stm;
 		stm.tm_year = Y - 1900;
 		stm.tm_mon = M - 1;
@@ -164,6 +162,31 @@ namespace dcsutil {
 		stm.tm_sec = s;
 		stm.tm_isdst = 0;
 		return mktime(&stm);
+	}
+	size_t			strprintf(std::string & str, const char * format, ...){
+		size_t ncvt = 0;
+		va_list	ap;
+		va_start(ap, format);
+		ncvt = vsnprintf((char *)str.data(), str.capacity(), format, ap);
+		va_end(ap);
+		if (ncvt == str.capacity()){
+			str[ncvt - 1] = 0;
+			--ncvt;
+		}
+		return ncvt;
+	}
+	size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...){
+		size_t ncvt = 0;
+		str.reserve(max_sz);
+		va_list	ap;
+		va_start(ap, format);
+		ncvt = vsnprintf((char *)str.data(), max_sz, format, ap);
+		va_end(ap);
+		if (ncvt == str.capacity()){
+			str[ncvt - 1] = 0;
+			--ncvt;
+		}
+		return ncvt;
 	}
 
 	

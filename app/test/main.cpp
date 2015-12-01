@@ -474,29 +474,59 @@ static int mongo_test(const char * p){
 		return -1;
 	}
 	using namespace dcsutil;
-	mongo_client_t::commnd_t cmd;
+	mongo_client_t::command_t cmd;
 	cmd.db = "test";
 	cmd.coll = "test";
 	cmd.cmd = "{\"ping\": 1}";
-	cmd.cmd = "{\"insert\": \"test\",\"documents\" : [{\"hello\":1},{\"world!\":2}]}";
+	cmd.cmd = "{\"insert\": \"test\",\"documents\" : [{\"execute\":1}]}";
+	cmd.cmd_length = cmd.cmd.length();
 	struct _test_cb {
-		static void cb(void * ud, const dcsutil::mongo_client_t::result_t & rst){
-			LOGP("rst response:%s  error:%s errno:%d",
-				rst.rst.c_str(), rst.err_msg.c_str(),rst.err_no);
+		static void cb(void * ud, const mongo_client_t::result_t & rst){
+			int * pn = (int*)ud;
+			LOGP("rst response:%s  error:%s errno:%d param:%d",
+				rst.rst.c_str(), rst.err_msg.c_str(),rst.err_no, *pn);
 		}
 	};
+	int n = 0;
 	while (true){
 		if (mg.poll() == 0){
 			//usleep(1000000);
 		}
 		if (!mg.running()){
-			LOGP("not running ...");
+			LOGP("mongo test stoped ...");
 			break;
 		}
-		sleep(1);
-		if (mg.excute(cmd, _test_cb::cb, 0)){
-			LOGP("excute error !");
+		switch (n){
+		case 0:
+			ret = mg.excute(cmd, _test_cb::cb, &n);
+			break;
+		case 1:
+			ret = mg.insert("test", "test", "{\"mongo_insert\":1}", _test_cb::cb, &n);
+			break;
+		case 2:
+			ret = mg.remove("test", "test", "{\"mongo_insert\":1}", _test_cb::cb, &n);
+			break;
+		case 3:
+			ret = mg.find("test", "test", "{\"mongo_insert\":1}", _test_cb::cb, &n);
+			break;
+		case 4:
+			ret = mg.count("test", "test", "{}", _test_cb::cb, &n);
+			break;
+		case 5:
+			ret = mg.update("test", "test", "{\"mongo_insert\":2}", _test_cb::cb, &n);
+			break;
+		case 6:
+			ret = mg.count("test", "test", "{}", _test_cb::cb, &n);
+			break;
+		case 7:
+			mg.stop();
+			break;
 		}
+		++n;
+		if (ret){
+			LOGP("excute error ret:%d", ret);
+		}
+		sleep(1);
 	}
 	return 0;
 }

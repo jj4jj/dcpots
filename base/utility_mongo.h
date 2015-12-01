@@ -9,15 +9,16 @@ struct mongo_client_config_t {
 };
 
 struct mongo_client_t {
-	struct commnd_t {
+	struct command_t {
 		string  db;
 		string	coll;
 		string	cmd;
+		size_t	cmd_length;//if 0:strlen()
 		int		flag;
-		commnd_t() :flag(0){}
+		command_t() :cmd_length(0),flag(0){}
 	};
 	struct result_t {
-		enum { RESULT_MAX_ERR_MSG_SZ = 64 };
+		enum { RESULT_MAX_ERR_MSG_SZ = 128 };
 		string	rst;
 		string	err_msg;
 		int		err_no;
@@ -32,9 +33,16 @@ public:
 	~mongo_client_t();
 public:
 	int				init(const mongo_client_config_t & conf);
-	typedef	 void(*on_response_t)(void * ud,const mongo_client_t::result_t & result);
-	int				excute(const commnd_t & cmd, on_response_t cb, void * ud);
-	int				poll(int max_proc = 100);//same thread cb call back
+	typedef	 void(*on_result_cb_t)(void * ud,const mongo_client_t::result_t & result);
+	int				excute(const command_t & cmd, on_result_cb_t cb, void * ud);
+
+	int				insert(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
+	int				update(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
+	int				remove(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
+	int				find(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
+	int				count(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
+
+	int				poll(int max_proc = 100, int timeout_ms = 2);//same thread cb call back
 	void			stop(); //set stop
 	bool			running(); //is running ?
 };
