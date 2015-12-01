@@ -504,7 +504,7 @@ static int mongo_test(const char * p){
 			ret = mg.insert("test", "test", "{\"mongo_insert\":1}", _test_cb::cb, &n);
 			break;
 		case 2:
-			ret = mg.remove("test", "test", "{\"mongo_insert\":1}", _test_cb::cb, &n);
+			ret = mg.remove("test", "test", "{\"execute\":1}", _test_cb::cb, &n);
 			break;
 		case 3:
 			ret = mg.find("test", "test", "{\"mongo_insert\":1}", _test_cb::cb, &n);
@@ -513,7 +513,7 @@ static int mongo_test(const char * p){
 			ret = mg.count("test", "test", "{}", _test_cb::cb, &n);
 			break;
 		case 5:
-			ret = mg.update("test", "test", "{\"mongo_insert\":2}", _test_cb::cb, &n);
+			ret = mg.update("test", "test", "{\"q\": {\"mongo_insert\":1},\"u\":{\"mongo_insert\":100}}", _test_cb::cb, &n);
 			break;
 		case 6:
 			ret = mg.count("test", "test", "{}", _test_cb::cb, &n);

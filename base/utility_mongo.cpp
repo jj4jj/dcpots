@@ -39,8 +39,8 @@ struct mongo_client_impl_t {
 };
 
 #define _THIS_HANDLE	((mongo_client_impl_t*)(handle))
-#define LOG_S_E(str, format, ...)	LOGSTR(str, "mongo", " [%d@%d (%s)] " format, error.code, error.domain, error.message, ##__VA_ARGS__)
-#define LOG_S(str, format, ...)		LOGSTR(str, "mongo", format, ##__VA_ARGS__)
+#define LOG_S_E(str, format, ...)	LOGSTR((str), "mongo", " [%d@%d (%s)] " format, error.code, error.domain, error.message, ##__VA_ARGS__)
+#define LOG_S(str, format, ...)		LOGSTR((str), "mongo", format, ##__VA_ARGS__)
 
 mongo_client_t::mongo_client_t(){
 	handle = new mongo_client_impl_t();
@@ -69,29 +69,18 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	if (!command){
 		rsp.result.err_no = error.code;
 		LOG_S_E(rsp.result.err_msg, "bson_new_from_json error!");
-		LOGP("bson_new_from_json error!:%s json:%s", error.message, req.cmd.cmd.c_str());
 		return;
 	}
 	bool ret = false;
 	if (!req.cmd.coll.empty()){
 		mongoc_collection_t * collection = mongoc_client_get_collection(client, req.cmd.db.c_str(), req.cmd.coll.c_str());
-		if (!collection){
-			LOG_S(rsp.result.err_msg,"not found the collection:%s", req.cmd.coll.c_str());
-		}
-		else {
-			ret = mongoc_collection_command_simple(collection, command, NULL, &reply, &error);
-			mongoc_collection_destroy(collection);
-		}
+		ret = mongoc_collection_command_simple(collection, command, NULL, &reply, &error);
+		mongoc_collection_destroy(collection);
 	}
 	else {
 		mongoc_database_t * database = mongoc_client_get_database(client, req.cmd.db.c_str());
-		if (!database){
-			LOG_S(rsp.result.err_msg, "not found the database:%s", req.cmd.db.c_str());
-		}
-		else {
-			ret = mongoc_database_command_simple(database, command, NULL, &reply, &error);
-			mongoc_database_destroy(database);
-		}
+		ret = mongoc_database_command_simple(database, command, NULL, &reply, &error);
+		mongoc_database_destroy(database);
 	}
 	if (ret) {
 		char *str = bson_as_json(&reply, NULL);
@@ -182,7 +171,7 @@ mongo_client_t::insert(const string & db, const string & coll, const string & js
 	cmd.db = db;
 	cmd.coll = coll;
 	cmd.cmd_length = dcsutil::strnprintf(cmd.cmd, jsonmsg.length() + coll.length() + 64,
-			"{\"insert\": \"%s\",\"documents\" : [%s]}",
+			"{\"insert\": \"%s\",\"documents\": [%s]}",
 			coll.c_str(), jsonmsg.c_str());
 	return excute(cmd, cb, ud);
 }

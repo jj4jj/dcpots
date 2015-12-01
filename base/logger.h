@@ -78,10 +78,10 @@ do{\
 #endif
 
 #ifndef LOGSTR
-#define LOGSTR(str,tag,format,...)	\
+#define LOGSTR(str, tag, format,...)	\
 do{\
 	timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-	dcsutil::strprintf(str,LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES, tag, ##__VA_ARGS__); \
+	dcsutil::strprintf((str), LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES, (tag), ##__VA_ARGS__); \
 } while (0)
 #endif
 

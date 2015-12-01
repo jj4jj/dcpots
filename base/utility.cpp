@@ -180,7 +180,7 @@ namespace dcsutil {
 		str.reserve(max_sz);
 		va_list	ap;
 		va_start(ap, format);
-		ncvt = vsnprintf((char *)str.data(), max_sz, format, ap);
+		ncvt = vsnprintf((char *)str.data(), str.capacity(), format, ap);
 		va_end(ap);
 		if (ncvt == str.capacity()){
 			str[ncvt - 1] = 0;
