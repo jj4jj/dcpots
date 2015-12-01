@@ -467,7 +467,7 @@ static int mongo_test(const char * p){
 	dcsutil::mongo_client_config_t conf;
 	dcsutil::mongo_client_t		mg;
 	conf.mongo_uri = "mongodb://127.0.0.1:27017";
-	conf.multi_thread = 20;
+	conf.multi_thread = 1;
 	int ret = mg.init(conf);
 	if (ret){
 		LOGP("init error :%d!", ret);
@@ -478,9 +478,11 @@ static int mongo_test(const char * p){
 	cmd.db = "test";
 	cmd.coll = "test";
 	cmd.cmd = "{\"ping\": 1}";
+	cmd.cmd = "{\"insert\": \"test\",\"documents\" : [{\"hello\":1},{\"world!\":2}]}";
 	struct _test_cb {
 		static void cb(void * ud, const dcsutil::mongo_client_t::result_t & rst){
-			LOGP("rst response:%s  error:%s", rst.rst.c_str(), rst.err_msg.c_str());
+			LOGP("rst response:%s  error:%s errno:%d",
+				rst.rst.c_str(), rst.err_msg.c_str(),rst.err_no);
 		}
 	};
 	while (true){
@@ -491,7 +493,7 @@ static int mongo_test(const char * p){
 			LOGP("not running ...");
 			break;
 		}
-		//sleep(1);
+		sleep(1);
 		if (mg.excute(cmd, _test_cb::cb, 0)){
 			LOGP("excute error !");
 		}

@@ -39,8 +39,8 @@ struct mongo_client_impl_t {
 };
 
 #define _THIS_HANDLE	((mongo_client_impl_t*)(handle))
-//#define LOG_S(format, ...)	LOGSTR(_THIS_HANDLE->error_msg, "mysql", " [%d (%s)]" format,mysql_errno(_THIS_HANDLE->mysql_conn),mysql_error(_THIS_HANDLE->mysql_conn), ##__VA_ARGS__)
-
+#define LOG_S_E(str, format, ...)	LOGSTR(str, "mongo", " [%d@%d (%s)] " format, error.code, error.domain, error.message, ##__VA_ARGS__)
+#define LOG_S(str, format, ...)		LOGSTR(str, "mongo", format, ##__VA_ARGS__)
 
 mongo_client_t::mongo_client_t(){
 	handle = new mongo_client_impl_t();
@@ -65,15 +65,15 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	char *str;
 	bson_t *command = bson_new_from_json((const uint8_t *)req.cmd.cmd.c_str(), req.cmd.cmd.length(), &error);// BCON_NEW(BCON_UTF8(req.cmd.cmd.c_str()));
 	if (!command){
-		rsp.result.err_msg = "bson_new_from_json error! :";
-		rsp.result.err_msg += error.message;
+		rsp.result.err_no = error.code;
+		LOG_S_E(rsp.result.err_msg, "bson_new_from_json error!");
 		return;
 	}
 	bool ret = false;
 	if (!req.cmd.coll.empty()){
 		mongoc_collection_t * collection = mongoc_client_get_collection(client, req.cmd.db.c_str(), req.cmd.coll.c_str());
 		if (!collection){
-			rsp.result.err_msg = "not found collection !";
+			LOG_S(rsp.result.err_msg,"not found the collection:%s", req.cmd.coll.c_str());
 		}
 		else {
 			ret = mongoc_collection_command_simple(collection, command, NULL, &reply, &error);
@@ -83,7 +83,7 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	else {
 		mongoc_database_t * database = mongoc_client_get_database(client, req.cmd.db.c_str());
 		if (!database){
-			rsp.result.err_msg = "not found database !";
+			LOG_S(rsp.result.err_msg, "not found the database:%s", req.cmd.db.c_str());
 		}
 		else {
 			ret = mongoc_database_command_simple(database, command, NULL, &reply, &error);
@@ -98,7 +98,7 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	else {
 		if (error.code){
 			rsp.result.err_no = error.code;
-			rsp.result.err_msg = error.message;
+			LOG_S_E(rsp.result.err_msg, "excute command:%s error !", req.cmd.cmd.c_str());
 		}
 	}
 	bson_destroy(command);
@@ -130,19 +130,6 @@ _worker(void * data){
 	//push client
 	mongoc_client_pool_push(mci->pool, client);
 	mci->running.fetch_sub(1);
-	return NULL;
-}
-
-static void *	
-_start_pool(void * data){
-	mongo_client_impl_t * mci = (mongo_client_impl_t *)(data);	
-	pthread_t				threads[MAX_MOGNO_THREAD_POOL_SIZE];
-	for (int i = 0; i < mci->conf.multi_thread; i++) {
-		pthread_create(&threads[i], NULL, _worker, mci);
-	}
-	for (int i = 0; i < mci->conf.multi_thread; i++) {
-		pthread_join(threads[i], NULL);
-	}
 	return NULL;
 }
 int				

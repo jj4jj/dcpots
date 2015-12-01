@@ -17,10 +17,13 @@ struct mongo_client_t {
 		commnd_t() :flag(0){}
 	};
 	struct result_t {
+		enum { RESULT_MAX_ERR_MSG_SZ = 64 };
 		string	rst;
 		string	err_msg;
 		int		err_no;
-		result_t() :err_no(0){}
+		result_t() :err_no(0){
+			err_msg.reserve(RESULT_MAX_ERR_MSG_SZ);
+		}
 	};
 private:
 	void	*		handle;
