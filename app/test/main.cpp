@@ -462,7 +462,7 @@ static int mysql_test(const char * p){
 	}
 	return 0;
 }
-#include "utility_mongo.h"
+#include "base/utility_mongo.h"
 static int mongo_test(const char * p){
 	dcsutil::mongo_client_config_t conf;
 	dcsutil::mongo_client_t		mg;

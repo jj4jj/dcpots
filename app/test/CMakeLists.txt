@@ -4,11 +4,12 @@ file(GLOB_RECURSE cur_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *
 #base dir depend on itself and some otherlib
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
-)
+/usr/local/include
+/usr/local/include/libbson-1.0)
 
 #base dir linked lib dir
 link_directories(
-
+/usr/local/lib
 /usr/local/lib
 ${PROJECT_SOURCE_DIR}/lib)
 
@@ -20,7 +21,12 @@ ADD_EXECUTABLE(testagent ${cur_SRCS})
 target_link_libraries(testagent
 dagent
 python2.7
-protobuf)
+libprotobuf.a
+libmysqlclient.a
+libmongoc-1.0.a
+libbson-1.0.a
+libssl.a
+libcrypto.a)
 
 #installing
 INSTALL(TARGETS testagent DESTINATION bin/)

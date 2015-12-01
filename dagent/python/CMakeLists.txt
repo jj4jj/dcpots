@@ -18,7 +18,9 @@ ${PROJECT_SOURCE_DIR}
 /usr/include
 ${PROJECT_SOURCE_DIR}/base
 ${PROJECT_SOURCE_DIR}/dcnode
-${PROJECT_SOURCE_DIR}/dagent)
+${PROJECT_SOURCE_DIR}/dagent
+/usr/local/include
+/usr/local/include/libbson-1.0)
 
 add_library(dagent_py SHARED ${cur_SRCS})
 

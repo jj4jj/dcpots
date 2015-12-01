@@ -20,7 +20,7 @@ option(DEBUG "Debug mode" 0)
 option(PCH "Use precompiled headers" 0)
 
 
-SET( CMAKE_VERBOSE_MAKEFILE off)
+SET( CMAKE_VERBOSE_MAKEFILE on)
 
 if(DEBUG)
 	set(CMAKE_BUILD_TYPE Debug)

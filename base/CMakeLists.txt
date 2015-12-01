@@ -8,7 +8,8 @@ set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
 /usr/include
-)
+/usr/local/include
+/usr/local/include/libbson-1.0)
 
 add_library(dcbase STATIC ${cur_SRCS})
 
@@ -16,6 +17,5 @@ link_directories(
 /usr/local/lib)
 
 target_link_libraries(dcbase
-libprotobuf.a
-python2.7)
+)
 
