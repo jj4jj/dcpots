@@ -16,14 +16,14 @@ public:
 	}
 	void	pop(T & t){
 		std::unique_lock<std::mutex>		lock(mtx);
-		cond.wait(lock, [&]{return queue.empty(); });
+		cond.wait(lock, [&]{return !queue.empty(); });
 		t = queue.front();
 		queue.pop();
 	}
 	bool	pop(T & t, int timeout_ms){	//return true: timeout
 		std::unique_lock<std::mutex>		lock(mtx);
 		cond.wait_for(lock,
-			std::chrono::milliseconds(timeout_ms), [&]{return queue.empty(); });
+			std::chrono::milliseconds(timeout_ms), [&]{return !queue.empty(); });
 		if (queue.empty()){
 			return true;
 		}

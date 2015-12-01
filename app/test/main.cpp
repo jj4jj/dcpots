@@ -466,32 +466,34 @@ static int mysql_test(const char * p){
 static int mongo_test(const char * p){
 	dcsutil::mongo_client_config_t conf;
 	dcsutil::mongo_client_t		mg;
-	conf.mongo_uri = "mongo://127.0.0.1:27017";
-	conf.multi_thread = 1;
-	if (mg.init(conf)){
-		LOGP("init error !");
+	conf.mongo_uri = "mongodb://127.0.0.1:27017";
+	conf.multi_thread = 20;
+	int ret = mg.init(conf);
+	if (ret){
+		LOGP("init error :%d!", ret);
 		return -1;
 	}
 	using namespace dcsutil;
 	mongo_client_t::commnd_t cmd;
 	cmd.db = "test";
 	cmd.coll = "test";
-	cmd.cmd = "insert({'hello':'world'})";
-
+	cmd.cmd = "{\"ping\": 1}";
 	struct _test_cb {
 		static void cb(void * ud, const dcsutil::mongo_client_t::result_t & rst){
 			LOGP("rst response:%s  error:%s", rst.rst.c_str(), rst.err_msg.c_str());
 		}
 	};
-	if (mg.excute(cmd, _test_cb::cb, 0)){
-		LOGP("excute error !");
-	}
 	while (true){
 		if (mg.poll() == 0){
-			usleep(1000000);
+			//usleep(1000000);
 		}
 		if (!mg.running()){
+			LOGP("not running ...");
 			break;
+		}
+		//sleep(1);
+		if (mg.excute(cmd, _test_cb::cb, 0)){
+			LOGP("excute error !");
 		}
 	}
 	return 0;

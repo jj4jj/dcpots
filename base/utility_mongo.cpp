@@ -26,15 +26,15 @@ struct mongo_response_t {
 struct mongo_client_impl_t {
 	mongo_client_config_t	conf;
 	mongoc_client_pool_t	*pool;
-	pthread_t				main_thread;
-	bool					stop;
+	bool									stop;
 	blocking_queue<mongo_request_t>			command_queue;
 	blocking_queue<mongo_response_t>		result_queue;
-
+	std::atomic<int>						running;
+	std::thread								workers[MAX_MOGNO_THREAD_POOL_SIZE];
 	mongo_client_impl_t() {
 		pool = NULL;
-		main_thread = 0;
 		stop = false;
+		running = 0;
 	}
 };
 
@@ -63,10 +63,10 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	bson_error_t error;
 	bson_t reply;
 	char *str;
-#warning "todo"
-	bson_t *command = bson_new();// BCON_UTF8(req.cmd.cmd.c_str()));
+	bson_t *command = bson_new_from_json((const uint8_t *)req.cmd.cmd.c_str(), req.cmd.cmd.length(), &error);// BCON_NEW(BCON_UTF8(req.cmd.cmd.c_str()));
 	if (!command){
-		rsp.result.err_msg = "bson_new_from_json error !";
+		rsp.result.err_msg = "bson_new_from_json error! :";
+		rsp.result.err_msg += error.message;
 		return;
 	}
 	bool ret = false;
@@ -93,7 +93,6 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	if (ret) {
 		str = bson_as_json(&reply, NULL);
 		rsp.result.rst = str;
-		LOGP("command result:%s", str);
 		bson_free(str);
 	}
 	else {
@@ -101,7 +100,6 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 			rsp.result.err_no = error.code;
 			rsp.result.err_msg = error.message;
 		}
-		LOGP("Failed to run command: %s", rsp.result.err_msg.c_str());
 	}
 	bson_destroy(command);
 	bson_destroy(&reply);
@@ -114,6 +112,7 @@ _worker(void * data){
 	if (!client){
 		return NULL;
 	}
+	mci->running.fetch_add(1);
 	mongo_request_t req;
 	mongo_response_t rsp;
 	do {
@@ -130,12 +129,13 @@ _worker(void * data){
 	} while (!mci->stop);
 	//push client
 	mongoc_client_pool_push(mci->pool, client);
+	mci->running.fetch_sub(1);
 	return NULL;
 }
 
 static void *	
 _start_pool(void * data){
-	mongo_client_impl_t * mci = (mongo_client_impl_t *)(data);
+	mongo_client_impl_t * mci = (mongo_client_impl_t *)(data);	
 	pthread_t				threads[MAX_MOGNO_THREAD_POOL_SIZE];
 	for (int i = 0; i < mci->conf.multi_thread; i++) {
 		pthread_create(&threads[i], NULL, _worker, mci);
@@ -165,11 +165,19 @@ mongo_client_t::init(const mongo_client_config_t & conf){
 	//mongoc_client_pool_max_size(mongoc_client_pool_t *pool, conf.multi_thread);
 	_THIS_HANDLE->pool = pool;
 	_THIS_HANDLE->conf = conf;
+#if 0
 	int ret = pthread_create(&_THIS_HANDLE->main_thread, NULL, _start_pool, _THIS_HANDLE);
 	if (ret){
 		LOGP("thread create error !");
 		return -4;
 	}
+#else
+	for (int i = 0; i < conf.multi_thread; i++) {
+		_THIS_HANDLE->workers[i] = std::thread(_worker, handle);
+		_THIS_HANDLE->workers[i].detach();
+	}
+#endif
+	_THIS_HANDLE->running.fetch_add(1);
 	return 0;
 }
 
@@ -189,11 +197,12 @@ mongo_client_t::excute(const commnd_t & cmd, on_response_t cb, void * ud){
 
 void			
 mongo_client_t::stop(){ //set stop
+	_THIS_HANDLE->running.fetch_sub(1);
 	_THIS_HANDLE->stop = true;
 }
 bool			
 mongo_client_t::running(){ //is running ?
-	return 	_THIS_HANDLE->stop == false;
+	return 	_THIS_HANDLE->running > 0;
 }
 int				
 mongo_client_t::poll(int max_proc){//same thread cb call back
@@ -206,8 +215,9 @@ mongo_client_t::poll(int max_proc){//same thread cb call back
 	//a cb
 	mongo_response_t	rsp;
 	for (nproc = 0; nproc < max_proc && !_THIS_HANDLE->result_queue.empty(); ++nproc){
-		_THIS_HANDLE->result_queue.pop(rsp);
-		rsp.cb(rsp.cb_ud, rsp.result);
+		if (!_THIS_HANDLE->result_queue.pop(rsp, 1)){
+			rsp.cb(rsp.cb_ud, rsp.result);
+		}
 	}
 	return nproc;
 }
