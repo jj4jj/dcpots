@@ -165,18 +165,10 @@ mongo_client_t::init(const mongo_client_config_t & conf){
 	//mongoc_client_pool_max_size(mongoc_client_pool_t *pool, conf.multi_thread);
 	_THIS_HANDLE->pool = pool;
 	_THIS_HANDLE->conf = conf;
-#if 0
-	int ret = pthread_create(&_THIS_HANDLE->main_thread, NULL, _start_pool, _THIS_HANDLE);
-	if (ret){
-		LOGP("thread create error !");
-		return -4;
-	}
-#else
 	for (int i = 0; i < conf.multi_thread; i++) {
 		_THIS_HANDLE->workers[i] = std::thread(_worker, handle);
 		_THIS_HANDLE->workers[i].detach();
 	}
-#endif
 	_THIS_HANDLE->running.fetch_add(1);
 	return 0;
 }
@@ -197,8 +189,10 @@ mongo_client_t::excute(const commnd_t & cmd, on_response_t cb, void * ud){
 
 void			
 mongo_client_t::stop(){ //set stop
-	_THIS_HANDLE->running.fetch_sub(1);
-	_THIS_HANDLE->stop = true;
+	if (!_THIS_HANDLE->stop){
+		_THIS_HANDLE->running.fetch_sub(1);
+		_THIS_HANDLE->stop = true;
+	}
 }
 bool			
 mongo_client_t::running(){ //is running ?
