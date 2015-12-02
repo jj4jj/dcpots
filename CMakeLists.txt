@@ -20,7 +20,7 @@ option(DEBUG "Debug mode" 0)
 option(PCH "Use precompiled headers" 0)
 
 
-SET( CMAKE_VERBOSE_MAKEFILE on)
+SET( CMAKE_VERBOSE_MAKEFILE off)
 
 if(DEBUG)
 	set(CMAKE_BUILD_TYPE Debug)
@@ -52,6 +52,7 @@ add_subdirectory(dcnode)
 add_subdirectory(dagent)
 add_subdirectory(dagent/python)
 add_subdirectory(app/test)
+add_subdirectory(app/mongoproxy)
 add_subdirectory(app/reporter)
 add_subdirectory(app/collector)
 add_subdirectory(app/pingpong)

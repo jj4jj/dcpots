@@ -118,7 +118,7 @@ namespace dcsutil {
 
 		return pid;
 	}
-	int			split(const std::string & str, const string & sep, std::vector<std::string> & vs){
+	int			split(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty){
 		vs.clear();
 		string::size_type beg = 0;
 		string::size_type pos = 0;
@@ -129,11 +129,17 @@ namespace dcsutil {
 				if (beg < str.length()){
 					vs.push_back(str.substr(beg));
 				}
+				else if (!ignore_empty){
+					vs.push_back(""); //empty 
+				}
 				return vs.size();
 			}
 			else { //found sep
 				if (pos > beg){
 					vs.push_back(str.substr(beg, pos - beg));
+				}
+				else if (!ignore_empty){
+					vs.push_back(""); //empty 
 				}
 				beg = pos + sep.length();
 			}
@@ -175,6 +181,12 @@ namespace dcsutil {
 		}
 		return ncvt;
 	}
+	void			strrepeat(std::string & str, const char * rep, int repcount){
+		while (repcount-- > 0){
+			str.append(rep);
+		}
+	}
+
 	size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...){
 		size_t ncvt = 0;
 		str.reserve(max_sz);

@@ -2,7 +2,7 @@ PROJECT='dcagent'
 VERSION='0.0.1'
 DEBUG = 0	#0/1
 DEFS = []
-VERBOSE = 'on'	#on/off
+VERBOSE = 'off'	#on/off
 EXTRA_C_FLAGS = ''
 EXTRA_CXX_FLAGS = '-std=c++11'
 EXTRA_LD_FLAGS = '-ldl -lm -lrt -pthread'
@@ -44,6 +44,22 @@ EXES = [
         {
             'name':'testagent',
             'subdir':'app/test',
+			'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+            'linkpaths':['/usr/local/lib'],
+            'linklibs' : [
+                'dagent',
+                'python2.7',
+                'libprotobuf.a',
+				'libmysqlclient.a',
+				'libmongoc-1.0.a',
+				'libbson-1.0.a',
+				'libssl.a',
+				'libcrypto.a',
+            ]
+        },
+        {
+            'name':'mongoproxy',
+            'subdir':'app/mongoproxy',
 			'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linkpaths':['/usr/local/lib'],
             'linklibs' : [

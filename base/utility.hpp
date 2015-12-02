@@ -21,14 +21,14 @@ NS_BEGIN(dcsutil)
 	int				writefile(const char * file, const char * buffer, size_t sz = 0);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
 	int				lockpidfile(const char * pidfile, int kill_other_sig = 0, bool nb = true);
-	int				split(const std::string & str, const string & sep, std::vector<std::string> & vs);
+	int				split(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty = true);
 	const char*		strftime(std::string & str, time_t unixtime = 0, const char * format = "%Y-%m-%dT%H:%M:%S");
 	time_t			from_strtime(const char * strtime = "1970-01-01T08:08:08");
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	size_t			strprintf(std::string & str, const char * format, ...);
 	size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...);
-
+	void			strrepeat(std::string & str, const char * rep, int repcount);
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 
