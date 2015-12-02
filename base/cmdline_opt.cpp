@@ -39,7 +39,11 @@ cmdline_opt_t::parse(const char * pattern){
 	for (auto & sopt : sopts){
 		std::vector<std::string>	soptv;
 		dcsutil::split(sopt, ":", soptv, false);
-		assert("pattern opt must be format of '[<long name>]:[rno]:[a-zA-Z]:[desc]' " && soptv.size() == 4);
+		if (soptv.size() != 4){
+			std::cerr << "error format option:" << sopt << " size:" << soptv.size() << " but not 4" << std::endl;
+			std::cerr << "pattern opt must be format of '[<long name>]:[rno]:[<short name>]:[desc];' " << std::endl;
+			exit(-2);
+		}
 		if (soptv[2][0]){
 			short_opt += soptv[2][0];
 			if (soptv[1][0] == 'r'){
