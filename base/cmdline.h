@@ -16,7 +16,7 @@ struct cmdline_opt_t {
 		usage = "usage: ";
 		usage += argv[0];
 		usage += " [options]	\n";
-		usage += "options as follow:\n";
+		usage += "option should be like as follow:\n";
 	}
 	//long pattern([a-zA-Z]+(-[a-zA-Z]+)?:nro:[a-zA-Z]?,)
 	void			 parse(const char * pattern = "version:n:v:desc,log-path:r::desc,::I:desc"){
@@ -61,14 +61,24 @@ struct cmdline_opt_t {
 			if (soptv[2][0]){
 				usage += "-";
 				usage += soptv[2];
-				usage += ", ";
-				length += 4;
+				length += 2;
 			}
 			if (soptv[0][0]){
+				if (soptv[2][0]){
+					usage += ", ";
+					length += 2;
+				}
 				usage += "--";
 				usage += soptv[0];
-				dcsutil::strrepeat(usage, " ", 4);
 				length += soptv[0].length();
+				length += 2;
+			}
+			if (soptv[1][0] == 'r'){
+				usage += " <arg>";
+				length += 6;
+			}
+			if (soptv[1][0] == 'o'){
+				usage += " [arg]";
 				length += 6;
 			}
 			if (soptv[3][0]){
