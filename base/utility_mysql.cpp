@@ -44,9 +44,7 @@ mysqlclient_t::~mysqlclient_t(){
 }
 //
 int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
-	if (_THIS_HANDLE){
-		delete _THIS_HANDLE;
-	}
+	mysqlclient_cleanup(handle); //for reinit
 	auto conn = mysql_init(NULL);
 	if (!conn){
 		LOG_S("mysql client init error ");
@@ -90,7 +88,6 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
 	_THIS_HANDLE->mysql_conn = conn;
 	return 0;
 FAIL_CONN:
-	conn = NULL;
 	mysql_close(conn);
 	return -2;
 }
