@@ -118,23 +118,14 @@ namespace dcsutil {
 
 		return pid;
 	}
-	int			split(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty){
+	int			split(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty, int maxsplit){
 		vs.clear();
 		string::size_type beg = 0;
 		string::size_type pos = 0;
 		//if pos not found add the rest then return , else add substr . again
 		do {
 			pos = str.find(sep, beg);
-			if (pos == string::npos){
-				if (beg < str.length()){
-					vs.push_back(str.substr(beg));
-				}
-				else if (!ignore_empty){
-					vs.push_back(""); //empty 
-				}
-				return vs.size();
-			}
-			else { //found sep
+			if (pos != string::npos){
 				if (pos > beg){
 					vs.push_back(str.substr(beg, pos - beg));
 				}
@@ -142,6 +133,16 @@ namespace dcsutil {
 					vs.push_back(""); //empty 
 				}
 				beg = pos + sep.length();
+			}
+			if ( pos == string::npos || //last one
+				(maxsplit > 0 && vs.size() + 1 == maxsplit)){
+				if (beg < str.length()){
+					vs.push_back(str.substr(beg));
+				}
+				else if (!ignore_empty){
+					vs.push_back(""); //empty 
+				}
+				return vs.size();
 			}
 		} while (true);
 		return vs.size();

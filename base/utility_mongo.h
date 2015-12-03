@@ -34,6 +34,7 @@ struct mongo_client_t {
 				err_no = rhs.err_no;
 				err_msg.assign(rhs.err_msg.data(), rhs.err_msg.capacity());
 			}
+			return *this;
 		}
 	};
 private:

@@ -143,8 +143,8 @@ mongo_client_t::init(const mongo_client_config_t & conf){
 
 	_THIS_HANDLE->pool = pool;
 	_THIS_HANDLE->conf = conf;
-	if (_THIS_HANDLE->conf == 0){
-		_THIS_HANDLE->conf = std::thread::hardware_concurrency();
+	if (_THIS_HANDLE->conf.multi_thread == 0){
+		_THIS_HANDLE->conf.multi_thread = std::thread::hardware_concurrency();
 	}
 	for (int i = 0; i < conf.multi_thread; i++) {
 		_THIS_HANDLE->workers[i] = std::thread(_worker, handle);
