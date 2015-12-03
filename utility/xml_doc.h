@@ -1,6 +1,6 @@
 #pragma once
-#include "stdinc.h"
-#include "msg_buffer.hpp"
+#include "base/stdinc.h"
+#include "base/msg_buffer.hpp"
 
 struct xml_node_t;
 struct xml_attribute_t;

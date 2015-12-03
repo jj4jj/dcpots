@@ -11,8 +11,16 @@ LIBS = [
             'name':'dcbase',
             'subdir':'base',
             'linklibs' : [],
-			'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+			'includes':[],
             'src_dirs':['base'],
+            'extra_srcs': [''],
+        },
+        {
+            'name':'dcutil',
+            'subdir':'utility',
+            'linklibs' : [],
+			'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+            'src_dirs':['utility'],
             'extra_srcs': [''],
         },
         {

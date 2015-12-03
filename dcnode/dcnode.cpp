@@ -4,7 +4,7 @@
 #include "base/dcsmq.h"
 #include "base/dctcp.h"
 #include "base/logger.h"
-#include "base/utility.hpp"
+#include "base/dcutils.hpp"
 #include "base/dcshm.h"
 #include "base/profile.h"
 

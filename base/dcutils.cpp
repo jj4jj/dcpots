@@ -1,4 +1,4 @@
-#include "utility.hpp"
+#include "dcutils.hpp"
 #include "logger.h"
 
 namespace dcsutil {
@@ -135,7 +135,7 @@ namespace dcsutil {
 				beg = pos + sep.length();
 			}
 			if ( pos == string::npos || //last one
-				(maxsplit > 0 && vs.size() + 1 == maxsplit)){
+				(maxsplit > 0 && (int)vs.size() + 1 == maxsplit)){
 				if (beg < str.length()){
 					vs.push_back(str.substr(beg));
 				}

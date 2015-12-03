@@ -3,7 +3,7 @@
 #include "base/logger.h"
 #include "proto/dagent.pb.h"
 #include "base/msg_proto.hpp"
-#include "base/script_vm.h"
+#include "utility/script_vm.h"
 #include "dagent.h"
 extern "C" {
 #include "python2.7/Python.h"

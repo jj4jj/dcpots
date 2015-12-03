@@ -1,5 +1,5 @@
 #include "dcsmq.h"
-#include "utility.hpp"
+#include "dcutils.hpp"
 #include "profile.h"
 #include <sys/msg.h>
 

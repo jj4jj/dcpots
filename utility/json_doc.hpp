@@ -1,7 +1,7 @@
 #pragma once
-#include "stdinc.h"
-#include "msg_buffer.hpp"
-#include "logger.h"
+#include "base/stdinc.h"
+#include "base/msg_buffer.hpp"
+#include "base/logger.h"
 #include "3rd/rapidjson/document.h"
 #include "3rd/rapidjson/filereadstream.h"
 #include "3rd/rapidjson/filewritestream.h"

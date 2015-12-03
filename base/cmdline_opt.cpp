@@ -1,7 +1,7 @@
 #include <getopt.h>
 extern char *optarg;
 extern int optind, opterr, optopt;
-#include "utility.hpp"
+#include "dcutils.hpp"
 #include "cmdline_opt.h"
 
 struct cmdline_opt_impl_t {

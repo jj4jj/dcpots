@@ -1,6 +1,6 @@
 #include "logger.h"
 #include "stdinc.h"
-#include "utility.hpp"
+#include "dcutils.hpp"
 
 struct logger_t {
 	logger_config_t	conf;

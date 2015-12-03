@@ -48,6 +48,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
 
 add_subdirectory(base)
+#add_subdirectory(utility)
 add_subdirectory(dcnode)
 add_subdirectory(dagent)
 add_subdirectory(dagent/python)

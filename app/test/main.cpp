@@ -3,9 +3,9 @@
 #include "base/logger.h"
 #include "dcnode/dcnode.h"
 #include "dagent/dagent.h"
-#include "base/utility.hpp"
+#include "base/dcutils.hpp"
 #include "base/msg_proto.hpp"
-#include "base/utility_mysql.h"
+#include "utility/utility_mysql.h"
 
 static int max_ping_pong = 100000;
 static int max_ppsz = 0;
@@ -226,7 +226,7 @@ int test_node(const char * p)
 	}
 	return 0;
 }
-#include "base/script_vm.h"
+#include "utility/script_vm.h"
 static int python_test(){
 	script_vm_config_t smc;
 	smc.type = SCRIPT_VM_PYTHON;
@@ -307,7 +307,7 @@ int perf_test(const char * arg){
 		pack_unpack_times, speed);
 	return 0;
 }
-#include "base/json_doc.hpp"
+#include "utility/json_doc.hpp"
 #include "iostream"
 using namespace  std;
 static int json_test(const char * file){
@@ -348,7 +348,7 @@ static int json_test(const char * file){
 	jd2.dump_file("test.out.json");
 	return 0;
 }
-#include "base/xml_doc.h"
+#include "utility/xml_doc.h"
 static int xml_test(const char * xmlfile){
 	xml_doc_t xml;
 	if (xml.parse_file(xmlfile)){
@@ -462,7 +462,7 @@ static int mysql_test(const char * p){
 	}
 	return 0;
 }
-#include "base/utility_mongo.h"
+#include "utility/utility_mongo.h"
 static int mongo_test(const char * p){
 	dcsutil::mongo_client_config_t conf;
 	dcsutil::mongo_client_t		mg;

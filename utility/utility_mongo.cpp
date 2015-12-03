@@ -4,8 +4,8 @@
 #include "libmongoc-1.0/mongoc.h"
 //}
 #include "utility_mongo.h"
-#include "blocking_queue.hpp"
-#include "logger.h"
+#include "base/blocking_queue.hpp"
+#include "base/logger.h"
 
 NS_BEGIN(dcsutil)
 
