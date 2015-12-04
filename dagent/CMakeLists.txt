@@ -4,6 +4,8 @@ set(cur_SRCS "${cur_aSRCS}")
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/base cur_aSRCS)
 set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
+aux_source_directory(${PROJECT_SOURCE_DIR}/utility cur_aSRCS)
+set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
 aux_source_directory(${PROJECT_SOURCE_DIR}/dcnode cur_aSRCS)
 set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
 aux_source_directory(${PROJECT_SOURCE_DIR}/dcnode/proto cur_aSRCS)

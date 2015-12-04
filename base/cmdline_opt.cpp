@@ -28,10 +28,12 @@ cmdline_opt_t::~cmdline_opt_t(){
 	}
 }
 // = "version:n:v:desc;log-path:r::desc;:o:I:desc"
-void			 
+void
 cmdline_opt_t::parse(const char * pattern){
 	std::vector<std::string>	sopts;
-	dcsutil::split(pattern, ";", sopts);
+    string pattern_ex = "help:n:h:show the help info;";
+    pattern_ex += pattern;
+	dcsutil::split(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
 	std::vector<std::string>	longoptnames;
 	longoptnames.reserve(128);
@@ -74,7 +76,7 @@ cmdline_opt_t::parse(const char * pattern){
 		}
 		//////////////////////////////////////////////////////////
 		dcsutil::strrepeat(_THIS_HANDLE->usage, " ", 4);
-		int length = 0;
+		int length = 4;
 		if (soptv[2][0]){
 			_THIS_HANDLE->usage += "-";
 			_THIS_HANDLE->usage += soptv[2];
@@ -98,9 +100,10 @@ cmdline_opt_t::parse(const char * pattern){
 			_THIS_HANDLE->usage += " [arg]";
 			length += 6;
 		}
+        #define MAX_OPT_SHOW_TEXT_WIDTH (25)
 		if (soptv[3][0]){
-			if (length < 20){
-				dcsutil::strrepeat(_THIS_HANDLE->usage, " ", 20 - length);
+			if (length < MAX_OPT_SHOW_TEXT_WIDTH){
+				dcsutil::strrepeat(_THIS_HANDLE->usage, " ", MAX_OPT_SHOW_TEXT_WIDTH - length);
 			}
 			_THIS_HANDLE->usage += "\t";
 			_THIS_HANDLE->usage += soptv[3];
@@ -108,9 +111,6 @@ cmdline_opt_t::parse(const char * pattern){
 		_THIS_HANDLE->usage += "\n";
 		//////////////////////////////////////////////////////////
 	}
-	//help 
-	struct option help_opt_ = { "help", no_argument, NULL, 0 };
-	longopts.push_back(help_opt_);
 	//end
 	struct option end_opt_ = { NULL, no_argument, NULL, 0 };
 	longopts.push_back(end_opt_);
@@ -130,17 +130,19 @@ cmdline_opt_t::parse(const char * pattern){
 				//std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
 				_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
 			}
+            //std::clog << "opt_name" << "dbg"<< std::endl;
 			if (opt_name == "help"){
 				pusage();
-				exit(1);
 			}
 		}
 		else if (opt == '?'){
 			//usage
 			pusage();
-			exit(-1);
 		}
 		else {	//short opt
+            if(opt == 'h'){
+                pusage();
+            }
 			string opt_name = string((char*)&opt, 1);
 			string opt_value = (optarg ? optarg : "");
 			_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
@@ -186,6 +188,7 @@ cmdline_opt_t::getoptint(const char * opt, int idx){
 void
 cmdline_opt_t::pusage(){
 	std::cerr << _THIS_HANDLE->usage << std::endl;
+    exit(-1);
 }
 const char *	
 cmdline_opt_t::usage(){
