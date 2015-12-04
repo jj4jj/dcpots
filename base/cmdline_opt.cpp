@@ -108,7 +108,11 @@ cmdline_opt_t::parse(const char * pattern){
 		_THIS_HANDLE->usage += "\n";
 		//////////////////////////////////////////////////////////
 	}
-	struct option end_opt_ { NULL, no_argument, NULL, 0 };
+	//help 
+	struct option help_opt_ = { "help", no_argument, NULL, 0 };
+	longopts.push_back(help_opt_);
+	//end
+	struct option end_opt_ = { NULL, no_argument, NULL, 0 };
 	longopts.push_back(end_opt_);
 	///////////////////////////////////////////////////////////////////////////
 	int longIndex = 0;
@@ -125,6 +129,10 @@ cmdline_opt_t::parse(const char * pattern){
 				opt_name = string((char*)&(longopts[longIndex].val), 1);
 				//std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
 				_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
+			}
+			if (opt_name == "help"){
+				pusage();
+				exit(1);
 			}
 		}
 		else if (opt == '?'){

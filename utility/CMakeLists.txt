@@ -2,7 +2,7 @@
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} cur_aSRCS)
 set(cur_SRCS "${cur_aSRCS}")
 
-aux_source_directory(${PROJECT_SOURCE_DIR}/utility cur_aSRCS)
+aux_source_directory(${PROJECT_SOURCE_DIR}/ cur_aSRCS)
 set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}

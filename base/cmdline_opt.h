@@ -6,6 +6,7 @@ struct cmdline_opt_t {
 	int				getoptnum(const char * opt);
 	const char *	getoptstr(const char * opt, int idx = 0);
 	int				getoptint(const char * opt, int idx = 0);
+	bool			hasopt(const char * opt, int idx = 0){return getoptstr(opt, idx) ? true : false;}
 	void			pusage();
 	const char *	usage();
 public:
