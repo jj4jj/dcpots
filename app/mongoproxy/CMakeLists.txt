@@ -22,11 +22,8 @@ target_link_libraries(mongoproxy
 dagent
 python2.7
 libprotobuf.a
-libmysqlclient.a
-libmongoc-1.0.a
-libbson-1.0.a
-libssl.a
-libcrypto.a)
+mongoc-1.0
+bson-1.0)
 
 #installing
 INSTALL(TARGETS mongoproxy DESTINATION bin/)

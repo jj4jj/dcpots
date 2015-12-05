@@ -22,11 +22,9 @@ target_link_libraries(testagent
 dagent
 python2.7
 libprotobuf.a
-libmysqlclient.a
-libmongoc-1.0.a
-libbson-1.0.a
-libssl.a
-libcrypto.a)
+mysqlclient
+mongoc-1.0
+bson-1.0)
 
 #installing
 INSTALL(TARGETS testagent DESTINATION bin/)
