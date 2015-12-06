@@ -1,6 +1,6 @@
 
-#include "utility/utility_mongo.h"
-#include "utility/utility_proto.h"
+#include "utility/util_mongo.h"
+#include "utility/util_proto.h"
 #include "base/cmdline_opt.h"
 #include "dcnode/dcnode.h"
 #include "mongoproxy_msg.h"

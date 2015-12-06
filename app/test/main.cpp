@@ -5,7 +5,7 @@
 #include "dagent/dagent.h"
 #include "base/dcutils.hpp"
 #include "base/msg_proto.hpp"
-#include "utility/utility_mysql.h"
+#include "utility/util_mysql.h"
 
 static int max_ping_pong = 100000;
 static int max_ppsz = 0;
@@ -462,7 +462,7 @@ static int mysql_test(const char * p){
 	}
 	return 0;
 }
-#include "utility/utility_mongo.h"
+#include "utility/util_mongo.h"
 static int mongo_test(const char * p){
 	dcsutil::mongo_client_config_t conf;
 	dcsutil::mongo_client_t		mg;
