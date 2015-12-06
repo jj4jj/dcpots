@@ -270,8 +270,7 @@ mongo_client_t::running(){ //is running ?
 	return 	_THIS_HANDLE->running > 0;
 }
 int				
-mongo_client_t::poll(int max_proc, int timeout_ms){//same thread cb call back
-	
+mongo_client_t::poll(int max_proc, int timeout_ms){//same thread cb call back	
 	//get a response
 	if (_THIS_HANDLE->result_queue.empty()){
 		return 0;

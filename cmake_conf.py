@@ -46,7 +46,20 @@ LIBS = [
                 'protobuf','python2.7'
             ]
         },
-
+		        {
+            'name':'mongoproxyapi',
+            'subdir':'app/mongoproxy/api',
+            'includes':['/usr/local/include','3rd'],
+            'linkpaths':['/usr/local/lib'],
+			'src_dirs': ['3rd/pbjson'],
+            'linklibs' : [
+                'dagent',
+                'python2.7',
+                'libprotobuf.a',
+                'mongoc-1.0',
+                'bson-1.0'
+            ]
+        },
 ]
 EXES = [
         {
@@ -68,8 +81,24 @@ EXES = [
             'subdir':'app/mongoproxy',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linkpaths':['/usr/local/lib'],
+			'src_dirs': ['proto'],
             'linklibs' : [
                 'dagent',
+                'python2.7',
+                'libprotobuf.a',
+                'mongoc-1.0',
+                'bson-1.0'
+            ]
+        },
+        {
+            'name':'mongoproxy_testapi',
+            'subdir':'app/mongoproxy/testapi',
+            'includes':['/usr/local/include'],
+            'linkpaths':['/usr/local/lib'],
+			'src_dirs': [],
+            'linklibs' : [
+                'dagent',
+				'mongoproxyapi',
                 'python2.7',
                 'libprotobuf.a',
                 'mongoc-1.0',

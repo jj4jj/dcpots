@@ -2,8 +2,62 @@
 #include "utility/utility_mongo.h"
 #include "base/cmdline_opt.h"
 #include "dcnode/dcnode.h"
-#include "3rd/pbjson/src/pbjson.hpp"
+#include "mongoproxy_msg.h"
 
+struct dispatch_param {
+	dcsutil::mongo_client_t * mc;
+	dcnode_t *		 dc;
+	string			 src;
+};
+
+msg_buffer_t g_msg_buffer;
+
+static  void 
+on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result){
+	dispatch_param * cbp = (dispatch_param*)ud;
+	mongo_msg_t msg;
+	if (!msg.Pack(g_msg_buffer)){
+		LOGP("pack msg error ! to dst:%s", cbp->src.c_str());
+		return;
+	}
+	int ret = dcnode_send(cbp->dc, cbp->src.c_str(), g_msg_buffer.buffer, g_msg_buffer.valid_size);
+	if (ret){
+		LOGP("dcnode send to :%s error !", cbp->src.c_str());
+		return;
+	}
+}
+
+static int 
+dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
+	dispatch_param * cbp = (dispatch_param*)ud;
+	cbp->src = src;
+	mongo_msg_t msg;
+	if (!msg.Unpack(msg_buffer)){
+		LOGP("unpack error msg !");
+		return -1;
+	}
+	switch (msg.op()){
+	case dcorm::MONGO_OP_FIND:
+		cbp->mc->find(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp);
+		break;
+	case dcorm::MONGO_OP_INSERT:
+		cbp->mc->insert(msg.db(), msg.coll(), msg.req().u(), on_mongo_result, cbp);
+		break;
+	case dcorm::MONGO_OP_UPDATE:
+		cbp->mc->update(msg.db(), msg.coll(), msg.req().u(), on_mongo_result, cbp);
+		break;
+	case dcorm::MONGO_OP_DELETE:
+		cbp->mc->remove(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp);
+		break;
+	case dcorm::MONGO_OP_COUNT:
+		cbp->mc->count(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp);
+		break;
+	default:
+		LOGP("unkown op :%d", msg.op());
+		return -2;
+	}
+	return 0;
+}
 
 int main(int argc, char * argv[]){
 
@@ -43,17 +97,11 @@ int main(int argc, char * argv[]){
 	if (!dcn){
 		return -3;
 	}
-
-	struct dcnode_forward {
-		static int foward_cmd(void * ud, const char * src, const msg_buffer_t & msg){
-			//
-			//forward to ->
-			return 0;
-		}
-	};
-	typedef int(*dcnode_dispatcher_t)(void * ud, const char * src, const msg_buffer_t & msg);
-	dcnode_set_dispatcher(dcn, dcnode_forward::foward_cmd, 0);
-
+	dispatch_param cbp;
+	cbp.mc = &mongo;
+	cbp.dc = dcn;
+	g_msg_buffer.create(MAX_MONGOPROXY_MSG_SIZE);
+	dcnode_set_dispatcher(dcn, dispatch_query, &cbp);
 	while (true){
 		dcnode_update(dcn, 1000);
 		mongo.poll();

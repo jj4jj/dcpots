@@ -1,0 +1,29 @@
+
+package dcorm;
+
+enum MongoOP {
+	MONGO_OP_CMD = 0;//cmd
+    MONGO_OP_FIND = 1;//get
+    MONGO_OP_UPDATE = 2;//set
+    MONGO_OP_INSERT = 3;//insert
+    MONGO_OP_DELETE = 4;//del
+    MONGO_OP_COUNT  = 5;//count for traversing
+}
+message MongoOPReq {
+   optional     string      q = 1;
+   optional     string      u = 2;
+   optional     string      cmd = 3; //cmd
+}
+message MongoOPRsp {
+    optional    int32       status = 1;//0:is ok
+    optional    string      result = 2;
+    optional    string      error = 3;
+}
+message MongoORM {
+    required    MongoOP     op = 1;
+    required    string      db = 2;//db.
+    optional    string      coll = 3;//.collection
+    optional    MongoOPReq  req = 4;
+    optional    MongoOPRsp  rsp = 5;
+}
+
