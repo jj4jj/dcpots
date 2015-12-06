@@ -22,7 +22,7 @@ namespace dcsutil {
 	int			readfile(const char * file, char * buffer, size_t sz){
 		FILE * fp = fopen(file, "r");
 		if (!fp){
-			LOGP("open file£º%s error:%d", file, errno);
+			GLOG_TRA("open file£º%s error:%d", file, errno);
 			return -1;
 		}
 		int n;
@@ -33,7 +33,7 @@ namespace dcsutil {
 			}
 			else if (errno != EINTR &&
 				errno != EAGAIN) {
-				LOGP("read file:%s ret:%d error :%d total sz:%zu", file, n, errno, tsz);
+				GLOG_TRA("read file:%s ret:%d error :%d total sz:%zu", file, n, errno, tsz);
 				break;
 			}
 		}
@@ -51,7 +51,7 @@ namespace dcsutil {
 	int			writefile(const char * file, const char * buffer, size_t sz){
 		FILE * fp = fopen(file, "w");
 		if (!fp){
-			LOGP("open file£º%s error:%d", file, errno);
+			GLOG_TRA("open file£º%s error:%d", file, errno);
 			return -1;
 		}
 		if (sz == 0){
@@ -65,7 +65,7 @@ namespace dcsutil {
 			}
 			else  if (errno != EINTR &&
 				errno != EAGAIN) {
-				LOGP("write file:%s ret:%d error :%d writed sz:%zu total:%zu", file, n, errno, tsz, sz);
+				GLOG_TRA("write file:%s ret:%d error :%d writed sz:%zu total:%zu", file, n, errno, tsz, sz);
 				break;
 			}
 		}
@@ -74,7 +74,7 @@ namespace dcsutil {
 			return tsz;
 		}
 		else {
-			LOGP("write file:%s writed:%zu error :%d total sz:%zu", file, tsz, errno, sz);
+			GLOG_TRA("write file:%s writed:%zu error :%d total sz:%zu", file, tsz, errno, sz);
 			return -2;
 		}
 	}
@@ -82,7 +82,7 @@ namespace dcsutil {
 	int			lockpidfile(const char * pidfile, int kill_other_sig, bool nb){
 		int fd = open(pidfile, O_RDWR | O_CREAT, 0644);
 		if (fd == -1) {
-			LOGP("open file:%s error ", pidfile);
+			GLOG_TRA("open file:%s error ", pidfile);
 			return -1;
 		}
 		int flags = LOCK_EX;
@@ -96,15 +96,15 @@ namespace dcsutil {
 				int n = readfile(pidfile, szpid, sizeof(szpid));
 				if (n > 0){
 					pid = strtol(szpid, NULL, 10);
-					LOGP("lock pidfile:%s fail , the file is held by pid %d", pidfile, pid);
+					GLOG_TRA("lock pidfile:%s fail , the file is held by pid %d", pidfile, pid);
 				}
 				else {
-					LOGP("lock pidfile:%s fail but read pid from file error !", pidfile);
+					GLOG_TRA("lock pidfile:%s fail but read pid from file error !", pidfile);
 				}
 			}
 			if (pid > 0 && kill_other_sig > 0){
 				if (kill(pid, kill_other_sig) && errno == ESRCH){
-					LOGP("killed the pidfile locker:%d by signal:%d", pid, kill_other_sig);
+					GLOG_TRA("killed the pidfile locker:%d by signal:%d", pid, kill_other_sig);
 					break;
 				}
 			}
@@ -201,8 +201,6 @@ namespace dcsutil {
 		}
 		return ncvt;
 	}
-
-	
 
 }
 

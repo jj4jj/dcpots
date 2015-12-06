@@ -8,7 +8,7 @@ int reporter_init(const char * keypath, const char * name){
 	conf.name = name;
 	conf.routermode = false;
 	if (dagent_init(conf)){
-		LOGP("dagent init error !");
+		GLOG_TRA("dagent init error !");
 		return -1;
 	}
 	return 0;
@@ -23,7 +23,7 @@ void reporter_update(int timeout_ms){
 
 int report_set(const char * k, const char * val){
 	if (strchr(k, ':')){
-		LOGP("error input param or k !");
+		GLOG_TRA("error input param or k !");
 		return -1;
 	}
 	std::ostringstream os;
@@ -32,7 +32,7 @@ int report_set(const char * k, const char * val){
 }
 int	report_inc(const char * k, int inc = 1, const char * param = nullptr){
 	if (strchr(k, ':') || (param && strchr(param, ':'))){
-		LOGP("error input param or k !");
+		GLOG_TRA("error input param or k !");
 		return -1;
 	}
 	std::ostringstream os;
@@ -44,7 +44,7 @@ int	report_inc(const char * k, int inc = 1, const char * param = nullptr){
 }
 int report_dec(const char * k, int dec = 1, const char * param = nullptr){
 	if (strchr(k, ':') || (param && strchr(param, ':'))){
-		LOGP("error input param or k !");
+		GLOG_TRA("error input param or k !");
 		return -1;
 	}
 	std::ostringstream os;
@@ -60,7 +60,7 @@ int reporter_using(){
 		return -1;
 	}
 	else if(dagent_ready() == 1){
-		LOGP("dagent is ready , so send msg ....");
+		GLOG_TRA("dagent is ready , so send msg ....");
 		report_set("online", "200");
 		report_inc("charge", 200);
 		report_inc("charge", 400);

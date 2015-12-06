@@ -1,0 +1,14 @@
+
+
+
+package test_db;
+
+
+
+
+message test_coll_person {
+    optional    string  name = 1;
+    optional    string  country = 2;
+    optional    int32   age = 3;
+    optional    string  zipcode = 4;
+}

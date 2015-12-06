@@ -141,12 +141,12 @@ static bool _is_root(dcnode_t* dc){
 
 static int	_fsm_check(dcnode_t * dc, bool checkforce);
 static inline int _switch_dcnode_fsm(dcnode_t * dc, int state) {
-	LOGP("switch dcnode fsm %d -> %d ", dc->fsm_state, state);
+	GLOG_TRA("switch dcnode fsm %d -> %d ", dc->fsm_state, state);
 	dc->fsm_state = state;
 	return _fsm_check(dc, true);
 }
 static int _fsm_register_name(dcnode_t * dc){
-	LOGP("register panrent name with:%s", dc->conf.name.c_str());
+	GLOG_TRA("register panrent name with:%s", dc->conf.name.c_str());
 	if (_is_root(dc)){
 		return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
 	}
@@ -254,7 +254,7 @@ static int _smq_msgpid_close(dcnode_t * dc, uint64_t msgpid){
 	//children name -> id map is const table , no changed
 	if (msgpid == dcsmq_session(dc->smq)) { //parent
 		assert(_is_smq_leaf(dc));
-		LOGP("smq parent ndoe closed ....");
+		GLOG_TRA("smq parent ndoe closed ....");
 		dcsmq_set_session(dc->smq, getpid()); //
 		return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_INIT);
 	}
@@ -273,7 +273,7 @@ static int _stcp_sockfd_close(dcnode_t * dc, int fd) {
 	if (fd == dc->parentfd)
 	{
 		dc->parentfd = -1;
-		LOGP("parent ndoe closed ....");
+		GLOG_TRA("parent ndoe closed ....");
 		return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_INIT);
 	}
 	dc->tcp_hb_expire_time.erase(fd);
@@ -311,7 +311,7 @@ static void _fsm_update_hearbeat_timer(dcnode_t * dc, int sockfd, uint64_t smqse
 }
 static void _node_expired(dcnode_t * dc, int sockfd , uint64_t msgpid = 0 ){
 	//erorr log
-	LOGP("node exipred sockfd:%d msgqpid:%lu",sockfd, msgpid);
+	GLOG_TRA("node exipred sockfd:%d msgqpid:%lu",sockfd, msgpid);
 	if (msgpid > 0){
 		_smq_msgpid_close(dc, msgpid);
 	}
@@ -336,7 +336,7 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 		(!dc->conf.addr.parent_addr.empty() ||	//tcp client
 		  (!dc->conf.addr.msgq_path.empty() && dc->conf.addr.msgq_push )))		//mq client
 	{
-		LOGP("add parent heart-beat timer checker with:%ds", dc->conf.heart_beat_gap);
+		GLOG_TRA("add parent heart-beat timer checker with:%ds", dc->conf.heart_beat_gap);
 		dc->parent_hb_expire_time = time(NULL) + dc->conf.max_live_heart_beat_gap;
 		_insert_timer_callback(dc, dc->conf.heart_beat_gap * 1000, hb, true);
 	}
@@ -345,7 +345,7 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 		time_t tNow = time(NULL);
 		if (dc->parent_hb_expire_time > 0 &&
 			dc->parent_hb_expire_time < tNow){
-			LOGP("parent node is expired ...");
+			GLOG_TRA("parent node is expired ...");
 			_node_expired(dc, dc->parentfd, dcsmq_session(dc->smq));
 		}
 		vector<uint64_t>	msgq_expired;
@@ -362,18 +362,18 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 		}
 
 		for (auto it : msgq_expired){
-			LOGP("smq children expired :%lu...",it);
+			GLOG_TRA("smq children expired :%lu...",it);
 			_node_expired(dc, -1, it);
 		}
 		for (auto it : tcp_expired){			
-			LOGP("tcp children expired :%d...",it);
+			GLOG_TRA("tcp children expired :%d...",it);
 			_node_expired(dc, it);
 		}
 
 	};
 	if (dc->conf.max_live_heart_beat_gap > 0 &&
 		dc->conf.max_live_heart_beat_gap > dc->conf.heart_beat_gap){
-		LOGP("add children heart-beat timer checker with:%ds", dc->conf.max_live_heart_beat_gap);
+		GLOG_TRA("add children heart-beat timer checker with:%ds", dc->conf.max_live_heart_beat_gap);
 		_insert_timer_callback(dc, 1000 * dc->conf.max_live_heart_beat_gap, hb_cheker, true);
 	}
 }
@@ -421,7 +421,7 @@ static int	_fsm_check(dcnode_t * dc, bool checkforce){
 		if (dc->smq){
 			//reg name
 			if (_name_smq_maping_shm_create(dc, false)){
-				LOGP("attach shm error !");
+				GLOG_TRA("attach shm error !");
 				dc->fsm_state = dcnode_t::DCNODE_ABORT;
 				return -1;
 			}
@@ -430,7 +430,7 @@ static int	_fsm_check(dcnode_t * dc, bool checkforce){
 			}
 		}
 		dc->fsm_state = dcnode_t::DCNODE_READY;
-		LOGP("fsm ready !");
+		GLOG_TRA("fsm ready !");
 		return 0;
 	case dcnode_t::DCNODE_READY:
 		//nothing report parent
@@ -449,12 +449,12 @@ static int _update_tcpfd_name(dcnode_t * dc, int sockfd, const string & name, bo
 				dc->named_tcpfd.erase(it);
 			}
 			else{
-				LOGP("the request name:%s is collision [%d] ...",name.c_str(), it->second);
+				GLOG_TRA("the request name:%s is collision [%d] ...",name.c_str(), it->second);
 				return -1;
 			}
 		}
 	}
-	LOGP("update tcp name map %s->%d", name.c_str(), sockfd);
+	GLOG_TRA("update tcp name map %s->%d", name.c_str(), sockfd);
 	dc->named_tcpfd[name] = sockfd;
 	dc->tcpfd_map_name[sockfd] = name;
 	return 0;
@@ -465,7 +465,7 @@ static int _response_msg(dcnode_t * dc, int sockfd, uint64_t msgqpid, dcnode_msg
 	dm.set_type(dmsrc.type());
 	dm.mutable_ext()->set_unixtime(time(NULL));
 	dm.mutable_ext()->set_opt(dcnode::MSG_OPT_RSP);
-	LOGP("response msg from:%s dst:%s", dmsrc.src().c_str(), dm.dst().c_str());
+	GLOG_TRA("response msg from:%s dst:%s", dmsrc.src().c_str(), dm.dst().c_str());
 	bool ret = dm.Pack(dc->send_buffer);
 	if (!ret){
 		//error pack
@@ -506,7 +506,7 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 				if (dm.reg_name().session() != entry->id){ //first time [init register]
 					if (dc->smq_hb_expire_time.find(entry->id) != dc->smq_hb_expire_time.end()){
 						//collision , alived node
-						LOGP("request name:%s session:%lu is collision [%lu] ...",
+						GLOG_TRA("request name:%s session:%lu is collision [%lu] ...",
 							dm.src().c_str(),dm.reg_name().session(), entry->id);
 						ret = -1;
 					}
@@ -517,7 +517,7 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 				}
 			}
 			if (ret == 0){
-				LOGP("update smq name map %s->%lu [%lu]", dm.src().c_str(), session, msgsrcid);
+				GLOG_TRA("update smq name map %s->%lu [%lu]", dm.src().c_str(), session, msgsrcid);
 			}
 		}
 		else {
@@ -555,7 +555,7 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 	PROFILE_FUNC();
 	if (dm.ext().unixtime() > 0 && dm.ext().unixtime() + dc->conf.max_msg_expired_time < time(NULL) ) {
 		//expired msg
-		LOGP("expired msg :%s",dm.Debug());
+		GLOG_TRA("expired msg :%s",dm.Debug());
 		return -1;
 	}
 	_fsm_update_hearbeat_timer(dc, sockfd, msgqpid);
@@ -564,7 +564,7 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 	{
 	case dcnode::MSG_DATA:
 		//to up callback 
-		LOGP("dispatch msg :%s->:%s size:%d",dm.src().c_str(), dm.dst().c_str(), dm.PackSize());
+		GLOG_TRA("dispatch msg :%s->:%s size:%d",dm.src().c_str(), dm.dst().c_str(), dm.PackSize());
 		return dc->dispatcher(dc->dispatcher_ud, dm.src().c_str(), msg_buffer_t(dm.msg_data().data(), dm.msg_data().length()));
 	case dcnode::MSG_REG_NAME:
 		//insert tcp src -> map name
@@ -587,7 +587,7 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_sz, const string & dst) {
 	if (_is_smq_leaf(dc)){
 		//to msgq
-		LOGP("foward msg to :%s with smq to parent", dst.c_str());
+		GLOG_TRA("foward msg to :%s with smq to parent", dst.c_str());
 		auto entry = _name_smq_entry_find(dc, dst);
 		if (!entry){
 			return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t(buff, buff_sz));
@@ -601,20 +601,20 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 	auto it = dc->named_smqid.find(dst);
 	if (it != dc->named_smqid.end())
 	{
-		LOGP("foward msg to :%s with smq [found dst]", dst.c_str());
+		GLOG_TRA("foward msg to :%s with smq [found dst]", dst.c_str());
 		return dcsmq_send(dc->smq, it->second, dcsmq_msg_t(buff, buff_sz));
 	}
 	auto tit = dc->named_tcpfd.find(dst);
 	if (tit != dc->named_tcpfd.end())
 	{
-		LOGP("foward msg to :%s with tcp [found dst]", dst.c_str());
+		GLOG_TRA("foward msg to :%s with tcp [found dst]", dst.c_str());
 		return dctcp_send(dc->stcp, tit->second, dctcp_msg_t(buff, buff_sz));
 	}
 
 	//to up layer 
 	if (sockfd != dc->parentfd && dc->parentfd != -1)
 	{
-		LOGP("foward msg to :%s not found name , so report to up layer with tcp:%d...",
+		GLOG_TRA("foward msg to :%s not found name , so report to up layer with tcp:%d...",
 			dst.c_str(), dc->parentfd);
 		dctcp_send(dc->stcp, dc->parentfd, dctcp_msg_t(buff, buff_sz));
 	}
@@ -627,7 +627,7 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 		{
 			continue;
 		}
-		LOGP("foward msg to :%s not found name , so report to lower layer with tcp:%d ...",
+		GLOG_TRA("foward msg to :%s not found name , so report to lower layer with tcp:%d ...",
 			dst.c_str() , it->second);
 		dctcp_send(dc->stcp, it->second, dctcp_msg_t(buff, buff_sz));
 	}
@@ -636,6 +636,9 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buff, int buff_sz){
 	dcnode_msg_t dm;
 	PROFILE_FUNC();
+	GLOG(LOG_LVL_TRACE, "dcnode recv msg fd:%d msgqpid:%lu buff sz:%d",
+		sockfd, msgqpid, buff_sz);
+
 	if (!dm.Unpack(buff, buff_sz)) {
 		//error for decode
 		return -1;
@@ -726,13 +729,14 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 
 		n->smq = dcsmq_create(smc);
 		if (!n->smq) {
+			GLOG(LOG_LVL_ERROR, "dcnode create msg q error !");;
 			dcnode_destroy(n);
 			return nullptr;
 		}
 		dcsmq_msg_cb(n->smq, _smq_cb, n);
 		if (smc.server_mode){
 			if (_name_smq_maping_shm_create(n, true)){
-				LOGP("create shm error !");
+				GLOG_TRA("create shm error !");
 				dcnode_destroy(n);
 				return nullptr;
 			}				

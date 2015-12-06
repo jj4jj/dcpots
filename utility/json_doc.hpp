@@ -26,18 +26,18 @@ public:
 	int					parse_file(const char * file){
 		FILE * fp = fopen(file, "r");
 		if (!fp){
-			LOGP("open file :%s error ! ", file);
+			GLOG_TRA("open file :%s error ! ", file);
 			return -1;
 		}
 		if (parse_file_buffer.buffer == nullptr && parse_file_buffer.create(MAX_CONF_BUFF_SIZE)){
-			LOGP("create config buffer error !");
+			GLOG_TRA("create config buffer error !");
 			return -2;
 		}
 		rapidjson::FileReadStream is(fp, parse_file_buffer.buffer, parse_file_buffer.max_size);
 		if (ParseStream(is).HasParseError()){
 			rapidjson::ParseErrorCode e = rapidjson::Document::GetParseError();
 			size_t o = GetErrorOffset();
-			LOGP("parse json file :%s error info:%s offset:%zu near:%32s", file,
+			GLOG_TRA("parse json file :%s error info:%s offset:%zu near:%32s", file,
 				rapidjson::GetParseError_En(e), o, parse_file_buffer.buffer + o);
 			return -1;
 		}
@@ -68,7 +68,7 @@ public:
 		if (ParseStream(ss).HasParseError()){
 			rapidjson::ParseErrorCode e = GetParseError();
 			size_t o = GetErrorOffset();
-			LOGP("parse buffer error info:%s offset:%zu near:%32s",
+			GLOG_TRA("parse buffer error info:%s offset:%zu near:%32s",
 				rapidjson::GetParseError_En(e), o, buffer + o);
 			return -1;
 		}

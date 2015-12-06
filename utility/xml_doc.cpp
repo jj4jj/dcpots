@@ -27,12 +27,12 @@ xml_doc_t::~xml_doc_t(){
 int					xml_doc_t::parse_file(const char * file){
 	if (parse_file_buffer.buffer == nullptr &&
 		parse_file_buffer.create(MAX_XML_FILE_BUFF_SIZE)){
-		LOGP("create file buffer error !");
+		GLOG_TRA("create file buffer error !");
 		return -1;
 	}
 	size_t readn = dcsutil::readfile(file, parse_file_buffer.buffer, parse_file_buffer.max_size);
 	if (readn <= 0){
-		LOGP("read file :%s error ! ", file);
+		GLOG_TRA("read file :%s error ! ", file);
 		return -2;
 	}
 	return loads(parse_file_buffer.buffer);
@@ -52,7 +52,7 @@ int					xml_doc_t::loads(char * buffer){
 		doc->parse<0>(buffer);
 	}
 	catch (rapidxml::parse_error e){
-		LOGP("parse buffer error info:%s ",
+		GLOG_TRA("parse buffer error info:%s ",
 			e.what());
 		return -1;
 	}
@@ -85,7 +85,7 @@ void				xml_doc_t::add_cdata(const char * data, xml_node_t * before){
 	}
 	xml_node_t * node = reinterpret_cast<xml_node_t *>(doc->allocate_node(rapidxml::node_cdata, nullptr, data));
 	if (!node){
-		LOGP("alloc data node error !");
+		GLOG_TRA("alloc data node error !");
 		return;
 	}
 	if (before->parent()){
@@ -101,7 +101,7 @@ void				xml_doc_t::add_comment(const char * comments, xml_node_t * before){
 	}
 	xml_node_t * node = reinterpret_cast<xml_node_t *>(doc->allocate_node(rapidxml::node_comment, nullptr, comments));
 	if (!node){
-		LOGP("alloc comment node error !");
+		GLOG_TRA("alloc comment node error !");
 		return;
 	}
 	if (before->parent()){
@@ -216,6 +216,6 @@ void				xml_doc_t::path_set(const char * path, const char * val){
 		}
 	}
 	else{
-		LOGP("path:%s is not valid format , not found attribute name !", path);
+		GLOG_TRA("path:%s is not valid format , not found attribute name !", path);
 	}
 }

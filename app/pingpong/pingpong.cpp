@@ -16,7 +16,7 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 		start_time = dcsutil::time_unixtime_us();
 	}
 	if (ncur < 3){
-		LOGP("recv msg from src:%s size:%d", src, msg.valid_size);
+		GLOG_TRA("recv msg from src:%s size:%d", src, msg.valid_size);
 	}
 	else{
 		logger_set_level(nullptr,LOG_LVL_INFO);
@@ -52,7 +52,7 @@ static dcnode_t* _create(bool ping, const char* name, const char * key,
 	}
 	auto dc = dcnode_create(dcf);
 	if (!dc){
-		LOGP("creat dcnode error !");
+		GLOG_TRA("creat dcnode error !");
 		return nullptr;
 	}
 	dcnode_set_dispatcher(dc, pingpong, dc);
@@ -122,10 +122,10 @@ int main(int argc , char * argv[]){
 	const char * s_sendbuff = "PingPong: Hello?";
 	string s_send_msg = s_sendbuff;
 	//for (auto i = 0; i < 20; i++) s_send_msg += s_send_msg;
-	LOGP("pingpong msg :%s length:%zu", s_send_msg.c_str(), s_send_msg.length());
+	GLOG_TRA("pingpong msg :%s length:%zu", s_send_msg.c_str(), s_send_msg.length());
 	dcnode_t* dc = _create(ping, name, key, listen_tcpaddr, conn_tcpaddr);
 	if (!dc){
-		LOGP("create dncode error !");
+		GLOG_TRA("create dncode error !");
 		return -2;
 	}
 	int n = 0;
@@ -143,7 +143,7 @@ int main(int argc , char * argv[]){
 			start_time = dcsutil::time_unixtime_us();
 		}
 		if (dcnode_ready(dc) == -1){
-			LOGP("dcnode stoped ....");
+			GLOG_TRA("dcnode stoped ....");
 			return -1;
 		}
 	}

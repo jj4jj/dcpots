@@ -36,7 +36,7 @@ struct dagent_t
 static dagent_t AGENT;
 static inline int	_error(const char * msg, int err = -1, logger_t * trace = nullptr){
 	//LOG_MSG(ERROR_LVL_DEBUG, AGENT.error_msg, trace, err, msg);
-	LOGP("%s",msg);
+	GLOG_TRA("%s",msg);
 	return err;
 }
 
@@ -56,7 +56,7 @@ bool	_cb_exists(int type){
 
 static int _py_cb_push(int type, PyObject * cb){
 	if (_cb_exists(type)){
-		LOGP("repeat cb push type:%d ", type);
+		GLOG_TRA("repeat cb push type:%d ", type);
 		return -1;
 	}
 	Py_XINCREF(cb);
@@ -96,7 +96,7 @@ static PyObject * _py_pop_cb(PyObject *, PyObject * type){
 	int ctype = 0;
 	if (PyArg_ParseTuple(type, "i", &ctype)){
 		//save the cb to the map > incea 
-		LOGP("pop python cb :%d",ctype);
+		GLOG_TRA("pop python cb :%d",ctype);
 		_py_cb_pop(ctype);
 		Py_INCREF(Py_None);
 		return Py_None;
@@ -110,7 +110,7 @@ static PyObject * _py_send(PyObject *, PyObject * dst_type_msg_size){
 	if (PyArg_ParseTuple(dst_type_msg_size, "sit#", &dst, &type, &msg, &size)){
 		int ret = dagent_send(dst, type, msg_buffer_t(msg, size));
 		if (ret){
-			LOGP("dagent send error :%d", ret);
+			GLOG_TRA("dagent send error :%d", ret);
 			PyErr_SetString(PyExc_TypeError, "dagent send error");
 			return NULL;
 		}
@@ -162,7 +162,7 @@ static PyObject * _py_ext_init(PyObject *, PyObject * args, PyObject *keywds){
 	dcf.extmode = true;
 	int ret = dagent_init(dcf);
 	if (ret){
-		LOGP("dagent init error :%d", ret);
+		GLOG_TRA("dagent init error :%d", ret);
 		PyErr_SetString(PyExc_TypeError, "dagent init error !");
 		return NULL;
 	}
@@ -182,7 +182,7 @@ static  int _init_py_vm(script_vm_t * vm){
 	}	
 	dagent_export_python(false);
 	if (script_vm_run_file(vm, "init")){
-		LOGP("init plugin start file error !");
+		GLOG_TRA("init plugin start file error !");
 		return -1;
 	}
 	return 0;
@@ -211,7 +211,7 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 		Py_XDECREF(arglist);
 		if (result == NULL){
 			PyErr_Print();
-			LOGP("call python cb error !");
+			GLOG_TRA("call python cb error !");
 		}
 		else{
 			int ret = 0;
@@ -219,7 +219,7 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 			Py_XDECREF(result);
 			return ret;
 		}
-		LOGP("call python cb error result !");
+		GLOG_TRA("call python cb error result !");
 		return -1;
 	}
 	//not found
@@ -229,7 +229,7 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 void dagent_export_python(bool for_ext){
 	script_vm_python_export_t & vmexport = AGENT.py_export;
 	if (!vmexport.entries.empty()){
-		LOGP("repeat export python ...");
+		GLOG_TRA("repeat export python ...");
 		return;
 	}
 
@@ -353,7 +353,7 @@ int     dagent_send(const char * dst, int type, const msg_buffer_t & msg){
 int     dagent_cb_push(int type, dagent_cb_t cb){
 	if (_cb_exists(type)){
 		//repeat
-		LOGP("repeat cb push type:%d ", type);
+		GLOG_TRA("repeat cb push type:%d ", type);
 		return -1;
 	}
 	AGENT.cbs[type] = cb;
@@ -383,7 +383,7 @@ int     dagent_load_plugin(const char * file){
 		vm = AGENT.vms[script_vm_enm_type::SCRIPT_VM_JS];
 	}
 	if(!vm){
-		LOGP("not found plugin vm file:%s or plugin vm not load", file);
+		GLOG_TRA("not found plugin vm file:%s or plugin vm not load", file);
 		return -1;
 	}
 	return script_vm_run_file(vm, file);

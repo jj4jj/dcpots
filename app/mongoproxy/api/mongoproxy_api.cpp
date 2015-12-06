@@ -67,6 +67,8 @@ mongoproxy_init(const char * proxyaddr){
 	}
 	dcnode_set_dispatcher(dc, on_proxy_rsp , 0);
 	MONGO.msg_buffer.create(MAX_MONGOPROXY_MSG_SIZE);
+	MONGO.dc = dc;
+	MONGO.proxyaddr = proxyaddr;
 	return 0;
 }
 void	
@@ -96,14 +98,15 @@ _mongoproxy_cmd(MongoOP op, const google::protobuf::Message & msg, bool update){
 	mongo_msg.set_coll(msg.GetDescriptor()->name());
 	string json;
 	pbjson::pb2json(&msg, json);
+	GLOG(LOG_LVL_TRACE, "pb2json :%s", json.c_str());
 	if (update){
 		mongo_msg.mutable_req()->set_u(json);
 	}
 	else {
 		mongo_msg.mutable_req()->set_q(json);
 	}
-	if (mongo_msg.Pack(MONGO.msg_buffer)){
-		cerr << "pack error" << endl;
+	if (!mongo_msg.Pack(MONGO.msg_buffer)){
+		GLOG(LOG_LVL_WARNING, "pack error :%s", mongo_msg.Debug());
 		return -1;
 	}
 	return dcnode_send(MONGO.dc, "", MONGO.msg_buffer.buffer, MONGO.msg_buffer.valid_size);

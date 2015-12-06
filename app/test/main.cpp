@@ -27,7 +27,7 @@ int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 	if (pingpong >= max_ping_pong)
 	{
 		start_us = dcsutil::time_unixtime_us() - start_us;
-		LOGP("mq cb msg size:%d src:%lu total:%d MB time:%ldus pingpong:%d",
+		GLOG_TRA("mq cb msg size:%d src:%lu total:%d MB time:%ldus pingpong:%d",
 			msg.sz, src, max_ppsz / 1048576, start_us, max_ping_pong);
 		exit(0);
 	}
@@ -36,7 +36,7 @@ int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 #define CHECK(r)	\
 if (r) {\
 \
-	LOGP("check error :%d sys error:%s",r, strerror(errno)); \
+	GLOG_TRA("check error :%d sys error:%s",r, strerror(errno)); \
 	return -1;\
 }
 
@@ -52,7 +52,7 @@ int test_mq(const char * ap)
 	auto p = dcsmq_create(sc);
 	if (!p)
 	{
-		LOGP("error create smq errno:%s", strerror(errno));
+		GLOG_TRA("error create smq errno:%s", strerror(errno));
 		return -1;
 	}
 	dcsmq_msg_cb(p, mq_cb, nullptr);
@@ -82,7 +82,7 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 	}
 
 	if (ev.type == dctcp_event_type::DCTCP_READ){
-		LOGP("ping pang get msg from fd:%d msg:%s",ev.fd, ev.msg->buff);
+		GLOG_TRA("ping pang get msg from fd:%d msg:%s",ev.fd, ev.msg->buff);
 		
 		pingpong++;
 		if (pingpong == 1 && tcp_server_mode){
@@ -100,7 +100,7 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 				dctcp_send(stc, ev.fd, *ev.msg);
 			}
 			start_us = dcsutil::time_unixtime_us() - start_us;
-			LOGP("mq cb msg size:%d total:%d MB time:%ldus pingpong:%d",
+			GLOG_TRA("mq cb msg size:%d total:%d MB time:%ldus pingpong:%d",
 				ev.msg->buff_sz,  max_ppsz / 1048576, start_us, max_ping_pong);
 			exit(0);
 		}
@@ -116,7 +116,7 @@ int test_tcp(const char * ap)
 	listen_addr.port = 8888;
 	auto * p = dctcp_create(sc);
 	if (!p){
-		LOGP("create stcp error ! syserror:%s", strerror(errno));
+		GLOG_TRA("create stcp error ! syserror:%s", strerror(errno));
 		return -1;
 	}
 	if (ap){
@@ -138,7 +138,7 @@ int test_tcp(const char * ap)
 
 int dc_cb(void * ud, const char* src, const msg_buffer_t & msg)
 {
-	LOGP("dc msg recv :%s", msg.buffer);
+	GLOG_TRA("dc msg recv :%s", msg.buffer);
 	return 0;
 }
 
@@ -191,7 +191,7 @@ int test_node(const char * p)
 	int times = 0;
 	uint64_t t1, t2;
 	if (ltest == 3){
-		LOGP("add timer test in node....");
+		GLOG_TRA("add timer test in node....");
 		t1 = dcnode_timer_add(dc, 1000, [&times, &t1, &t2, dc](){
 			puts("test timer 1s");
 			times++;
@@ -216,7 +216,7 @@ int test_node(const char * p)
 	{
 		dcnode_update(dc, 10000);
 		if (dcnode_ready(dc) == -1){
-			LOGP("dcnode stoped ....");
+			GLOG_TRA("dcnode stoped ....");
 			return -1;
 		}
 		if (ltest == 4 && last_time + 5 < time(NULL)){
@@ -232,27 +232,27 @@ static int python_test(){
 	smc.type = SCRIPT_VM_PYTHON;
 	script_vm_t * vm = script_vm_create(smc);
 	if (!vm){
-		LOGP("error create vm !");
+		GLOG_TRA("error create vm !");
 		return -1;
 	}
 	int r = script_vm_run_string(vm, "a=20");
 	r |= script_vm_run_string(vm, "print('hello,world!')");
 	r |= script_vm_run_string(vm, "print('hello,world!'+str(a))");
-	LOGP("vm run ret:%d",r);
+	GLOG_TRA("vm run ret:%d",r);
 	script_vm_destroy(vm);
 
-	LOGP("destroyed vm");
+	GLOG_TRA("destroyed vm");
 	smc.path = "./plugins";
 	vm = script_vm_create(smc);
 	if (!vm){
-		LOGP("error create vm agin !");
+		GLOG_TRA("error create vm agin !");
 		return -1;
 	}
 	r = script_vm_run_string(vm, "a=20");
 	r |= script_vm_run_string(vm, "print('hello,world! %s' % a)");
-	LOGP("vm run ret:%d", r);
+	GLOG_TRA("vm run ret:%d", r);
 	r = script_vm_run_file(vm, "hello.py");
-	LOGP("vm run ret:%d", r);
+	GLOG_TRA("vm run ret:%d", r);
 
 	return 0;
 }
@@ -268,7 +268,7 @@ int log_test(){
 	}
 	int n = 3 * 1000;
 	while (n--){
-		GLOG(LOG_LVL_ERROR, ret, "test logger msg just for size , this is dummy");
+		GLOG(LOG_LVL_ERROR, "test logger msg just for size , this is dummy");
 	}
 	return 0;
 }
@@ -301,7 +301,7 @@ int perf_test(const char * arg){
 	}
 	int64_t cost_time = dcsutil::time_unixtime_us() - start_us;
 	double speed = pack_unpack_times*1000000.0 / cost_time ;
-	LOGP("print pack size:%lu msg size:%zd cost time:%ld total times:%d speed:%lf /s", 
+	GLOG_TRA("print pack size:%lu msg size:%zd cost time:%ld total times:%d speed:%lf /s", 
 		packsize, strlen(s_test_msg)+1,
 		cost_time,
 		pack_unpack_times, speed);
@@ -381,14 +381,14 @@ static int lock_test(const char * pidfile){
 
 	int pid = dcsutil::lockpidfile(pidfile, SIGTERM);
 	if (pid <= 0){
-		LOGP("error:%d lock errno:%d for:%s",pid, errno, strerror(errno));
+		GLOG_TRA("error:%d lock errno:%d for:%s",pid, errno, strerror(errno));
 		return -2;
 	}
 	if (pid != getpid()){
 		return -3;
 	}
 	else {
-		LOGP("lock file:%s success!", pidfile);
+		GLOG_TRA("lock file:%s success!", pidfile);
 		while (true){
 			sleep(5);
 		}
@@ -401,11 +401,11 @@ static int daemon_test(const char * arg){
 	std::vector<std::string> vss;
 	int n = dcsutil::split("..b.abc..def..", ".", vs);
 	int m = dcsutil::split("ffffdccvf", ".", vss);
-	LOGP("split test ret:%d [0]:%s [1]:%s [2]:%s", n, vs[0].c_str(), vs[1].c_str(), vs[2].c_str());
-	LOGP("split test ret:%d [0]:%s", m, vss[0].c_str());
+	GLOG_TRA("split test ret:%d [0]:%s [1]:%s [2]:%s", n, vs[0].c_str(), vs[1].c_str(), vs[2].c_str());
+	GLOG_TRA("split test ret:%d [0]:%s", m, vss[0].c_str());
 	std::string str;
-	LOGP("strtime:%s", dcsutil::strftime(str));
-	LOGP("from_strtime:%lu", dcsutil::from_strtime());
+	GLOG_TRA("strtime:%s", dcsutil::strftime(str));
+	GLOG_TRA("from_strtime:%lu", dcsutil::from_strtime());
 	while (true){
 		//LOGP("test ....");
 		sleep(5);
@@ -447,7 +447,7 @@ static int mysql_test(const char * p){
 	}
 	struct _test {
 		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::table_row_t & row){
-			LOGP("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
+			GLOG_TRA("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
 				ud,row.row_data[0],row.row_length[0],row.fields_name[0],row.row_total, row.row_offset, need_more);
 			if (row.row_offset > 5){
 				need_more = false;
@@ -470,7 +470,7 @@ static int mongo_test(const char * p){
 	conf.multi_thread = 1;
 	int ret = mg.init(conf);
 	if (ret){
-		LOGP("init error :%d!", ret);
+		GLOG_TRA("init error :%d!", ret);
 		return -1;
 	}
 	using namespace dcsutil;
@@ -483,7 +483,7 @@ static int mongo_test(const char * p){
 	struct _test_cb {
 		static void cb(void * ud, const mongo_client_t::result_t & rst){
 			int * pn = (int*)ud;
-			LOGP("rst response:%s  error:%s errno:%d param:%d",
+			GLOG_TRA("rst response:%s  error:%s errno:%d param:%d",
 				rst.rst.c_str(), rst.err_msg.c_str(),rst.err_no, *pn);
 		}
 	};
@@ -493,7 +493,7 @@ static int mongo_test(const char * p){
 			//usleep(1000000);
 		}
 		if (!mg.running()){
-			LOGP("mongo test stoped ...");
+			GLOG_TRA("mongo test stoped ...");
 			break;
 		}
 		switch (n){
@@ -524,7 +524,7 @@ static int mongo_test(const char * p){
 		}
 		++n;
 		if (ret){
-			LOGP("excute error ret:%d", ret);
+			GLOG_TRA("excute error ret:%d", ret);
 		}
 		sleep(1);
 	}

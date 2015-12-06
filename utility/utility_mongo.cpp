@@ -195,7 +195,7 @@ mongo_client_t::excute(const command_t & cmd, on_result_cb_t cb, void * ud){
 	req.cmd = cmd;
 	req.cb = cb;
 	req.cb_ud = ud;
-	LOGP("excute command json:%s", req.cmd.cmd.c_str());
+	GLOG_TRA("excute command json:%s", req.cmd.cmd.c_str());
 	////////////////////////////////////////////////////////
 	if(_THIS_HANDLE->client){
 		mongo_response_t rsp;

@@ -120,7 +120,7 @@ inline	void	_close_connections(dctcp_t * stcp){
 	for (auto & it : stcp->connectings) close(it.first);
 }
 void            dctcp_destroy(dctcp_t * stcp){
-	LOGP("stcp destroy ....");
+	GLOG_TRA("stcp destroy ....");
 	_close_listeners(stcp);
 	_close_connections(stcp);
 	if (stcp->epfd >= 0) close(stcp->epfd);
@@ -151,13 +151,13 @@ static int _get_sockerror(int fd){
 static void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
 	auto it = stcp->sock_recv_buffer.find(fd);
 	if (it != stcp->sock_recv_buffer.end()){
-		LOGP("free recv buffer ....fd:%d", fd);
+		GLOG_TRA("free recv buffer ....fd:%d", fd);
 		it->second.destroy();
 		stcp->sock_recv_buffer.erase(it);
 	}
 	it = stcp->sock_send_buffer.find(fd);
 	if (it != stcp->sock_send_buffer.end()){
-		LOGP("free send buffer ....fd:%d", fd);
+		GLOG_TRA("free send buffer ....fd:%d", fd);
 		it->second.destroy();
 		stcp->sock_send_buffer.erase(it);
 	}
@@ -189,7 +189,7 @@ static msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool for_recv
 	}
 }
 static void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason){
-	LOGP("close fd:%d for reason:%d", fd, reason);
+	GLOG_TRA("close fd:%d for reason:%d", fd, reason);
 	int error = _get_sockerror(fd);
 	_op_poll(stcp, EPOLL_CTL_DEL, fd);
 	close(fd);
@@ -225,7 +225,7 @@ static void _new_connx(dctcp_t * stcp, int listenfd){
 		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 	}
 	else{		//error
-		LOGP("accept error listen fd:%d for:%s", listenfd, strerror(errno));
+		GLOG_TRA("accept error listen fd:%d for:%s", listenfd, strerror(errno));
 	}
 }
 
@@ -274,7 +274,7 @@ static int _dispatch_msg(dctcp_t * stcp, int fd, msg_buffer_t * buffer){
 		memmove(buffer->buffer,
 			buffer->buffer + msg_buff_start,
 			buffer->valid_size - msg_buff_start);
-		LOGP("memmove size:%d", buffer->valid_size - msg_buff_start);
+		GLOG_TRA("memmove size:%d", buffer->valid_size - msg_buff_start);
 		buffer->valid_size -= msg_buff_start;
 	}
 	else {
@@ -440,6 +440,10 @@ void			dctcp_close(dctcp_t * stcp, int fd){
 }
 int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc){
 	PROFILE_FUNC();
+	if (stcp->listeners.empty() &&
+		stcp->connectings.empty()){
+		return 0;
+	}
 	int ms = timeout_us / 1000;
 	int nproc = 0;
 	for (; stcp->nproc < stcp->nevts && nproc < max_proc; ++(stcp->nproc)){
@@ -482,7 +486,7 @@ int				dctcp_reconnect(dctcp_t* stcp, int fd){
 		return -1;
 	}
 	cnx->reconnect++;
-	LOGP("tcp connect fd:%d tried:%d  ....", fd, cnx->reconnect);
+	GLOG_TRA("tcp connect fd:%d tried:%d  ....", fd, cnx->reconnect);
 	return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
 }
 int				dctcp_listen(dctcp_t * stcp, const dctcp_addr_t & addr){ //return a fd >= 0when success

@@ -19,6 +19,9 @@ struct logger_t {
 };
 
 static	logger_t * G_LOGGER = nullptr;
+logger_t *		global_logger(){
+	return G_LOGGER;
+}
 int				global_logger_init(const logger_config_t & conf){
 	if (G_LOGGER){
 		return -1;
@@ -42,7 +45,7 @@ FILE * logfile_open(const char * filename, int & nextrollid){
 		pf = fopen(filename, "w");
 	}
 	if (pf == nullptr){
-		GLOG(LOG_LVL_FATAL, errno, "open file :%s error!", filename);
+		GLOG(LOG_LVL_FATAL, "open file :%s error!", filename);
 		return nullptr;
 	}
 	if (nextrollid == 0){
@@ -97,7 +100,9 @@ int				logger_level(logger_t * logger){
 	if (logger == nullptr){
 		logger = G_LOGGER;
 	}
-	return logger->conf.lv;
+	if (logger)
+		return logger->conf.lv;
+	return LOG_LVL_INVALID;
 }
 
 //last msg
@@ -116,23 +121,31 @@ int				logger_errno(logger_t * logger){
 }
 
 //set last
-int				logger_write(logger_t * logger, int err, const char* fmt, ...)
+int				logger_write(logger_t * logger, int loglv, const char* fmt, ...)
 {
 	if (logger == nullptr){
 		logger = G_LOGGER;
 	}
+	if (loglv < logger->conf.lv){
+		return 0;
+	}
+	//logger lock ?
+
 	va_list ap;
 	va_start(ap, fmt);
 	int n = 0;
-	logger->last_err = err;
+	logger->last_err = errno;
 	char * msg_start = (char*)logger->last_msg.data();
 	n = vsnprintf(msg_start, logger->last_msg.capacity() - 1, fmt, ap);
 	va_end(ap);
 	int available_size = logger->last_msg.capacity() - (n + 2);
 	char errorno_msg_buff[128];
-	if (logger->conf.lv >= LOG_LVL_WARNING && available_size > 16){
-		strerror_r(errno, errorno_msg_buff, sizeof(errorno_msg_buff) - 1);
-		snprintf(&msg_start[n], available_size, "[errno:%d][%s]\n", errno, errorno_msg_buff);
+	if (loglv >= LOG_LVL_WARNING && available_size > 16){
+		if (msg_start[n-1] == '\n'){
+			--n;
+		}
+		snprintf(&msg_start[n], available_size, "[system errno:%d(%s)]\n", errno,
+			strerror_r(errno, errorno_msg_buff, sizeof(errorno_msg_buff)-1));
 	}
 	if (logger->pf){
 		fputs(msg_start, logger->pf);

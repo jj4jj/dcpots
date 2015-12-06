@@ -97,7 +97,7 @@ size_t	mysqlclient_t::affects(){
 
 //return affects num
 int		mysqlclient_t::execute(const std::string & sql){
-	LOGP("exec sql = \n[%s]\n", sql.c_str());
+	GLOG_TRA("exec sql = \n[%s]\n", sql.c_str());
 	if (mysql_query(_THIS_HANDLE->mysql_conn, sql.c_str())){
 		LOG_S("execute sql:%s error ", sql.c_str());
 		return -1;

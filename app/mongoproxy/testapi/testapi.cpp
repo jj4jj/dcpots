@@ -2,14 +2,17 @@
 #include "base/cmdline_opt.h"
 #include "../api/mongoproxy_api.h"
 #include "base/logger.h"
+#include "test.pb.h"
+#include "utility/utility_proto.h"
 
 void test_cb(mongoproxy_cmd_t cmd, void * ud, const mongoproxy_result_t & result){
-	LOGP("cmd:%d %d %p", cmd, result.status, result.msg);
+	GLOG_TRA("cmd:%d %d %p", cmd, result.status, result.msg);
 }
 int main(int argc, char ** argv){
 	using namespace std;
 	cmdline_opt_t cmdopt(argc, argv);
-	cmdopt.parse("path:r:p:proxy communication msgq path");
+	cmdopt.parse("path:r:p:proxy communication msgq path:/tmp");
+	dcsutil::protobuf_logger_init();
 	//path
 	if (!cmdopt.hasopt("path")){
 		std::cerr << "no path option" << endl;
@@ -24,6 +27,15 @@ int main(int argc, char ** argv){
 
 	mongoproxy_set_cmd_cb(test_cb, 0);
 	//curd
+	test_db::test_coll_person	tcp;
+	tcp.set_age(20);
+	tcp.set_name("ffff");
+	tcp.set_zipcode("ffff");
+
+	while (true){
+		sleep(5);
+		mongoproxy_insert(tcp);
+	}
 
 
 	return 0;

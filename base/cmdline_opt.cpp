@@ -8,6 +8,7 @@ struct cmdline_opt_impl_t {
 	int								argc;
 	char **							argv;
 	std::multimap<string, string>	dict_opts;
+	std::map<string, string>		dict_opts_default;
 	string							usage;
 };
 
@@ -27,11 +28,11 @@ cmdline_opt_t::~cmdline_opt_t(){
 		delete _THIS_HANDLE;
 	}
 }
-// = "version:n:v:desc;log-path:r::desc;:o:I:desc"
+// = "version:n:v:desc:default;log-path:r::desc;:o:I:desc:default"
 void
 cmdline_opt_t::parse(const char * pattern){
 	std::vector<std::string>	sopts;
-    string pattern_ex = "help:n:h:show the help info;";
+    string pattern_ex = "help:n:h:show the help info:;";
     pattern_ex += pattern;
 	dcsutil::split(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
@@ -40,10 +41,10 @@ cmdline_opt_t::parse(const char * pattern){
 	string short_opt;
 	for (auto & sopt : sopts){
 		std::vector<std::string>	soptv;
-		dcsutil::split(sopt, ":", soptv, false);
-		if (soptv.size() != 4){
-			std::cerr << "error format option:" << sopt << " size:" << soptv.size() << " but not 4" << std::endl;
-			std::cerr << "pattern opt must be format of '[<long name>]:[rno]:[<short name>]:[desc];' " << std::endl;
+		dcsutil::split(sopt, ":", soptv, false, 5);
+		if (soptv.size() < 4){
+			std::cerr << "error format option:" << sopt << " size:" << soptv.size() << " but < 4" << std::endl;
+			std::cerr << "pattern opt must be format of '[<long name>]:[rno]:[<short name>]:[desc]:[default];' " << std::endl;
 			exit(-2);
 		}
 		if (soptv[2][0]){
@@ -108,6 +109,14 @@ cmdline_opt_t::parse(const char * pattern){
 			_THIS_HANDLE->usage += "\t";
 			_THIS_HANDLE->usage += soptv[3];
 		}
+		if (soptv.size() > 4 && soptv[4][0]){
+			_THIS_HANDLE->usage += "  (";
+			_THIS_HANDLE->usage += soptv[4];
+			_THIS_HANDLE->usage += ")";
+			/////////////////////////////////////
+			_THIS_HANDLE->dict_opts_default[string(soptv[0])] = soptv[4];
+			_THIS_HANDLE->dict_opts_default[string(soptv[2])] = soptv[4];
+		}
 		_THIS_HANDLE->usage += "\n";
 		//////////////////////////////////////////////////////////
 	}
@@ -171,17 +180,17 @@ cmdline_opt_t::getoptstr(const char * opt, int idx){
 		--idx;
 		range.first++;
 	}
+	auto it = _THIS_HANDLE->dict_opts_default.find(opt);
+	if (it != _THIS_HANDLE->dict_opts_default.end()){
+		return it->second.c_str();
+	}
 	return nullptr;
 }
 int			 
 cmdline_opt_t::getoptint(const char * opt, int idx){
-	auto range = _THIS_HANDLE->dict_opts.equal_range(string(opt));
-	while (range.first != range.second){
-		if (idx == 0){
-			return std::stoi(range.first->second);
-		}
-		--idx;
-		range.first++;
+	const char * value = getoptstr(opt, idx);
+	if (value){
+		return atoi(value);
 	}
 	return 0;
 }

@@ -3,15 +3,15 @@
 #include "report_colect.h"
 
 int on_report_set(const msg_buffer_t &  msg, const char * src){
-	LOGP("recv from :%s set msg:%s",src, msg.buffer);
+	GLOG_TRA("recv from :%s set msg:%s",src, msg.buffer);
 	return 0;
 }
 int	on_report_inc(const msg_buffer_t &  msg, const char * src){
-	LOGP("recv from :%s inc msg:%s", src, msg.buffer);
+	GLOG_TRA("recv from :%s inc msg:%s", src, msg.buffer);
 	return 0;
 }
 int on_report_dec(const msg_buffer_t &  msg, const char * src){
-	LOGP("recv from :%s dec msg:%s", src, msg.buffer);
+	GLOG_TRA("recv from :%s dec msg:%s", src, msg.buffer);
 	return 0;
 }
 
@@ -21,7 +21,7 @@ int collector_init(const char * keypath, const char * name){
 	conf.name = name;
 	conf.routermode = true;
 	if (dagent_init(conf)){
-		LOGP("dagent init error !");
+		GLOG_TRA("dagent init error !");
 		return -1;
 	}
 	dagent_cb_push(REPORT_MSG_SET, on_report_set);

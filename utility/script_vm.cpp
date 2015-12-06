@@ -29,7 +29,7 @@ static python_vm_t * _create_vm_python(const script_python_conf_t & conf){
 	python_vm_t * vm = new python_vm_t();
 	vm->myown = true;
 	if (Py_IsInitialized()){
-		LOGP("python vm has been inited by other module.");
+		GLOG_TRA("python vm has been inited by other module.");
 		vm->myown = false;
 	}
 	else {
@@ -48,7 +48,7 @@ static void _destroy_vm_python(python_vm_t * vm){
 static int _run_python_file(python_vm_t * vm, const char* file){
 	FILE * fp = fopen(file, "r");
 	if (!fp){
-		LOGP("open file error :%d for:%s", errno, strerror(errno));
+		GLOG_TRA("open file error :%d for:%s", errno, strerror(errno));
 		return -1;
 	}
 	return PyRun_SimpleFileExFlags(fp, file, 1, NULL);
@@ -106,7 +106,7 @@ int				script_vm_run_file(script_vm_t * vm, const char * file){
 		}
 		return _run_python_file(vm->python, filepath.c_str());
 	default:
-		LOGP("not support type:%d", vm->type);
+		GLOG_TRA("not support type:%d", vm->type);
 		return -1;
 	}
 }
@@ -115,7 +115,7 @@ int				script_vm_run_string(script_vm_t * vm, const char * str){
 	case SCRIPT_VM_PYTHON:
 		return _run_python_string(vm->python, str);
 	default:
-		LOGP("not support type:%d", vm->type);
+		GLOG_TRA("not support type:%d", vm->type);
 		return -1;
 	}
 }
