@@ -4,6 +4,3 @@
 [submodule "tools/sdv"]
 	path = tools/sdv
 	url = git@github.com:jj4jj/sdv.git
-[submodule "3rd/pbjson"]
-	path = 3rd/pbjson
-	url = https://github.com/yinqiwen/pbjson.git
