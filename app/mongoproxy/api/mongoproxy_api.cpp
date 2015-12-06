@@ -60,6 +60,7 @@ mongoproxy_init(const char * proxyaddr){
 	dcnode_config_t dconf;
 	dconf.addr.msgq_path = proxyaddr;
 	dconf.addr.msgq_push = true;
+	dconf.name = "mongoproxyapi";
 	dcnode_t * dc = dcnode_create(dconf);
 	if (!dc){
 		cerr << "dcnode create error !" << endl;

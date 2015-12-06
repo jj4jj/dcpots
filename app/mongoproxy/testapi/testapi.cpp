@@ -33,8 +33,10 @@ int main(int argc, char ** argv){
 	tcp.set_zipcode("ffff");
 
 	while (true){
-		sleep(5);
-		mongoproxy_insert(tcp);
+		mongoproxy_poll();
+		if (mongoproxy_insert(tcp)){
+			sleep(1);
+		}
 	}
 
 

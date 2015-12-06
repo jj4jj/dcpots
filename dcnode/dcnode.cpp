@@ -193,8 +193,8 @@ static int _send_to_parent(dcnode_t * dc, dcnode_msg_t & dm) {
 	return -2;
 }
 static  int _fsm_connect_parent(dcnode_t * dc){
-	if (dc->conf.addr.parent_addr.empty())
-	{
+	GLOG_TRA("connect parent for name registering ...");
+	if (dc->conf.addr.parent_addr.empty()){
 		return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_CONNECTED);
 	}
 	dc->fsm_state = dcnode_t::DCNODE_CONNECTING;
@@ -373,7 +373,7 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 	};
 	if (dc->conf.max_live_heart_beat_gap > 0 &&
 		dc->conf.max_live_heart_beat_gap > dc->conf.heart_beat_gap){
-		GLOG_TRA("add children heart-beat timer checker with:%ds", dc->conf.max_live_heart_beat_gap);
+		GLOG_TRA("add heart-beat timer checker with:%ds", dc->conf.max_live_heart_beat_gap);
 		_insert_timer_callback(dc, 1000 * dc->conf.max_live_heart_beat_gap, hb_cheker, true);
 	}
 }
@@ -850,6 +850,8 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz){
 	if (dc->fsm_state != dcnode_t::DCNODE_READY &&
 		!_name_exists(dc, dst)) {
 		//error not ready (name not reg) 
+		GLOG_ERR("dcnode state:%d not ready can't send msg(size:%d) and name not exist !",
+			dc->fsm_state, sz);
 		return -1;
 	}
 	dcnode_msg_t dm;
@@ -860,6 +862,7 @@ int      dcnode_send(dcnode_t* dc, const char * dst, const char * buff, int sz){
 	dm.mutable_ext()->set_unixtime(time(NULL));
 	if (!dm.Pack(dc->send_buffer)){
 		//error
+		GLOG_ERR("dcnode pack msg error !");
 		return -1;
 	}
 	//dc, tcp_src,sockfd, buff, buff_sz, dm.dst()

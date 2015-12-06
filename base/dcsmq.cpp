@@ -73,6 +73,9 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 			flag, conf.max_queue_buff_size);
 		return nullptr;
 	}
+	GLOG_TRA("create sender with key:%s(%d) , prj_id:%d",
+		conf.key.c_str(), key, prj_id[0]);
+
 	key = ftok(conf.key.c_str(), prj_id[1]);
 	int recver = _msgq_create(key, flag, conf.max_queue_buff_size);
 	if (recver < 0){
@@ -81,6 +84,9 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 			flag, conf.max_queue_buff_size);
 		return nullptr;
 	}
+	GLOG_TRA("create recver with key:%s(%d) , prj_id:%d",
+		conf.key.c_str(), key, prj_id[1]);
+
 	dcsmq_t * smq = new dcsmq_t();
 	if (!smq){
 		//memalloc
@@ -145,6 +151,7 @@ int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){
 		}
 		else {
 			msgbuf * buf = (msgbuf*)(smq->recvbuff);
+			GLOG_TRA("recv msgq msg from (type) :%lu size:%zu", buf->mtype, msg_sz);
 			smq->msg_cb(smq, buf->mtype, dcsmq_msg_t(buf->mtext, msg_sz), smq->msg_cb_ud);
 		}
 		++nproc;
