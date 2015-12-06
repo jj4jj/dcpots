@@ -1,5 +1,10 @@
-#projects genearte by cmaketools 
-file(GLOB_RECURSE cur_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *.hpp)
+#projects genearte by cmaketools
+#file(GLOB_RECURSE cur_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *.hpp)
+#file(GLOB cur_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.cpp *.c *.cc *.hpp)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} cur_aSRCS)
+set(cur_SRCS "${cur_aSRCS}")
+aux_source_directory(${PROJECT_SOURCE_DIR}/app/mongoproxy/proto cur_aSRCS)
+set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
 
 #base dir depend on itself and some otherlib
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}

@@ -51,7 +51,7 @@ LIBS = [
             'subdir':'app/mongoproxy/api',
             'includes':['/usr/local/include','3rd'],
             'linkpaths':['/usr/local/lib'],
-			'src_dirs': ['3rd/pbjson'],
+			'src_dirs': ['app/mongoproxy/proto','3rd/pbjson'],
             'linklibs' : [
                 'dagent',
                 'python2.7',
@@ -81,7 +81,7 @@ EXES = [
             'subdir':'app/mongoproxy',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linkpaths':['/usr/local/lib'],
-			'src_dirs': ['proto'],
+			'src_dirs': ['app/mongoproxy/proto'],
             'linklibs' : [
                 'dagent',
                 'python2.7',
