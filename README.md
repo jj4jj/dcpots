@@ -1,7 +1,7 @@
-#D[C]Agent
-D[C]Agent is a distribute system basic comunication componets [agent] solution .
+#DCPots
+DCPots is a distribute system basic comunication componets [agent] container solution .
 
-##DCAgent main feature##
+##DCPots main feature##
 
 - lib for distribute agent client
 - distribute agent server for report bussiness, monitor, machine statistics , python extension etc.
@@ -11,7 +11,7 @@ D[C]Agent is a distribute system basic comunication componets [agent] solution .
 ##Architecture##
 
 - Bussiness Application [reporter , execter , monitor , machine statistics]
-- DCAgent [wrap DCNode with python extension]
+- DCPots [wrap DCNode with python extension]
 - DCNode [local:system mq, remote:tcp]
 
 ```
