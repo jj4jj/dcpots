@@ -474,12 +474,8 @@ static int mongo_test(const char * p){
 		return -1;
 	}
 	using namespace dcsutil;
-	mongo_client_t::command_t cmd;
-	cmd.db = "test";
-	cmd.coll = "test";
-	cmd.cmd = "{\"ping\": 1}";
-	cmd.cmd = "{\"insert\": \"test\",\"documents\" : [{\"execute\":1}]}";
-	cmd.cmd_length = cmd.cmd.length();
+	string cmd = "{\"ping\": 1}";
+	cmd = "{\"insert\": \"test\",\"documents\" : [{\"execute\":1}]}";
 	struct _test_cb {
 		static void cb(void * ud, const mongo_client_t::result_t & rst){
 			int * pn = (int*)ud;
@@ -498,7 +494,7 @@ static int mongo_test(const char * p){
 		}
 		switch (n){
 		case 0:
-			ret = mg.excute(cmd, _test_cb::cb, &n);
+			ret = mg.command("test", "test", _test_cb::cb, &n, 0, cmd.c_str());
 			break;
 		case 1:
 			ret = mg.insert("test", "test", "{\"mongo_insert\":1}", _test_cb::cb, &n);

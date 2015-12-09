@@ -9,16 +9,10 @@ struct mongo_client_config_t {
 };
 
 struct mongo_client_t {
-	struct command_t {
-		string  db;
-		string	coll;
-		string	cmd;
-		size_t	cmd_length;//if 0:strlen()
-		int		flag;
-		command_t() :cmd_length(0),flag(0){}
-	};
 	struct result_t {
 		enum { RESULT_MAX_ERR_MSG_SZ = 128 };
+		string  db;
+		string	coll;
 		string	rst;
 		string	err_msg;
 		int		err_no;
@@ -45,8 +39,8 @@ public:
 public:
 	int				init(const mongo_client_config_t & conf);
 	typedef	 void(*on_result_cb_t)(void * ud,const mongo_client_t::result_t & result);
-	int				excute(const command_t & cmd, on_result_cb_t cb, void * ud);
-
+	int				command(const string & db, const string & coll,
+							on_result_cb_t cb, void * ud, int flag, const char * cmd_fmt, ...);
 	int				insert(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
 	int				update(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
 	int				remove(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);

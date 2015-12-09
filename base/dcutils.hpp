@@ -28,6 +28,7 @@ NS_BEGIN(dcsutil)
 	/////////////////////////////////////////////////////////////////////////////////////////////////
 	size_t			strprintf(std::string & str, const char * format, ...);
 	size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...);
+	size_t			vstrprintf(std::string & str, const char* format, va_list va);
 	void			strrepeat(std::string & str, const char * rep, int repcount);
 
 	/////////////////////////////////////////////////////////////////////////////////////////////////

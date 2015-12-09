@@ -170,35 +170,32 @@ namespace dcsutil {
 		stm.tm_isdst = 0;
 		return mktime(&stm);
 	}
-	size_t			strprintf(std::string & str, const char * format, ...){
-		size_t ncvt = 0;
-		va_list	ap;
-		va_start(ap, format);
-		ncvt = vsnprintf((char *)str.data(), str.capacity(), format, ap);
-		va_end(ap);
+	void			strrepeat(std::string & str, const char * rep, int repcount){
+		while (repcount-- > 0){
+			str.append(rep);
+		}
+	}
+	size_t			vstrprintf(std::string & str, const char* format, va_list ap){
+		size_t ncvt = vsnprintf((char*)str.data(), str.capacity(), format, ap);
 		if (ncvt == str.capacity()){
 			str[ncvt - 1] = 0;
 			--ncvt;
 		}
 		return ncvt;
 	}
-	void			strrepeat(std::string & str, const char * rep, int repcount){
-		while (repcount-- > 0){
-			str.append(rep);
-		}
+	size_t			strprintf(std::string & str, const char * format, ...){
+		va_list	ap;
+		va_start(ap, format);
+		size_t ncvt = vstrprintf(str, format, ap);
+		va_end(ap);
+		return ncvt;
 	}
-
 	size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...){
-		size_t ncvt = 0;
 		str.reserve(max_sz);
 		va_list	ap;
 		va_start(ap, format);
-		ncvt = vsnprintf((char *)str.data(), str.capacity(), format, ap);
+		size_t ncvt = vstrprintf(str, format, ap);
 		va_end(ap);
-		if (ncvt == str.capacity()){
-			str[ncvt - 1] = 0;
-			--ncvt;
-		}
 		return ncvt;
 	}
 

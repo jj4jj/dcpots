@@ -8,6 +8,7 @@ struct dispatch_param {
 	dcsutil::mongo_client_t * mc;
 	dcnode_t *		 dc;
 	string			 src;
+	dcorm::MongoOP	 op;
 };
 
 msg_buffer_t g_msg_buffer;
@@ -16,10 +17,11 @@ static  void
 on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result){
 	dispatch_param * cbp = (dispatch_param*)ud;
 	mongo_msg_t msg;
-	msg.set_db("unknown");
-	msg.set_coll("unknown");
+	msg.set_db(result.db);
+	msg.set_coll(result.coll);
 	msg.mutable_rsp()->set_status(-1);
 	msg.mutable_rsp()->set_error("not implement");
+	msg.set_op(cbp->op);
 	if (!msg.Pack(g_msg_buffer)){
 		GLOG_ERR("pack msg error ! to dst:%s", cbp->src.c_str());
 		return;
@@ -41,16 +43,12 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
 		GLOG_TRA("unpack error msg !");
 		return -1;
 	}
+	cbp->op = msg.op();
 	GLOG_TRA("recv query :%s", msg.Debug());
 	switch (msg.op()){
 	case dcorm::MONGO_OP_CMD:
 	do{
-		dcsutil::mongo_client_t::command_t command;
-		command.db = msg.db();
-		command.coll = msg.coll();
-		command.cmd = msg.req().cmd();
-		command.cmd_length = msg.req().cmd().length();
-		cbp->mc->excute(command, on_mongo_result, cbp);
+		cbp->mc->command(msg.db(), msg.coll(), on_mongo_result, cbp, 0, msg.req().cmd().c_str());
 	} while (false);
 		break;
 	case dcorm::MONGO_OP_FIND:

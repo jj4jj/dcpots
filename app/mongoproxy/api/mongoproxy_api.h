@@ -23,6 +23,7 @@ enum mongoproxy_cmd_t {
 };
 
 typedef	void(*mongoproxy_cmd_cb_t)(mongoproxy_cmd_t cmd, void * ud, const mongoproxy_result_t &);
+
 int		mongoproxy_init(const char * proxyaddr);
 void	mongoproxy_set_cmd_cb(mongoproxy_cmd_cb_t cb, void * cb_ud);
 void	mongoproxy_destroy();
