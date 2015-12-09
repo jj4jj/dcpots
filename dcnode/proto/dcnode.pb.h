@@ -283,18 +283,33 @@ class MsgRegName : public ::google::protobuf::Message {
   inline ::google::protobuf::int32 ret() const;
   inline void set_ret(::google::protobuf::int32 value);
 
+  // optional string error = 3;
+  inline bool has_error() const;
+  inline void clear_error();
+  static const int kErrorFieldNumber = 3;
+  inline const ::std::string& error() const;
+  inline void set_error(const ::std::string& value);
+  inline void set_error(const char* value);
+  inline void set_error(const char* value, size_t size);
+  inline ::std::string* mutable_error();
+  inline ::std::string* release_error();
+  inline void set_allocated_error(::std::string* error);
+
   // @@protoc_insertion_point(class_scope:dcnode.MsgRegName)
  private:
   inline void set_has_session();
   inline void clear_has_session();
   inline void set_has_ret();
   inline void clear_has_ret();
+  inline void set_has_error();
+  inline void clear_has_error();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
   ::google::protobuf::uint64 session_;
+  ::std::string* error_;
   ::google::protobuf::int32 ret_;
   friend void  protobuf_AddDesc_dcnode_2eproto();
   friend void protobuf_AssignDesc_dcnode_2eproto();
@@ -885,6 +900,82 @@ inline void MsgRegName::set_ret(::google::protobuf::int32 value) {
   set_has_ret();
   ret_ = value;
   // @@protoc_insertion_point(field_set:dcnode.MsgRegName.ret)
+}
+
+// optional string error = 3;
+inline bool MsgRegName::has_error() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void MsgRegName::set_has_error() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void MsgRegName::clear_has_error() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void MsgRegName::clear_error() {
+  if (error_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_->clear();
+  }
+  clear_has_error();
+}
+inline const ::std::string& MsgRegName::error() const {
+  // @@protoc_insertion_point(field_get:dcnode.MsgRegName.error)
+  return *error_;
+}
+inline void MsgRegName::set_error(const ::std::string& value) {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  error_->assign(value);
+  // @@protoc_insertion_point(field_set:dcnode.MsgRegName.error)
+}
+inline void MsgRegName::set_error(const char* value) {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  error_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcnode.MsgRegName.error)
+}
+inline void MsgRegName::set_error(const char* value, size_t size) {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  error_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcnode.MsgRegName.error)
+}
+inline ::std::string* MsgRegName::mutable_error() {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcnode.MsgRegName.error)
+  return error_;
+}
+inline ::std::string* MsgRegName::release_error() {
+  clear_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = error_;
+    error_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void MsgRegName::set_allocated_error(::std::string* error) {
+  if (error_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete error_;
+  }
+  if (error) {
+    set_has_error();
+    error_ = error;
+  } else {
+    clear_has_error();
+    error_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcnode.MsgRegName.error)
 }
 
 // -------------------------------------------------------------------

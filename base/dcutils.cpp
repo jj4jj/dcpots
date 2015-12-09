@@ -2,9 +2,6 @@
 #include "logger.h"
 
 namespace dcsutil {
-	uint64_t	time_unixtime_ms(){
-		return time_unixtime_us() / 1000;
-	}
 	uint64_t	time_unixtime_us(){
 		timeval tv;
 		gettimeofday(&tv, NULL);
@@ -118,7 +115,7 @@ namespace dcsutil {
 
 		return pid;
 	}
-	int			split(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty, int maxsplit){
+	int			strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty, int maxsplit){
 		vs.clear();
 		string::size_type beg = 0;
 		string::size_type pos = 0;
@@ -134,7 +131,7 @@ namespace dcsutil {
 				}
 				beg = pos + sep.length();
 			}
-			if ( pos == string::npos || //last one
+			if (pos == string::npos || //last one
 				(maxsplit > 0 && (int)vs.size() + 1 == maxsplit)){
 				if (beg < str.length()){
 					vs.push_back(str.substr(beg));
@@ -198,6 +195,27 @@ namespace dcsutil {
 		va_end(ap);
 		return ncvt;
 	}
+
+
+	//////////////////////////////////////////////////////////////////////////////////////////
+	const char*			strrandom(std::string & randoms, int length, char charbeg, char charend){
+		if (charbeg > charend){std::swap(charbeg, charend);}
+		std::random_device	rd;
+		for (int i = 0; i < length; ++i){
+			randoms.append(1, (char)(rd() % (charend - charbeg + 1) + charbeg));
+		}
+		return randoms.c_str();
+	}
+
+
+
+
+
+
+
+
+
+
 
 }
 

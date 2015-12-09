@@ -284,8 +284,8 @@ int     dagent_init(const dagent_config_t & conf){
 	
 	dcnode_config_t	dcf;
 	dcf.name = conf.name;
-	dcf.heart_beat_gap = conf.heartbeat;
-	dcf.max_live_heart_beat_gap = 3 * conf.heartbeat;
+	dcf.parent_heart_beat_gap = conf.heartbeat;
+	dcf.max_children_heart_beat_expired = 3 * conf.heartbeat;
 	if (!conf.parent.empty()){
 		dcf.addr.parent_addr = conf.parent;
 	}

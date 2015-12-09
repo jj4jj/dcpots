@@ -34,14 +34,14 @@ cmdline_opt_t::parse(const char * pattern){
 	std::vector<std::string>	sopts;
     string pattern_ex = "help:n:h:show the help info:;";
     pattern_ex += pattern;
-	dcsutil::split(pattern_ex.c_str(), ";", sopts);
+	dcsutil::strsplit(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
 	std::vector<std::string>	longoptnames;
 	longoptnames.reserve(128);
 	string short_opt;
 	for (auto & sopt : sopts){
 		std::vector<std::string>	soptv;
-		dcsutil::split(sopt, ":", soptv, false, 5);
+		dcsutil::strsplit(sopt, ":", soptv, false, 5);
 		if (soptv.size() < 4){
 			std::cerr << "error format option:" << sopt << " size:" << soptv.size() << " but < 4" << std::endl;
 			std::cerr << "pattern opt must be format of '[<long name>]:[rno]:[<short name>]:[desc]:[default];' " << std::endl;

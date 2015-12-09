@@ -27,6 +27,7 @@ message MsgRegName
 {
 	optional	uint64			session = 1;//session id , alloc msgpid
 	optional	int32			ret = 2; //apply result 0:ok
+	optional	string			error = 3; //error msg
 }
 message MsgExt
 {

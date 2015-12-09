@@ -5,10 +5,13 @@
 #include "mongoproxy_api.h"
 #include "dcnode/dcnode.h"
 #include "base/msg_buffer.hpp"
+#include "utility/json_doc.hpp"
+#include "utility/util_proto.h"
+#include "google/protobuf/descriptor.h"
 
 using namespace dcorm;
 using namespace std;
-//using namespace dcsutil;
+using namespace dcsutil;
 
 struct mongoproxy_t {
 	string					proxyaddr;
@@ -17,6 +20,33 @@ struct mongoproxy_t {
 	void					*cb_ud;
 	msg_buffer_t			msg_buffer;
 }	MONGO;
+
+static	inline	mongoproxy_cmd_t  mongoop_to_proxycmd(dcorm::MongoOP	op){
+	switch (op){
+	case MONGO_OP_CMD:
+		return MONGO_CMD;
+		break;
+	case MONGO_OP_INSERT:
+		return MONGO_INSERT;
+		break;
+	case MONGO_OP_DELETE:
+		return MONGO_REMOVE;
+		break;
+	case MONGO_OP_FIND:
+		return MONGO_FIND;
+		break;
+	case MONGO_OP_UPDATE:
+		return MONGO_UPDATE;
+		break;
+	case MONGO_OP_COUNT:
+		return MONGO_COUNT;
+		break;
+	default:
+		cerr << "unkown op !" << endl;
+		assert("unknown op !" && false);
+		return MONGO_CMD;
+	}
+}
 static int	
 on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 	mongo_msg_t msg;
@@ -24,35 +54,72 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 		cerr << "msg unpack error !" << endl;
 		return -1;
 	}
+    GLOG_TRA("recv proxy msg:%s", msg.Debug());
 	mongoproxy_result_t result;
 	result.status = msg.rsp().status();
 	result.error = msg.rsp().error().c_str();
-	mongoproxy_cmd_t cmd_type = MONGO_CMD;
+	mongoproxy_cmd_t cmd_type = mongoop_to_proxycmd(msg.op());
+    string msg_type_name = msg.db() + "." + msg.coll();
+    string debug_msg;
 	//json2pb
-	switch (msg.op()){
-	case MONGO_OP_CMD:
-		cmd_type = MONGO_CMD;
-		break;
-	case MONGO_OP_INSERT:
-		cmd_type = MONGO_INSERT;
-		break;
-	case MONGO_OP_DELETE:
-		cmd_type = MONGO_REMOVE;
-		break;
-	case MONGO_OP_FIND:
-		cmd_type = MONGO_FIND;
-		break;
-	case MONGO_OP_UPDATE:
-		cmd_type = MONGO_UPDATE;
-		break;
-	case MONGO_OP_COUNT:
-		cmd_type = MONGO_COUNT;
-		break;
-	default:
-		cerr << "unkown op !" << endl;
-		return -2;
-	}
+	if (0 == msg.rsp().status()){
+		json_doc_t jdc;
+		jdc.loads(msg.rsp().result().c_str());
+		string pretty;
+		GLOG_TRA("cmmongo proxy result: %s", jdc.pretty(pretty));
+		if (cmd_type == MONGO_COUNT){
+			//count
+		}
+        else if (cmd_type == MONGO_INSERT){
+            //ok
+            result.nsuccess = jdc["ok"].GetInt();
+            result.count = jdc["n"].GetInt();
+        }
+		else if (cmd_type == MONGO_FIND){
+            result.nsuccess = jdc["ok"].GetInt();
+            result.count = jdc["n"].GetInt();
+            mongoproxy_result_t::mongo_record_t record;
+            if (result.nsuccess == 1){
+                auto oid = jdc.get("value/_id/$oid");
+                if (!oid || !oid->IsString()){
+                    GLOG_ERR("not found the oid:%s", jdc.pretty(debug_msg));
+                }
+                else {
+                    record.first = oid->GetString();
+                    auto new_msg = protobuf_alloc_msg(msg_type_name);
+                    if (!new_msg){
+                        GLOG_ERR("alloc msg error msg type:%s", msg_type_name.c_str());
+                    }
+                    else {
+                        if (pbjson::jsonobject2pb(jdc.get("value"), new_msg, debug_msg)){
+                            GLOG_ERR("json 2 pb error for:%s", debug_msg.c_str());
+                            protobuf_free_msg(new_msg);
+                            new_msg = nullptr;
+                        }
+                    }
+                    if (new_msg){
+                        record.second = new_msg;
+                        result.results.push_back(record);
+                    }
+                }
+            }
+            else {
+                #warning "todo"
+            }
+            //value
+		}
+		else if (cmd_type == MONGO_UPDATE){
+
+		}
+		else if (cmd_type == MONGO_REMOVE){
+
+		}
+	}	
 	MONGO.cb(cmd_type, MONGO.cb_ud, result);
+    //free msg
+    for (auto & record : result.results){
+        protobuf_free_msg(record.second);
+    }
 	return 0;
 }
 int		
@@ -60,7 +127,10 @@ mongoproxy_init(const char * proxyaddr){
 	dcnode_config_t dconf;
 	dconf.addr.msgq_path = proxyaddr;
 	dconf.addr.msgq_push = true;
-	dconf.name = "mongoproxyapi";
+	dconf.parent_heart_beat_gap = 2;//2s
+	//randomname
+	dconf.name = "mgpapi";
+	strrandom(dconf.name);
 	dcnode_t * dc = dcnode_create(dconf);
 	if (!dc){
 		cerr << "dcnode create error !" << endl;
@@ -70,6 +140,8 @@ mongoproxy_init(const char * proxyaddr){
 	MONGO.msg_buffer.create(MAX_MONGOPROXY_MSG_SIZE);
 	MONGO.dc = dc;
 	MONGO.proxyaddr = proxyaddr;
+    protobuf_logger_init();
+
 	return 0;
 }
 void	

@@ -42,8 +42,8 @@ static dcnode_t* _create(bool ping, const char* name, const char * key,
 	dcf.addr.msgq_push = ping;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = name;
-	dcf.heart_beat_gap = 2;
-	dcf.max_live_heart_beat_gap = 5;
+	dcf.parent_heart_beat_gap = 2;
+	dcf.max_children_heart_beat_expired = 5;
 	dcf.addr.parent_addr = conn_tcp; ;
 	dcf.addr.listen_addr = listen_tcp;
 	if (!dcf.addr.parent_addr.empty()){

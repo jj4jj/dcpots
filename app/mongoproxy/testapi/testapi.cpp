@@ -6,7 +6,8 @@
 #include "utility/util_proto.h"
 
 void test_cb(mongoproxy_cmd_t cmd, void * ud, const mongoproxy_result_t & result){
-	GLOG_TRA("cmd:%d %d %p", cmd, result.status, result.msg);
+	GLOG_TRA("cmd:%d %d count:%d success:%d msg:%d", cmd, result.status,
+        result.count, result.nsuccess, result.results.size());
 }
 int main(int argc, char ** argv){
 	using namespace std;
@@ -31,14 +32,22 @@ int main(int argc, char ** argv){
 	tcp.set_age(20);
 	tcp.set_name("ffff");
 	tcp.set_zipcode("ffff");
-
+	int i = 0;
 	while (true){
 		mongoproxy_poll();
-		if (mongoproxy_insert(tcp)){
-			sleep(1);
+		if (0 == i && !mongoproxy_insert(tcp)){
+			++i;
 		}
+		else if (1 == i && !mongoproxy_find(tcp)){
+			++i;
+		}
+		else if (2 == i && !mongoproxy_count(tcp)){
+			++i;
+		}
+		else if (3 == i && !mongoproxy_remove(tcp)){
+			++i;
+		}
+		sleep(1);
 	}
-
-
 	return 0;
 }

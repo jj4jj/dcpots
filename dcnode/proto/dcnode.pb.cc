@@ -64,9 +64,10 @@ void protobuf_AssignDesc_dcnode_2eproto() {
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(MsgDCNodeRPC));
   MsgRegName_descriptor_ = file->message_type(1);
-  static const int MsgRegName_offsets_[2] = {
+  static const int MsgRegName_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgRegName, session_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgRegName, ret_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MsgRegName, error_),
   };
   MsgRegName_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -163,18 +164,18 @@ void protobuf_AddDesc_dcnode_2eproto() {
     "\n\014dcnode.proto\022\006dcnode\"`\n\014MsgDCNodeRPC\022\014"
     "\n\004name\030\001 \002(\t\022\016\n\006cookie\030\002 \002(\004\022\017\n\007errcode\030"
     "\003 \001(\005\022\017\n\007request\030\004 \001(\014\022\020\n\010response\030\005 \001(\014"
-    "\"*\n\nMsgRegName\022\017\n\007session\030\001 \001(\004\022\013\n\003ret\030\002"
-    " \001(\005\":\n\006MsgExt\022\020\n\010unixtime\030\001 \002(\r\022\036\n\003opt\030"
-    "\003 \001(\0162\021.dcnode.MsgOption\"\302\001\n\tMsgDCNode\022\013"
-    "\n\003src\030\001 \002(\t\022\013\n\003dst\030\002 \001(\t\022#\n\004type\030\003 \002(\0162\025"
-    ".dcnode.MsgDCNodeType\022\020\n\010msg_data\030\004 \001(\014\022"
-    "\033\n\003ext\030\005 \002(\0132\016.dcnode.MsgExt\022$\n\010reg_name"
-    "\030\006 \001(\0132\022.dcnode.MsgRegName\022!\n\003rpc\030\007 \001(\0132"
-    "\024.dcnode.MsgDCNodeRPC*P\n\rMsgDCNodeType\022\020"
-    "\n\014MSG_REG_NAME\020\001\022\022\n\016MSG_HEART_BEAT\020\002\022\013\n\007"
-    "MSG_RPC\020\003\022\014\n\010MSG_DATA\020\004*\?\n\tMsgOption\022\017\n\013"
-    "MSG_OPT_REQ\020\001\022\017\n\013MSG_OPT_RSP\020\002\022\020\n\014MSG_OP"
-    "T_PUSH\020\003", 568);
+    "\"9\n\nMsgRegName\022\017\n\007session\030\001 \001(\004\022\013\n\003ret\030\002"
+    " \001(\005\022\r\n\005error\030\003 \001(\t\":\n\006MsgExt\022\020\n\010unixtim"
+    "e\030\001 \002(\r\022\036\n\003opt\030\003 \001(\0162\021.dcnode.MsgOption\""
+    "\302\001\n\tMsgDCNode\022\013\n\003src\030\001 \002(\t\022\013\n\003dst\030\002 \001(\t\022"
+    "#\n\004type\030\003 \002(\0162\025.dcnode.MsgDCNodeType\022\020\n\010"
+    "msg_data\030\004 \001(\014\022\033\n\003ext\030\005 \002(\0132\016.dcnode.Msg"
+    "Ext\022$\n\010reg_name\030\006 \001(\0132\022.dcnode.MsgRegNam"
+    "e\022!\n\003rpc\030\007 \001(\0132\024.dcnode.MsgDCNodeRPC*P\n\r"
+    "MsgDCNodeType\022\020\n\014MSG_REG_NAME\020\001\022\022\n\016MSG_H"
+    "EART_BEAT\020\002\022\013\n\007MSG_RPC\020\003\022\014\n\010MSG_DATA\020\004*\?"
+    "\n\tMsgOption\022\017\n\013MSG_OPT_REQ\020\001\022\017\n\013MSG_OPT_"
+    "RSP\020\002\022\020\n\014MSG_OPT_PUSH\020\003", 583);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "dcnode.proto", &protobuf_RegisterTypes);
   MsgDCNodeRPC::default_instance_ = new MsgDCNodeRPC();
@@ -649,6 +650,7 @@ void MsgDCNodeRPC::Swap(MsgDCNodeRPC* other) {
 #ifndef _MSC_VER
 const int MsgRegName::kSessionFieldNumber;
 const int MsgRegName::kRetFieldNumber;
+const int MsgRegName::kErrorFieldNumber;
 #endif  // !_MSC_VER
 
 MsgRegName::MsgRegName()
@@ -668,9 +670,11 @@ MsgRegName::MsgRegName(const MsgRegName& from)
 }
 
 void MsgRegName::SharedCtor() {
+  ::google::protobuf::internal::GetEmptyString();
   _cached_size_ = 0;
   session_ = GOOGLE_ULONGLONG(0);
   ret_ = 0;
+  error_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -680,6 +684,9 @@ MsgRegName::~MsgRegName() {
 }
 
 void MsgRegName::SharedDtor() {
+  if (error_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete error_;
+  }
   if (this != default_instance_) {
   }
 }
@@ -706,21 +713,15 @@ MsgRegName* MsgRegName::New() const {
 }
 
 void MsgRegName::Clear() {
-#define OFFSET_OF_FIELD_(f) (reinterpret_cast<char*>(      \
-  &reinterpret_cast<MsgRegName*>(16)->f) - \
-   reinterpret_cast<char*>(16))
-
-#define ZR_(first, last) do {                              \
-    size_t f = OFFSET_OF_FIELD_(first);                    \
-    size_t n = OFFSET_OF_FIELD_(last) - f + sizeof(last);  \
-    ::memset(&first, 0, n);                                \
-  } while (0)
-
-  ZR_(session_, ret_);
-
-#undef OFFSET_OF_FIELD_
-#undef ZR_
-
+  if (_has_bits_[0 / 32] & 7) {
+    session_ = GOOGLE_ULONGLONG(0);
+    ret_ = 0;
+    if (has_error()) {
+      if (error_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        error_->clear();
+      }
+    }
+  }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
   mutable_unknown_fields()->Clear();
 }
@@ -757,6 +758,23 @@ bool MsgRegName::MergePartialFromCodedStream(
                    ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
                  input, &ret_)));
           set_has_ret();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(26)) goto parse_error;
+        break;
+      }
+
+      // optional string error = 3;
+      case 3: {
+        if (tag == 26) {
+         parse_error:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->mutable_error()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->error().data(), this->error().length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "error");
         } else {
           goto handle_unusual;
         }
@@ -799,6 +817,16 @@ void MsgRegName::SerializeWithCachedSizes(
     ::google::protobuf::internal::WireFormatLite::WriteInt32(2, this->ret(), output);
   }
 
+  // optional string error = 3;
+  if (has_error()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->error().data(), this->error().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "error");
+    ::google::protobuf::internal::WireFormatLite::WriteStringMaybeAliased(
+      3, this->error(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -817,6 +845,17 @@ void MsgRegName::SerializeWithCachedSizes(
   // optional int32 ret = 2;
   if (has_ret()) {
     target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(2, this->ret(), target);
+  }
+
+  // optional string error = 3;
+  if (has_error()) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->error().data(), this->error().length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "error");
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteStringToArray(
+        3, this->error(), target);
   }
 
   if (!unknown_fields().empty()) {
@@ -843,6 +882,13 @@ int MsgRegName::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::Int32Size(
           this->ret());
+    }
+
+    // optional string error = 3;
+    if (has_error()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::StringSize(
+          this->error());
     }
 
   }
@@ -878,6 +924,9 @@ void MsgRegName::MergeFrom(const MsgRegName& from) {
     if (from.has_ret()) {
       set_ret(from.ret());
     }
+    if (from.has_error()) {
+      set_error(from.error());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -903,6 +952,7 @@ void MsgRegName::Swap(MsgRegName* other) {
   if (other != this) {
     std::swap(session_, other->session_);
     std::swap(ret_, other->ret_);
+    std::swap(error_, other->error_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

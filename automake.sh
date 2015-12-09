@@ -5,7 +5,7 @@ build()
     make -C dcnode/proto/
     #cd -
     make -C dagent/proto/
-    cd build && cmake ../ && make
+    cd build && cmake ../ && make -j 6
     cd -
 }
 

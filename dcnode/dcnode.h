@@ -31,7 +31,6 @@ NODE.is_not_ready => dcnode_send maybe error [if dst is knowned].
 
 */
 #include "base/stdinc.h"
-#include "base/logger.h"
 #include "base/msg_buffer.hpp"
 
 struct dcnode_t;
@@ -50,22 +49,22 @@ struct dcnode_config_t
 {
     dcnode_addr_t  addr; //parent tcp and msgq
     int max_channel_buff_size;//
-    int heart_beat_gap;//seconds
+    int parent_heart_beat_gap;//seconds
     int max_register_children;//max children
 	int max_msg_expired_time; //expired time s
-	int max_live_heart_beat_gap; //expire time for close -> 5*max_expire
+	int max_children_heart_beat_expired; //expire time for close -> 5*max_expire
 	string	name;
 	dcnode_config_t()
 	{
 		name = "noname";
 		max_register_children = DCNODE_MAX_LOCAL_NODES_NUM;
-		heart_beat_gap = 30;
+		parent_heart_beat_gap = 30;
+		max_children_heart_beat_expired = 3 * parent_heart_beat_gap; //children max hb timer
 		max_channel_buff_size = 1024 * 1024;
 		addr.listen_addr = "";
 		addr.parent_addr = "";
 		addr.msgq_path = "";
 		max_msg_expired_time = 60*30;	//half an hour
-		max_live_heart_beat_gap = 3 * heart_beat_gap;
 	}
 };
 
@@ -80,7 +79,8 @@ uint64_t  dcnode_timer_add(dcnode_t * ,int delayms , dcnode_timer_callback_t cb,
 void	  dcnode_timer_cancel(dcnode_t *, uint64_t cookie);
 
 void      dcnode_set_dispatcher(dcnode_t*, dcnode_dispatcher_t, void* ud);
-int       dcnode_send(dcnode_t*, const char * dst, const char * buff, int sz);
+int       dcnode_send(dcnode_t*, const std::string & dst, const char * buff, int sz);
+int       dcnode_reply(dcnode_t*, const char * buff, int sz); //reply current processing msg
 
 int		  dcnode_ready(dcnode_t *);
 void	  dcnode_abort(dcnode_t *);

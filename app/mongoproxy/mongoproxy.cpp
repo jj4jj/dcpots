@@ -1,9 +1,10 @@
-
 #include "utility/util_mongo.h"
 #include "utility/util_proto.h"
 #include "base/cmdline_opt.h"
 #include "dcnode/dcnode.h"
 #include "mongoproxy_msg.h"
+#include "base/logger.h"
+
 struct dispatch_param {
 	dcsutil::mongo_client_t * mc;
 	dcnode_t *		 dc;
@@ -17,11 +18,19 @@ static  void
 on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result){
 	dispatch_param * cbp = (dispatch_param*)ud;
 	mongo_msg_t msg;
+	msg.set_op(cbp->op);
 	msg.set_db(result.db);
 	msg.set_coll(result.coll);
-	msg.mutable_rsp()->set_status(-1);
-	msg.mutable_rsp()->set_error("not implement");
-	msg.set_op(cbp->op);
+
+	dcorm::MongoOPRsp & rsp = *msg.mutable_rsp();
+	if (result.err_no){
+		rsp.set_status(result.err_no);
+		rsp.set_error(result.err_msg);
+	}
+	else {
+		rsp.set_status(0);
+		rsp.set_result(result.rst);
+	}
 	if (!msg.Pack(g_msg_buffer)){
 		GLOG_ERR("pack msg error ! to dst:%s", cbp->src.c_str());
 		return;
@@ -113,6 +122,8 @@ int main(int argc, char * argv[]){
 	//dconf.addr.listen_addr = listen;
 	dconf.addr.msgq_path = listen;
 	dconf.addr.msgq_push = false;
+	dconf.max_children_heart_beat_expired = 5;
+	dconf.max_register_children = 64;
 	dcnode_t * dcn = dcnode_create(dconf);
 	if (!dcn){
 		cerr << "dcnode msgq init error !" << endl;

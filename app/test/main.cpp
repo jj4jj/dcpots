@@ -150,8 +150,8 @@ int test_node(const char * p)
 	dcf.addr.msgq_push = true;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = "leaf";
-	dcf.heart_beat_gap = 10;
-	dcf.max_live_heart_beat_gap = 20;
+	dcf.parent_heart_beat_gap = 10;
+	dcf.max_children_heart_beat_expired = 20;
 	int ltest = 0;
 	logger_config_t loger_conf;
 	global_logger_init(loger_conf);
@@ -176,8 +176,8 @@ int test_node(const char * p)
 			dcf.addr.msgq_path = "";
 			dcf.name = "test";
 			dcf.addr.listen_addr = "";
-			dcf.heart_beat_gap = 0;
-			dcf.max_live_heart_beat_gap = 0;
+			dcf.parent_heart_beat_gap = 0;
+			dcf.max_children_heart_beat_expired = 0;
 			ltest = 3;
 		}
 		else if (strcmp(p, "l4") == 0){
@@ -399,8 +399,8 @@ static int daemon_test(const char * arg){
 	//dcsutil::daemonlize(0);
 	std::vector<std::string> vs;
 	std::vector<std::string> vss;
-	int n = dcsutil::split("..b.abc..def..", ".", vs);
-	int m = dcsutil::split("ffffdccvf", ".", vss);
+	int n = dcsutil::strsplit("..b.abc..def..", ".", vs);
+	int m = dcsutil::strsplit("ffffdccvf", ".", vss);
 	GLOG_TRA("split test ret:%d [0]:%s [1]:%s [2]:%s", n, vs[0].c_str(), vs[1].c_str(), vs[2].c_str());
 	GLOG_TRA("split test ret:%d [0]:%s", m, vss[0].c_str());
 	std::string str;

@@ -1,5 +1,5 @@
 #pragma  once
-
+#include "base/stdinc.h"
 
 namespace google {
 	namespace protobuf {
@@ -8,9 +8,12 @@ namespace google {
 }
 
 struct mongoproxy_result_t {
-	int status;
-	int count; //for count
-	const google::protobuf::Message * msg; //result msg
+	int status; //0:ok
+    int nsuccess; //.ok
+	int count; //for count , .n
+    //id, msg
+    typedef std::pair<string, google::protobuf::Message * >  mongo_record_t;
+    std::vector<mongo_record_t> results; //result msg
 	const char * error; //error
 };
 enum mongoproxy_cmd_t {
