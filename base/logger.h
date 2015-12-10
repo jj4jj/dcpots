@@ -57,14 +57,26 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 #ifndef LOGR
 #define RAW_LOG_MSG_FORMAT_PREFIX	"%lu.%lu:%d|%s|"
 #define RAW_LOG_MSG_FORMAT_VALUES	err_tv_.tv_sec,err_tv_.tv_usec,getpid()
-#define LOGR(log_lv_, format,...)	\
-do{\
-	if (global_logger() && (log_lv_) >= logger_level()){\
-		timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-		fprintf(stderr, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
-	}\
+#define LOGR(log_lv_, format,...)	do{\
+if ((log_lv_) >= logger_level((nullptr))){\
+    timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
+    logger_write((nullptr), (log_lv_), RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+}\
+else {\
+    timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
+    fprintf(stderr, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+}} while (0)
+#endif
+
+
+//log to str
+#ifndef LOGRSTR
+#define LOGRSTR(str, tag, format,...)	do{\
+    timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
+    dcsutil::strprintf((str), RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, (tag), ##__VA_ARGS__); \
 } while (0)
 #endif
+
 
 //general log prefix and values
 #define LOG_MSG_FORMAT_PREFIX	"%s.%lu:%d|%s:%d|%s|"

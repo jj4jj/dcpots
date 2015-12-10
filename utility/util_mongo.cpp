@@ -16,12 +16,24 @@ NS_BEGIN(dcsutil)
 
 
 struct mongo_command_t {
-	string  db;
-	string	coll;
-	string	cmd;
-	size_t  length;
-	int		flag;
-	mongo_command_t():length(0), flag(0){}
+    string  db;
+    string	coll;
+    string	cmd;
+    size_t  length;
+    int		flag;
+    mongo_command_t() :length(0), flag(0){}
+    mongo_command_t(const mongo_command_t & rhs){
+        this->operator=(rhs);
+    }
+    mongo_command_t & operator = (const mongo_command_t & rhs){
+        if (this != &rhs){
+            this->db.swap(const_cast<string&>(rhs.db));
+            this->coll.swap(const_cast<string&>(rhs.coll));
+            this->cmd.assign(rhs.cmd.data(), rhs.cmd.length());
+            //this->cmd.swap(const_cast<string&>(rhs.cmd));
+            this->flag = rhs.flag;
+        }
+    }
 };
 
 struct mongo_request_t {
@@ -53,8 +65,8 @@ struct mongo_client_impl_t {
 };
 
 #define _THIS_HANDLE	((mongo_client_impl_t*)(handle))
-#define LOG_S_E(str, format, ...)	LOGSTR((str), "mongo", " [%d@%d (%s)] " format, error.code, error.domain, error.message, ##__VA_ARGS__)
-#define LOG_S(str, format, ...)		LOGSTR((str), "mongo", format, ##__VA_ARGS__)
+#define LOG_S_E(str, format, ...)	LOGRSTR((str), "mongo", " [%d@%d (%s)] " format, error.code, error.domain, error.message, ##__VA_ARGS__)
+#define LOG_S(str, format, ...)		LOGRSTR((str), "mongo", format, ##__VA_ARGS__)
 
 mongo_client_t::mongo_client_t(){
 	handle = new mongo_client_impl_t();
@@ -105,6 +117,7 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	if (ret) {
 		char *str = bson_as_json(&reply, NULL);
 		rsp.result.rst = str;
+        GLOG_TRA("rsp result:%s", str);
 		bson_free(str);
 	}
 	else {
@@ -133,7 +146,7 @@ _worker(void * data){
 		else {
 			//real command excute
 			_real_excute_command(client, rsp, req);
-			mci->result_queue.push(rsp);
+            mci->result_queue.push(rsp);
 		}
 		//push result
 	} while (!mci->stop);
@@ -283,7 +296,7 @@ mongo_client_t::poll(int max_proc, int timeout_ms){//same thread cb call back
 	mongo_response_t	rsp;
 	for (nproc = 0; nproc < max_proc && !_THIS_HANDLE->result_queue.empty(); ++nproc){
 		if (!_THIS_HANDLE->result_queue.pop(rsp, timeout_ms)){
-			rsp.cb(rsp.cb_ud, rsp.result);
+            rsp.cb(rsp.cb_ud, rsp.result);
 		}
 	}
 	return nproc;

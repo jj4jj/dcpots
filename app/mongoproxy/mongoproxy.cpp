@@ -56,9 +56,7 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
 	GLOG_TRA("recv query :%s", msg.Debug());
 	switch (msg.op()){
 	case dcorm::MONGO_OP_CMD:
-	do{
 		cbp->mc->command(msg.db(), msg.coll(), on_mongo_result, cbp, 0, msg.req().cmd().c_str());
-	} while (false);
 		break;
 	case dcorm::MONGO_OP_FIND:
 		cbp->mc->find(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp);

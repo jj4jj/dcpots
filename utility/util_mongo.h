@@ -19,6 +19,7 @@ struct mongo_client_t {
 		result_t() :err_no(0){
 			err_msg.reserve(RESULT_MAX_ERR_MSG_SZ);
 		}
+#if 0
 		result_t(const result_t & rhs){
 			this->operator = (rhs);
 		}
@@ -27,9 +28,12 @@ struct mongo_client_t {
 				rst.swap(const_cast<string&>(rhs.rst));
 				err_no = rhs.err_no;
 				err_msg.assign(rhs.err_msg.data(), rhs.err_msg.capacity());
-			}
+                db.swap(const_cast<string&>(rhs.db));
+                coll.swap(const_cast<string&>(rhs.coll));
+            }
 			return *this;
 		}
+#endif
 	};
 private:
 	void	*		handle;

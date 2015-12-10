@@ -8,13 +8,19 @@ namespace google {
 }
 
 struct mongoproxy_result_t {
-	int status; //0:ok
+    int status; //0:ok
     int nsuccess; //.ok
-	int count; //for count , .n
+    int count; //for count , .n
     //id, msg
     typedef std::pair<string, google::protobuf::Message * >  mongo_record_t;
     std::vector<mongo_record_t> results; //result msg
-	const char * error; //error
+    const char * error; //error
+    mongoproxy_result_t(){
+        status = 0;
+        nsuccess = 0;
+        count = 0;
+        error = nullptr;
+    }
 };
 enum mongoproxy_cmd_t {
 	MONGO_CMD = 0,

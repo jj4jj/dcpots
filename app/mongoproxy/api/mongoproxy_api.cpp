@@ -65,8 +65,7 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 	if (0 == msg.rsp().status()){
 		json_doc_t jdc;
 		jdc.loads(msg.rsp().result().c_str());
-		string pretty;
-		GLOG_TRA("cmmongo proxy result: %s", jdc.pretty(pretty));
+		GLOG_TRA("cmmongo proxy result: %s", jdc.pretty(debug_msg));
 		if (cmd_type == MONGO_COUNT){
 			//count
 		}
@@ -80,7 +79,7 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
             result.count = jdc["n"].GetInt();
             mongoproxy_result_t::mongo_record_t record;
             if (result.nsuccess == 1){
-                auto oid = jdc.get("value/_id/$oid");
+                auto oid = jdc.get("/value/_id/$oid");
                 if (!oid || !oid->IsString()){
                     GLOG_ERR("not found the oid:%s", jdc.pretty(debug_msg));
                 }
@@ -108,6 +107,10 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
             }
             //value
 		}
+        else if (cmd_type == MONGO_COUNT){
+            result.nsuccess = jdc["ok"].GetInt();
+            result.count = jdc["n"].GetInt();
+        }
 		else if (cmd_type == MONGO_UPDATE){
 
 		}
