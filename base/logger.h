@@ -85,7 +85,7 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 
 
 //general log prefix and values
-#define LOG_MSG_FORMAT_PREFIX	"%s.%lu|%d@%d|%s:%d|%s|"
+#define LOG_MSG_FORMAT_PREFIX	"%s.%lu|%ld@%d|%s:%d|%s|"
 #define LOG_MSG_FORMAT_VALUES	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec),err_tv_.tv_usec,gettid(),getpid(),__FUNCTION__,__LINE__
 
 //log to str
