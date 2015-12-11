@@ -25,7 +25,6 @@ on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result, con
     if (cmd.cb_size > 0){
         msg.set_cb(cmd.cb_data.data(), cmd.cb_size);
     }
-
 	dcorm::MongoOPRsp & rsp = *msg.mutable_rsp();
 	if (result.err_no){
 		rsp.set_status(result.err_no);
@@ -35,16 +34,16 @@ on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result, con
 		rsp.set_status(0);
 		rsp.set_result(result.rst);
 	}
-	if (!msg.Pack(g_msg_buffer)){
+    GLOG_TRA("send msg to:%s msg:%s", cbp->src.c_str(), msg.Debug());
+    if (!msg.Pack(g_msg_buffer)){
 		GLOG_ERR("pack msg error ! to dst:%s", cbp->src.c_str());
 		return;
 	}
-	int ret = dcnode_send(cbp->dc, cbp->src.c_str(), g_msg_buffer.buffer, g_msg_buffer.valid_size);
+    int ret = dcnode_send(cbp->dc, cbp->src.c_str(), g_msg_buffer.buffer, g_msg_buffer.valid_size);
 	if (ret){
 		GLOG_ERR("dcnode send to :%s error !", cbp->src.c_str());
 		return;
 	}
-	GLOG_TRA("send msg to:%s msg:%s", cbp->src.c_str(), msg.Debug());
 }
 
 static int 
@@ -64,13 +63,13 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
 		break;
 	case dcorm::MONGO_OP_FIND:
         do{
-            //------------------------------------------
+            //----------------------------------------------------------------------------
             string projection;
             std::vector<string>     projects;
             std::transform(msg.req().find().projection().begin(), msg.req().find().projection().end(),
                 projects.begin(), [](const string & v){return "\"" + v + "\": 1"; });
             dcsutil::strjoin(projection, ",", projects);
-            //-------------------------------------------
+            //----------------------------------------------------------------------------
             string sort;
             std::vector<string>     sorts;
             std::transform(msg.req().find().sort().begin(), msg.req().find().sort().end(),
@@ -88,7 +87,7 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
         do{
             string updates = "{ \"q\": ";;
             updates.append(msg.req().q());
-            updates.append("}, { \"u\":");
+            updates.append(", \"u\":");
             updates.append(msg.req().u());
             updates.append("}");
             cbp->mc->update(msg.db(),msg.coll(), updates, on_mongo_result, cbp);

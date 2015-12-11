@@ -33,20 +33,31 @@ int main(int argc, char ** argv){
 	tcp.set_name("ffff");
 	tcp.set_zipcode("ffff");
 	int i = 0;
-	while (true){
-		mongoproxy_poll();
-		if (0 == i && !mongoproxy_insert(tcp)){
-			++i;
-		}
-		else if (1 == i && !mongoproxy_find(tcp)){
-			++i;
-		}
-		else if (2 == i && !mongoproxy_count(tcp)){
-			++i;
-		}
-		else if (3 == i && !mongoproxy_remove(tcp)){
-			++i;
-		}
+    while (true){
+        mongoproxy_poll();
+        if (0 == i && !mongoproxy_insert(tcp)){
+            ++i;
+        }
+        else if (1 == i && !mongoproxy_find(tcp)){
+            ++i;
+        }
+        /*
+        else if (2 == i && !mongoproxy_count(tcp)){
+        ++i;
+        }
+        else if (3 == i ){//&& !mongoproxy_remove(tcp)){
+        ++i;
+        }
+        else if (4 == i){
+        const char * pcb = "hello,world!this is cb data";
+        int cblen = strlen(pcb);
+        tcp.set_zipcode("updated!!");
+        if (!mongoproxy_update(tcp, "name", pcb, cblen)){
+        ++i;
+        }
+        }
+        */
+
 		sleep(1);
 	}
 	return 0;

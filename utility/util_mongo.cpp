@@ -212,7 +212,8 @@ mongo_client_t::command(const string & db, const string & coll,
 	va_start(ap, cmd_fmt);
     req.cmd.cmd_length = vstrprintf(req.cmd.cmd_data, cmd_fmt, ap);
 	va_end(ap);
-	////////////////////////////////////////////////////////
+    GLOG_TRA("mongo client excute command:(%s)", req.cmd.cmd_data.c_str());
+	/////////////////////////////////////////////////////////////////////////////////////////
 	if (_THIS_HANDLE->client){
         process_one(_THIS_HANDLE->client, _THIS_HANDLE, reqid);
     }
@@ -255,7 +256,7 @@ mongo_client_t::find(const string & db, const string & coll, const string & json
     }
     GLOG_TRA("find ex:%s skip:%d limit:%d", ex.c_str(), skip, limit);
 	return command(db, coll, cb, ud, 0,
-		"{\"findAndModify\": \"%s\",\"query\": %s, \"update\": false %s}",
+		"{\"find\": \"%s\",\"query\": %s %s}",
 		coll.c_str(), jsonmsg.c_str(), ex.c_str());
 }
 int				

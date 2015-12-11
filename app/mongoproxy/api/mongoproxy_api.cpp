@@ -65,7 +65,7 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 	if (0 == msg.rsp().status()){
 		json_doc_t jdc;
 		jdc.loads(msg.rsp().result().c_str());
-		GLOG_TRA("cmmongo proxy result: %s", jdc.pretty(debug_msg));
+		GLOG_TRA("cmmongo proxy result: (%s)", jdc.dumps(debug_msg));
         result.ok = jdc["ok"].GetInt();
         if (cmd_type == MONGO_INSERT){
             result.n = jdc["n"].GetInt();
@@ -228,6 +228,7 @@ int		mongoproxy_update(const google::protobuf::Message & msg, const std::string 
         return -1;
     }
     google::protobuf::Message * tmpmsg = msg.New();
+    tmpmsg->CopyFrom(msg);
     auto reflect = tmpmsg->GetReflection();
     auto desc = tmpmsg->GetDescriptor();
     for (int i = 0; i < desc->field_count(); ++i){
@@ -240,7 +241,6 @@ int		mongoproxy_update(const google::protobuf::Message & msg, const std::string 
     string fieldsquery;
     pbjson::pb2json(tmpmsg, fieldsquery);
     delete tmpmsg;
-
     requpdate.set_q(fieldsquery);
     return _mongoproxy_cmd(MONGO_OP_UPDATE, msg, true, &requpdate, cb_data, cb_size);
 }
