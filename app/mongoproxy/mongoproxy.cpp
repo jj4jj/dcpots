@@ -5,6 +5,7 @@
 #include "mongoproxy_msg.h"
 #include "base/logger.h"
 
+
 struct dispatch_param {
 	dcsutil::mongo_client_t * mc;
 	dcnode_t *		 dc;
@@ -15,12 +16,15 @@ struct dispatch_param {
 msg_buffer_t g_msg_buffer;
 
 static  void 
-on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result){
+on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result, const dcsutil::mongo_client_t::command_t & cmd){
 	dispatch_param * cbp = (dispatch_param*)ud;
 	mongo_msg_t msg;
 	msg.set_op(cbp->op);
-	msg.set_db(result.db);
-	msg.set_coll(result.coll);
+	msg.set_db(cmd.db);
+    msg.set_coll(cmd.coll);
+    if (cmd.cb_size > 0){
+        msg.set_cb(cmd.cb_data.data(), cmd.cb_size);
+    }
 
 	dcorm::MongoOPRsp & rsp = *msg.mutable_rsp();
 	if (result.err_no){
@@ -59,16 +63,45 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
 		cbp->mc->command(msg.db(), msg.coll(), on_mongo_result, cbp, 0, msg.req().cmd().c_str());
 		break;
 	case dcorm::MONGO_OP_FIND:
-		cbp->mc->find(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp);
+        do{
+            //------------------------------------------
+            string projection;
+            std::vector<string>     projects;
+            std::transform(msg.req().find().projection().begin(), msg.req().find().projection().end(),
+                projects.begin(), [](const string & v){return "\"" + v + "\": 1"; });
+            dcsutil::strjoin(projection, ",", projects);
+            //-------------------------------------------
+            string sort;
+            std::vector<string>     sorts;
+            std::transform(msg.req().find().sort().begin(), msg.req().find().sort().end(),
+                sorts.begin(), [](const string & v){return "\"" + v + "\": 1"; });
+            dcsutil::strjoin(sort, ",", sorts);
+            //----------------------------------------------------------------------------
+            cbp->mc->find(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp,
+                projection.c_str(), sort.c_str(), msg.req().find().skip(), msg.req().find().limit());
+        } while (false);
 		break;
 	case dcorm::MONGO_OP_INSERT:
 		cbp->mc->insert(msg.db(), msg.coll(), msg.req().u(), on_mongo_result, cbp);
 		break;
 	case dcorm::MONGO_OP_UPDATE:
-		cbp->mc->update(msg.db(), msg.coll(), msg.req().u(), on_mongo_result, cbp);
+        do{
+            string updates = "{ \"q\": ";;
+            updates.append(msg.req().q());
+            updates.append("}, { \"u\":");
+            updates.append(msg.req().u());
+            updates.append("}");
+            cbp->mc->update(msg.db(),msg.coll(), updates, on_mongo_result, cbp);
+        } while (false);
 		break;
 	case dcorm::MONGO_OP_DELETE:
-		cbp->mc->remove(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp);
+        do {
+            string deletes = "{ \"q\":";
+            deletes.append(msg.req().q());
+            deletes.append("},{ \"limit\": ");
+            deletes.append(std::to_string(msg.req().remove().limit()) + "}");
+            cbp->mc->remove(msg.db(), msg.coll(), deletes, on_mongo_result, cbp);
+        } while (false);
 		break;
 	case dcorm::MONGO_OP_COUNT:
 		cbp->mc->count(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp);

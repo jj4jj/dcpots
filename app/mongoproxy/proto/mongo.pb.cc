@@ -20,6 +20,12 @@ namespace dcorm {
 
 namespace {
 
+const ::google::protobuf::Descriptor* MongoFindEx_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  MongoFindEx_reflection_ = NULL;
+const ::google::protobuf::Descriptor* MongoRemoveEx_descriptor_ = NULL;
+const ::google::protobuf::internal::GeneratedMessageReflection*
+  MongoRemoveEx_reflection_ = NULL;
 const ::google::protobuf::Descriptor* MongoOPReq_descriptor_ = NULL;
 const ::google::protobuf::internal::GeneratedMessageReflection*
   MongoOPReq_reflection_ = NULL;
@@ -40,11 +46,46 @@ void protobuf_AssignDesc_mongo_2eproto() {
     ::google::protobuf::DescriptorPool::generated_pool()->FindFileByName(
       "mongo.proto");
   GOOGLE_CHECK(file != NULL);
-  MongoOPReq_descriptor_ = file->message_type(0);
-  static const int MongoOPReq_offsets_[3] = {
+  MongoFindEx_descriptor_ = file->message_type(0);
+  static const int MongoFindEx_offsets_[4] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoFindEx, sort_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoFindEx, projection_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoFindEx, skip_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoFindEx, limit_),
+  };
+  MongoFindEx_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      MongoFindEx_descriptor_,
+      MongoFindEx::default_instance_,
+      MongoFindEx_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoFindEx, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoFindEx, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(MongoFindEx));
+  MongoRemoveEx_descriptor_ = file->message_type(1);
+  static const int MongoRemoveEx_offsets_[1] = {
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoRemoveEx, limit_),
+  };
+  MongoRemoveEx_reflection_ =
+    new ::google::protobuf::internal::GeneratedMessageReflection(
+      MongoRemoveEx_descriptor_,
+      MongoRemoveEx::default_instance_,
+      MongoRemoveEx_offsets_,
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoRemoveEx, _has_bits_[0]),
+      GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoRemoveEx, _unknown_fields_),
+      -1,
+      ::google::protobuf::DescriptorPool::generated_pool(),
+      ::google::protobuf::MessageFactory::generated_factory(),
+      sizeof(MongoRemoveEx));
+  MongoOPReq_descriptor_ = file->message_type(2);
+  static const int MongoOPReq_offsets_[5] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoOPReq, q_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoOPReq, u_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoOPReq, cmd_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoOPReq, find_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoOPReq, remove_),
   };
   MongoOPReq_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -57,7 +98,7 @@ void protobuf_AssignDesc_mongo_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(MongoOPReq));
-  MongoOPRsp_descriptor_ = file->message_type(1);
+  MongoOPRsp_descriptor_ = file->message_type(3);
   static const int MongoOPRsp_offsets_[3] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoOPRsp, status_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoOPRsp, result_),
@@ -74,13 +115,14 @@ void protobuf_AssignDesc_mongo_2eproto() {
       ::google::protobuf::DescriptorPool::generated_pool(),
       ::google::protobuf::MessageFactory::generated_factory(),
       sizeof(MongoOPRsp));
-  MongoORM_descriptor_ = file->message_type(2);
-  static const int MongoORM_offsets_[5] = {
+  MongoORM_descriptor_ = file->message_type(4);
+  static const int MongoORM_offsets_[6] = {
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoORM, op_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoORM, db_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoORM, coll_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoORM, req_),
     GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoORM, rsp_),
+    GOOGLE_PROTOBUF_GENERATED_MESSAGE_FIELD_OFFSET(MongoORM, cb_),
   };
   MongoORM_reflection_ =
     new ::google::protobuf::internal::GeneratedMessageReflection(
@@ -107,6 +149,10 @@ inline void protobuf_AssignDescriptorsOnce() {
 void protobuf_RegisterTypes(const ::std::string&) {
   protobuf_AssignDescriptorsOnce();
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    MongoFindEx_descriptor_, &MongoFindEx::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
+    MongoRemoveEx_descriptor_, &MongoRemoveEx::default_instance());
+  ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     MongoOPReq_descriptor_, &MongoOPReq::default_instance());
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedMessage(
     MongoOPRsp_descriptor_, &MongoOPRsp::default_instance());
@@ -117,6 +163,10 @@ void protobuf_RegisterTypes(const ::std::string&) {
 }  // namespace
 
 void protobuf_ShutdownFile_mongo_2eproto() {
+  delete MongoFindEx::default_instance_;
+  delete MongoFindEx_reflection_;
+  delete MongoRemoveEx::default_instance_;
+  delete MongoRemoveEx_reflection_;
   delete MongoOPReq::default_instance_;
   delete MongoOPReq_reflection_;
   delete MongoOPRsp::default_instance_;
@@ -132,21 +182,30 @@ void protobuf_AddDesc_mongo_2eproto() {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   ::google::protobuf::DescriptorPool::InternalAddGeneratedFile(
-    "\n\013mongo.proto\022\005dcorm\"/\n\nMongoOPReq\022\t\n\001q\030"
-    "\001 \001(\t\022\t\n\001u\030\002 \001(\t\022\013\n\003cmd\030\003 \001(\t\";\n\nMongoOP"
-    "Rsp\022\016\n\006status\030\001 \001(\005\022\016\n\006result\030\002 \001(\t\022\r\n\005e"
-    "rror\030\003 \001(\t\"\200\001\n\010MongoORM\022\032\n\002op\030\001 \002(\0162\016.dc"
-    "orm.MongoOP\022\n\n\002db\030\002 \002(\t\022\014\n\004coll\030\003 \001(\t\022\036\n"
-    "\003req\030\004 \001(\0132\021.dcorm.MongoOPReq\022\036\n\003rsp\030\005 \001"
-    "(\0132\021.dcorm.MongoOPRsp*\201\001\n\007MongoOP\022\020\n\014MON"
-    "GO_OP_CMD\020\000\022\021\n\rMONGO_OP_FIND\020\001\022\023\n\017MONGO_"
-    "OP_UPDATE\020\002\022\023\n\017MONGO_OP_INSERT\020\003\022\023\n\017MONG"
-    "O_OP_DELETE\020\004\022\022\n\016MONGO_OP_COUNT\020\005", 393);
+    "\n\013mongo.proto\022\005dcorm\"L\n\013MongoFindEx\022\014\n\004s"
+    "ort\030\001 \003(\t\022\022\n\nprojection\030\002 \003(\t\022\014\n\004skip\030\003 "
+    "\001(\005\022\r\n\005limit\030\004 \001(\005\"\036\n\rMongoRemoveEx\022\r\n\005l"
+    "imit\030\001 \001(\005\"w\n\nMongoOPReq\022\t\n\001q\030\001 \001(\t\022\t\n\001u"
+    "\030\002 \001(\t\022\013\n\003cmd\030\003 \001(\t\022 \n\004find\030\004 \001(\0132\022.dcor"
+    "m.MongoFindEx\022$\n\006remove\030\005 \001(\0132\024.dcorm.Mo"
+    "ngoRemoveEx\";\n\nMongoOPRsp\022\016\n\006status\030\001 \001("
+    "\005\022\016\n\006result\030\002 \001(\t\022\r\n\005error\030\003 \001(\t\"\214\001\n\010Mon"
+    "goORM\022\032\n\002op\030\001 \002(\0162\016.dcorm.MongoOP\022\n\n\002db\030"
+    "\002 \002(\t\022\014\n\004coll\030\003 \001(\t\022\036\n\003req\030\004 \001(\0132\021.dcorm"
+    ".MongoOPReq\022\036\n\003rsp\030\005 \001(\0132\021.dcorm.MongoOP"
+    "Rsp\022\n\n\002cb\030\006 \001(\014*\201\001\n\007MongoOP\022\020\n\014MONGO_OP_"
+    "CMD\020\000\022\021\n\rMONGO_OP_FIND\020\001\022\023\n\017MONGO_OP_UPD"
+    "ATE\020\002\022\023\n\017MONGO_OP_INSERT\020\003\022\023\n\017MONGO_OP_D"
+    "ELETE\020\004\022\022\n\016MONGO_OP_COUNT\020\005", 587);
   ::google::protobuf::MessageFactory::InternalRegisterGeneratedFile(
     "mongo.proto", &protobuf_RegisterTypes);
+  MongoFindEx::default_instance_ = new MongoFindEx();
+  MongoRemoveEx::default_instance_ = new MongoRemoveEx();
   MongoOPReq::default_instance_ = new MongoOPReq();
   MongoOPRsp::default_instance_ = new MongoOPRsp();
   MongoORM::default_instance_ = new MongoORM();
+  MongoFindEx::default_instance_->InitAsDefaultInstance();
+  MongoRemoveEx::default_instance_->InitAsDefaultInstance();
   MongoOPReq::default_instance_->InitAsDefaultInstance();
   MongoOPRsp::default_instance_->InitAsDefaultInstance();
   MongoORM::default_instance_->InitAsDefaultInstance();
@@ -181,9 +240,609 @@ bool MongoOP_IsValid(int value) {
 // ===================================================================
 
 #ifndef _MSC_VER
+const int MongoFindEx::kSortFieldNumber;
+const int MongoFindEx::kProjectionFieldNumber;
+const int MongoFindEx::kSkipFieldNumber;
+const int MongoFindEx::kLimitFieldNumber;
+#endif  // !_MSC_VER
+
+MongoFindEx::MongoFindEx()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:dcorm.MongoFindEx)
+}
+
+void MongoFindEx::InitAsDefaultInstance() {
+}
+
+MongoFindEx::MongoFindEx(const MongoFindEx& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+  // @@protoc_insertion_point(copy_constructor:dcorm.MongoFindEx)
+}
+
+void MongoFindEx::SharedCtor() {
+  ::google::protobuf::internal::GetEmptyString();
+  _cached_size_ = 0;
+  skip_ = 0;
+  limit_ = 0;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+MongoFindEx::~MongoFindEx() {
+  // @@protoc_insertion_point(destructor:dcorm.MongoFindEx)
+  SharedDtor();
+}
+
+void MongoFindEx::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void MongoFindEx::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* MongoFindEx::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return MongoFindEx_descriptor_;
+}
+
+const MongoFindEx& MongoFindEx::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_mongo_2eproto();
+  return *default_instance_;
+}
+
+MongoFindEx* MongoFindEx::default_instance_ = NULL;
+
+MongoFindEx* MongoFindEx::New() const {
+  return new MongoFindEx;
+}
+
+void MongoFindEx::Clear() {
+#define OFFSET_OF_FIELD_(f) (reinterpret_cast<char*>(      \
+  &reinterpret_cast<MongoFindEx*>(16)->f) - \
+   reinterpret_cast<char*>(16))
+
+#define ZR_(first, last) do {                              \
+    size_t f = OFFSET_OF_FIELD_(first);                    \
+    size_t n = OFFSET_OF_FIELD_(last) - f + sizeof(last);  \
+    ::memset(&first, 0, n);                                \
+  } while (0)
+
+  ZR_(skip_, limit_);
+
+#undef OFFSET_OF_FIELD_
+#undef ZR_
+
+  sort_.Clear();
+  projection_.Clear();
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool MongoFindEx::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
+  ::google::protobuf::uint32 tag;
+  // @@protoc_insertion_point(parse_start:dcorm.MongoFindEx)
+  for (;;) {
+    ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // repeated string sort = 1;
+      case 1: {
+        if (tag == 10) {
+         parse_sort:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->add_sort()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->sort(this->sort_size() - 1).data(),
+            this->sort(this->sort_size() - 1).length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "sort");
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(10)) goto parse_sort;
+        if (input->ExpectTag(18)) goto parse_projection;
+        break;
+      }
+
+      // repeated string projection = 2;
+      case 2: {
+        if (tag == 18) {
+         parse_projection:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadString(
+                input, this->add_projection()));
+          ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+            this->projection(this->projection_size() - 1).data(),
+            this->projection(this->projection_size() - 1).length(),
+            ::google::protobuf::internal::WireFormat::PARSE,
+            "projection");
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(18)) goto parse_projection;
+        if (input->ExpectTag(24)) goto parse_skip;
+        break;
+      }
+
+      // optional int32 skip = 3;
+      case 3: {
+        if (tag == 24) {
+         parse_skip:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &skip_)));
+          set_has_skip();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(32)) goto parse_limit;
+        break;
+      }
+
+      // optional int32 limit = 4;
+      case 4: {
+        if (tag == 32) {
+         parse_limit:
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &limit_)));
+          set_has_limit();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectAtEnd()) goto success;
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0 ||
+            ::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          goto success;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:dcorm.MongoFindEx)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:dcorm.MongoFindEx)
+  return false;
+#undef DO_
+}
+
+void MongoFindEx::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:dcorm.MongoFindEx)
+  // repeated string sort = 1;
+  for (int i = 0; i < this->sort_size(); i++) {
+  ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+    this->sort(i).data(), this->sort(i).length(),
+    ::google::protobuf::internal::WireFormat::SERIALIZE,
+    "sort");
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      1, this->sort(i), output);
+  }
+
+  // repeated string projection = 2;
+  for (int i = 0; i < this->projection_size(); i++) {
+  ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+    this->projection(i).data(), this->projection(i).length(),
+    ::google::protobuf::internal::WireFormat::SERIALIZE,
+    "projection");
+    ::google::protobuf::internal::WireFormatLite::WriteString(
+      2, this->projection(i), output);
+  }
+
+  // optional int32 skip = 3;
+  if (has_skip()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(3, this->skip(), output);
+  }
+
+  // optional int32 limit = 4;
+  if (has_limit()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(4, this->limit(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:dcorm.MongoFindEx)
+}
+
+::google::protobuf::uint8* MongoFindEx::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dcorm.MongoFindEx)
+  // repeated string sort = 1;
+  for (int i = 0; i < this->sort_size(); i++) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->sort(i).data(), this->sort(i).length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "sort");
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteStringToArray(1, this->sort(i), target);
+  }
+
+  // repeated string projection = 2;
+  for (int i = 0; i < this->projection_size(); i++) {
+    ::google::protobuf::internal::WireFormat::VerifyUTF8StringNamedField(
+      this->projection(i).data(), this->projection(i).length(),
+      ::google::protobuf::internal::WireFormat::SERIALIZE,
+      "projection");
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteStringToArray(2, this->projection(i), target);
+  }
+
+  // optional int32 skip = 3;
+  if (has_skip()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(3, this->skip(), target);
+  }
+
+  // optional int32 limit = 4;
+  if (has_limit()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(4, this->limit(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dcorm.MongoFindEx)
+  return target;
+}
+
+int MongoFindEx::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[2 / 32] & (0xffu << (2 % 32))) {
+    // optional int32 skip = 3;
+    if (has_skip()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->skip());
+    }
+
+    // optional int32 limit = 4;
+    if (has_limit()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->limit());
+    }
+
+  }
+  // repeated string sort = 1;
+  total_size += 1 * this->sort_size();
+  for (int i = 0; i < this->sort_size(); i++) {
+    total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
+      this->sort(i));
+  }
+
+  // repeated string projection = 2;
+  total_size += 1 * this->projection_size();
+  for (int i = 0; i < this->projection_size(); i++) {
+    total_size += ::google::protobuf::internal::WireFormatLite::StringSize(
+      this->projection(i));
+  }
+
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void MongoFindEx::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const MongoFindEx* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const MongoFindEx*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void MongoFindEx::MergeFrom(const MongoFindEx& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  sort_.MergeFrom(from.sort_);
+  projection_.MergeFrom(from.projection_);
+  if (from._has_bits_[2 / 32] & (0xffu << (2 % 32))) {
+    if (from.has_skip()) {
+      set_skip(from.skip());
+    }
+    if (from.has_limit()) {
+      set_limit(from.limit());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void MongoFindEx::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void MongoFindEx::CopyFrom(const MongoFindEx& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool MongoFindEx::IsInitialized() const {
+
+  return true;
+}
+
+void MongoFindEx::Swap(MongoFindEx* other) {
+  if (other != this) {
+    sort_.Swap(&other->sort_);
+    projection_.Swap(&other->projection_);
+    std::swap(skip_, other->skip_);
+    std::swap(limit_, other->limit_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata MongoFindEx::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = MongoFindEx_descriptor_;
+  metadata.reflection = MongoFindEx_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
+const int MongoRemoveEx::kLimitFieldNumber;
+#endif  // !_MSC_VER
+
+MongoRemoveEx::MongoRemoveEx()
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  // @@protoc_insertion_point(constructor:dcorm.MongoRemoveEx)
+}
+
+void MongoRemoveEx::InitAsDefaultInstance() {
+}
+
+MongoRemoveEx::MongoRemoveEx(const MongoRemoveEx& from)
+  : ::google::protobuf::Message() {
+  SharedCtor();
+  MergeFrom(from);
+  // @@protoc_insertion_point(copy_constructor:dcorm.MongoRemoveEx)
+}
+
+void MongoRemoveEx::SharedCtor() {
+  _cached_size_ = 0;
+  limit_ = 0;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+}
+
+MongoRemoveEx::~MongoRemoveEx() {
+  // @@protoc_insertion_point(destructor:dcorm.MongoRemoveEx)
+  SharedDtor();
+}
+
+void MongoRemoveEx::SharedDtor() {
+  if (this != default_instance_) {
+  }
+}
+
+void MongoRemoveEx::SetCachedSize(int size) const {
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+}
+const ::google::protobuf::Descriptor* MongoRemoveEx::descriptor() {
+  protobuf_AssignDescriptorsOnce();
+  return MongoRemoveEx_descriptor_;
+}
+
+const MongoRemoveEx& MongoRemoveEx::default_instance() {
+  if (default_instance_ == NULL) protobuf_AddDesc_mongo_2eproto();
+  return *default_instance_;
+}
+
+MongoRemoveEx* MongoRemoveEx::default_instance_ = NULL;
+
+MongoRemoveEx* MongoRemoveEx::New() const {
+  return new MongoRemoveEx;
+}
+
+void MongoRemoveEx::Clear() {
+  limit_ = 0;
+  ::memset(_has_bits_, 0, sizeof(_has_bits_));
+  mutable_unknown_fields()->Clear();
+}
+
+bool MongoRemoveEx::MergePartialFromCodedStream(
+    ::google::protobuf::io::CodedInputStream* input) {
+#define DO_(EXPRESSION) if (!(EXPRESSION)) goto failure
+  ::google::protobuf::uint32 tag;
+  // @@protoc_insertion_point(parse_start:dcorm.MongoRemoveEx)
+  for (;;) {
+    ::std::pair< ::google::protobuf::uint32, bool> p = input->ReadTagWithCutoff(127);
+    tag = p.first;
+    if (!p.second) goto handle_unusual;
+    switch (::google::protobuf::internal::WireFormatLite::GetTagFieldNumber(tag)) {
+      // optional int32 limit = 1;
+      case 1: {
+        if (tag == 8) {
+          DO_((::google::protobuf::internal::WireFormatLite::ReadPrimitive<
+                   ::google::protobuf::int32, ::google::protobuf::internal::WireFormatLite::TYPE_INT32>(
+                 input, &limit_)));
+          set_has_limit();
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectAtEnd()) goto success;
+        break;
+      }
+
+      default: {
+      handle_unusual:
+        if (tag == 0 ||
+            ::google::protobuf::internal::WireFormatLite::GetTagWireType(tag) ==
+            ::google::protobuf::internal::WireFormatLite::WIRETYPE_END_GROUP) {
+          goto success;
+        }
+        DO_(::google::protobuf::internal::WireFormat::SkipField(
+              input, tag, mutable_unknown_fields()));
+        break;
+      }
+    }
+  }
+success:
+  // @@protoc_insertion_point(parse_success:dcorm.MongoRemoveEx)
+  return true;
+failure:
+  // @@protoc_insertion_point(parse_failure:dcorm.MongoRemoveEx)
+  return false;
+#undef DO_
+}
+
+void MongoRemoveEx::SerializeWithCachedSizes(
+    ::google::protobuf::io::CodedOutputStream* output) const {
+  // @@protoc_insertion_point(serialize_start:dcorm.MongoRemoveEx)
+  // optional int32 limit = 1;
+  if (has_limit()) {
+    ::google::protobuf::internal::WireFormatLite::WriteInt32(1, this->limit(), output);
+  }
+
+  if (!unknown_fields().empty()) {
+    ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
+        unknown_fields(), output);
+  }
+  // @@protoc_insertion_point(serialize_end:dcorm.MongoRemoveEx)
+}
+
+::google::protobuf::uint8* MongoRemoveEx::SerializeWithCachedSizesToArray(
+    ::google::protobuf::uint8* target) const {
+  // @@protoc_insertion_point(serialize_to_array_start:dcorm.MongoRemoveEx)
+  // optional int32 limit = 1;
+  if (has_limit()) {
+    target = ::google::protobuf::internal::WireFormatLite::WriteInt32ToArray(1, this->limit(), target);
+  }
+
+  if (!unknown_fields().empty()) {
+    target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
+        unknown_fields(), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:dcorm.MongoRemoveEx)
+  return target;
+}
+
+int MongoRemoveEx::ByteSize() const {
+  int total_size = 0;
+
+  if (_has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    // optional int32 limit = 1;
+    if (has_limit()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::Int32Size(
+          this->limit());
+    }
+
+  }
+  if (!unknown_fields().empty()) {
+    total_size +=
+      ::google::protobuf::internal::WireFormat::ComputeUnknownFieldsSize(
+        unknown_fields());
+  }
+  GOOGLE_SAFE_CONCURRENT_WRITES_BEGIN();
+  _cached_size_ = total_size;
+  GOOGLE_SAFE_CONCURRENT_WRITES_END();
+  return total_size;
+}
+
+void MongoRemoveEx::MergeFrom(const ::google::protobuf::Message& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  const MongoRemoveEx* source =
+    ::google::protobuf::internal::dynamic_cast_if_available<const MongoRemoveEx*>(
+      &from);
+  if (source == NULL) {
+    ::google::protobuf::internal::ReflectionOps::Merge(from, this);
+  } else {
+    MergeFrom(*source);
+  }
+}
+
+void MongoRemoveEx::MergeFrom(const MongoRemoveEx& from) {
+  GOOGLE_CHECK_NE(&from, this);
+  if (from._has_bits_[0 / 32] & (0xffu << (0 % 32))) {
+    if (from.has_limit()) {
+      set_limit(from.limit());
+    }
+  }
+  mutable_unknown_fields()->MergeFrom(from.unknown_fields());
+}
+
+void MongoRemoveEx::CopyFrom(const ::google::protobuf::Message& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+void MongoRemoveEx::CopyFrom(const MongoRemoveEx& from) {
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool MongoRemoveEx::IsInitialized() const {
+
+  return true;
+}
+
+void MongoRemoveEx::Swap(MongoRemoveEx* other) {
+  if (other != this) {
+    std::swap(limit_, other->limit_);
+    std::swap(_has_bits_[0], other->_has_bits_[0]);
+    _unknown_fields_.Swap(&other->_unknown_fields_);
+    std::swap(_cached_size_, other->_cached_size_);
+  }
+}
+
+::google::protobuf::Metadata MongoRemoveEx::GetMetadata() const {
+  protobuf_AssignDescriptorsOnce();
+  ::google::protobuf::Metadata metadata;
+  metadata.descriptor = MongoRemoveEx_descriptor_;
+  metadata.reflection = MongoRemoveEx_reflection_;
+  return metadata;
+}
+
+
+// ===================================================================
+
+#ifndef _MSC_VER
 const int MongoOPReq::kQFieldNumber;
 const int MongoOPReq::kUFieldNumber;
 const int MongoOPReq::kCmdFieldNumber;
+const int MongoOPReq::kFindFieldNumber;
+const int MongoOPReq::kRemoveFieldNumber;
 #endif  // !_MSC_VER
 
 MongoOPReq::MongoOPReq()
@@ -193,6 +852,8 @@ MongoOPReq::MongoOPReq()
 }
 
 void MongoOPReq::InitAsDefaultInstance() {
+  find_ = const_cast< ::dcorm::MongoFindEx*>(&::dcorm::MongoFindEx::default_instance());
+  remove_ = const_cast< ::dcorm::MongoRemoveEx*>(&::dcorm::MongoRemoveEx::default_instance());
 }
 
 MongoOPReq::MongoOPReq(const MongoOPReq& from)
@@ -208,6 +869,8 @@ void MongoOPReq::SharedCtor() {
   q_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   u_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   cmd_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  find_ = NULL;
+  remove_ = NULL;
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -227,6 +890,8 @@ void MongoOPReq::SharedDtor() {
     delete cmd_;
   }
   if (this != default_instance_) {
+    delete find_;
+    delete remove_;
   }
 }
 
@@ -252,7 +917,7 @@ MongoOPReq* MongoOPReq::New() const {
 }
 
 void MongoOPReq::Clear() {
-  if (_has_bits_[0 / 32] & 7) {
+  if (_has_bits_[0 / 32] & 31) {
     if (has_q()) {
       if (q_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
         q_->clear();
@@ -267,6 +932,12 @@ void MongoOPReq::Clear() {
       if (cmd_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
         cmd_->clear();
       }
+    }
+    if (has_find()) {
+      if (find_ != NULL) find_->::dcorm::MongoFindEx::Clear();
+    }
+    if (has_remove()) {
+      if (remove_ != NULL) remove_->::dcorm::MongoRemoveEx::Clear();
     }
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -329,6 +1000,32 @@ bool MongoOPReq::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(34)) goto parse_find;
+        break;
+      }
+
+      // optional .dcorm.MongoFindEx find = 4;
+      case 4: {
+        if (tag == 34) {
+         parse_find:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+               input, mutable_find()));
+        } else {
+          goto handle_unusual;
+        }
+        if (input->ExpectTag(42)) goto parse_remove;
+        break;
+      }
+
+      // optional .dcorm.MongoRemoveEx remove = 5;
+      case 5: {
+        if (tag == 42) {
+         parse_remove:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadMessageNoVirtual(
+               input, mutable_remove()));
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -388,6 +1085,18 @@ void MongoOPReq::SerializeWithCachedSizes(
       3, this->cmd(), output);
   }
 
+  // optional .dcorm.MongoFindEx find = 4;
+  if (has_find()) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      4, this->find(), output);
+  }
+
+  // optional .dcorm.MongoRemoveEx remove = 5;
+  if (has_remove()) {
+    ::google::protobuf::internal::WireFormatLite::WriteMessageMaybeToArray(
+      5, this->remove(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -431,6 +1140,20 @@ void MongoOPReq::SerializeWithCachedSizes(
         3, this->cmd(), target);
   }
 
+  // optional .dcorm.MongoFindEx find = 4;
+  if (has_find()) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        4, this->find(), target);
+  }
+
+  // optional .dcorm.MongoRemoveEx remove = 5;
+  if (has_remove()) {
+    target = ::google::protobuf::internal::WireFormatLite::
+      WriteMessageNoVirtualToArray(
+        5, this->remove(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -462,6 +1185,20 @@ int MongoOPReq::ByteSize() const {
       total_size += 1 +
         ::google::protobuf::internal::WireFormatLite::StringSize(
           this->cmd());
+    }
+
+    // optional .dcorm.MongoFindEx find = 4;
+    if (has_find()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+          this->find());
+    }
+
+    // optional .dcorm.MongoRemoveEx remove = 5;
+    if (has_remove()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::MessageSizeNoVirtual(
+          this->remove());
     }
 
   }
@@ -500,6 +1237,12 @@ void MongoOPReq::MergeFrom(const MongoOPReq& from) {
     if (from.has_cmd()) {
       set_cmd(from.cmd());
     }
+    if (from.has_find()) {
+      mutable_find()->::dcorm::MongoFindEx::MergeFrom(from.find());
+    }
+    if (from.has_remove()) {
+      mutable_remove()->::dcorm::MongoRemoveEx::MergeFrom(from.remove());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -526,6 +1269,8 @@ void MongoOPReq::Swap(MongoOPReq* other) {
     std::swap(q_, other->q_);
     std::swap(u_, other->u_);
     std::swap(cmd_, other->cmd_);
+    std::swap(find_, other->find_);
+    std::swap(remove_, other->remove_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);
@@ -892,6 +1637,7 @@ const int MongoORM::kDbFieldNumber;
 const int MongoORM::kCollFieldNumber;
 const int MongoORM::kReqFieldNumber;
 const int MongoORM::kRspFieldNumber;
+const int MongoORM::kCbFieldNumber;
 #endif  // !_MSC_VER
 
 MongoORM::MongoORM()
@@ -920,6 +1666,7 @@ void MongoORM::SharedCtor() {
   coll_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   req_ = NULL;
   rsp_ = NULL;
+  cb_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
 }
 
@@ -934,6 +1681,9 @@ void MongoORM::SharedDtor() {
   }
   if (coll_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
     delete coll_;
+  }
+  if (cb_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete cb_;
   }
   if (this != default_instance_) {
     delete req_;
@@ -963,7 +1713,7 @@ MongoORM* MongoORM::New() const {
 }
 
 void MongoORM::Clear() {
-  if (_has_bits_[0 / 32] & 31) {
+  if (_has_bits_[0 / 32] & 63) {
     op_ = 0;
     if (has_db()) {
       if (db_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
@@ -980,6 +1730,11 @@ void MongoORM::Clear() {
     }
     if (has_rsp()) {
       if (rsp_ != NULL) rsp_->::dcorm::MongoOPRsp::Clear();
+    }
+    if (has_cb()) {
+      if (cb_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+        cb_->clear();
+      }
     }
   }
   ::memset(_has_bits_, 0, sizeof(_has_bits_));
@@ -1071,6 +1826,19 @@ bool MongoORM::MergePartialFromCodedStream(
         } else {
           goto handle_unusual;
         }
+        if (input->ExpectTag(50)) goto parse_cb;
+        break;
+      }
+
+      // optional bytes cb = 6;
+      case 6: {
+        if (tag == 50) {
+         parse_cb:
+          DO_(::google::protobuf::internal::WireFormatLite::ReadBytes(
+                input, this->mutable_cb()));
+        } else {
+          goto handle_unusual;
+        }
         if (input->ExpectAtEnd()) goto success;
         break;
       }
@@ -1138,6 +1906,12 @@ void MongoORM::SerializeWithCachedSizes(
       5, this->rsp(), output);
   }
 
+  // optional bytes cb = 6;
+  if (has_cb()) {
+    ::google::protobuf::internal::WireFormatLite::WriteBytesMaybeAliased(
+      6, this->cb(), output);
+  }
+
   if (!unknown_fields().empty()) {
     ::google::protobuf::internal::WireFormat::SerializeUnknownFields(
         unknown_fields(), output);
@@ -1190,6 +1964,13 @@ void MongoORM::SerializeWithCachedSizes(
         5, this->rsp(), target);
   }
 
+  // optional bytes cb = 6;
+  if (has_cb()) {
+    target =
+      ::google::protobuf::internal::WireFormatLite::WriteBytesToArray(
+        6, this->cb(), target);
+  }
+
   if (!unknown_fields().empty()) {
     target = ::google::protobuf::internal::WireFormat::SerializeUnknownFieldsToArray(
         unknown_fields(), target);
@@ -1236,6 +2017,13 @@ int MongoORM::ByteSize() const {
           this->rsp());
     }
 
+    // optional bytes cb = 6;
+    if (has_cb()) {
+      total_size += 1 +
+        ::google::protobuf::internal::WireFormatLite::BytesSize(
+          this->cb());
+    }
+
   }
   if (!unknown_fields().empty()) {
     total_size +=
@@ -1278,6 +2066,9 @@ void MongoORM::MergeFrom(const MongoORM& from) {
     if (from.has_rsp()) {
       mutable_rsp()->::dcorm::MongoOPRsp::MergeFrom(from.rsp());
     }
+    if (from.has_cb()) {
+      set_cb(from.cb());
+    }
   }
   mutable_unknown_fields()->MergeFrom(from.unknown_fields());
 }
@@ -1307,6 +2098,7 @@ void MongoORM::Swap(MongoORM* other) {
     std::swap(coll_, other->coll_);
     std::swap(req_, other->req_);
     std::swap(rsp_, other->rsp_);
+    std::swap(cb_, other->cb_);
     std::swap(_has_bits_[0], other->_has_bits_[0]);
     _unknown_fields_.Swap(&other->_unknown_fields_);
     std::swap(_cached_size_, other->_cached_size_);

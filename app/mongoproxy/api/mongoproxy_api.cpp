@@ -66,22 +66,16 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 		json_doc_t jdc;
 		jdc.loads(msg.rsp().result().c_str());
 		GLOG_TRA("cmmongo proxy result: %s", jdc.pretty(debug_msg));
-		if (cmd_type == MONGO_COUNT){
-			//count
-		}
-        else if (cmd_type == MONGO_INSERT){
-            //ok
-            result.nsuccess = jdc["ok"].GetInt();
-            result.count = jdc["n"].GetInt();
+        result.ok = jdc["ok"].GetInt();
+        if (cmd_type == MONGO_INSERT){
+            result.n = jdc["n"].GetInt();
         }
 		else if (cmd_type == MONGO_FIND){
-            result.nsuccess = jdc["ok"].GetInt();
-            result.count = jdc["n"].GetInt();
             mongoproxy_result_t::mongo_record_t record;
-            if (result.nsuccess == 1){
+            if (result.ok == 1){//ok
                 auto oid = jdc.get("/value/_id/$oid");
                 if (!oid || !oid->IsString()){
-                    GLOG_ERR("not found the oid:%s", jdc.pretty(debug_msg));
+                    GLOG_TRA("not found the oid result:%s , empty found set", msg.rsp().result().c_str());
                 }
                 else {
                     record.first = oid->GetString();
@@ -102,22 +96,20 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
                     }
                 }
             }
-            else {
-                #warning "todo"
-            }
-            //value
 		}
         else if (cmd_type == MONGO_COUNT){
-            result.nsuccess = jdc["ok"].GetInt();
-            result.count = jdc["n"].GetInt();
+            result.n = jdc["n"].GetInt();
         }
 		else if (cmd_type == MONGO_UPDATE){
-
+            result.n = jdc["n"].GetInt();
+            result.modified = jdc["nModified"].GetInt();
 		}
 		else if (cmd_type == MONGO_REMOVE){
-
+            result.n = jdc["n"].GetInt();
 		}
 	}	
+    result.cb_data = msg.cb().data();
+    result.cb_size = msg.cb().length();
 	MONGO.cb(cmd_type, MONGO.cb_ud, result);
     //free msg
     for (auto & record : result.results){
@@ -167,14 +159,21 @@ int		mongoproxy_poll(int timeout_ms){
 	return 0;
 }
 static int 
-_mongoproxy_cmd(MongoOP op, const google::protobuf::Message & msg, bool update){
+_mongoproxy_cmd(MongoOP op, const google::protobuf::Message & msg, bool update,
+                const dcorm::MongoOPReq * ex, const char * cb_data , int cb_size){
 	mongo_msg_t mongo_msg;
 	mongo_msg.set_op(op);
 	mongo_msg.set_db(msg.GetDescriptor()->file()->package());
 	mongo_msg.set_coll(msg.GetDescriptor()->name());
+    if (cb_data && cb_size > 0){
+        mongo_msg.set_cb(cb_data, cb_size);
+    }
 	string json;
 	pbjson::pb2json(&msg, json);
 	GLOG(LOG_LVL_TRACE, "pb2json :%s", json.c_str());
+    if (ex){
+        mongo_msg.mutable_req()->MergeFrom(*ex);
+    }
 	if (update){
 		mongo_msg.mutable_req()->set_u(json);
 	}
@@ -187,18 +186,64 @@ _mongoproxy_cmd(MongoOP op, const google::protobuf::Message & msg, bool update){
 	}
 	return dcnode_send(MONGO.dc, "", MONGO.msg_buffer.buffer, MONGO.msg_buffer.valid_size);
 }
-int		mongoproxy_insert(const google::protobuf::Message & msg){
-	return _mongoproxy_cmd(MONGO_OP_INSERT, msg, true);
+int		mongoproxy_insert(const google::protobuf::Message & msg, const char * cb_data, int cb_size){
+	return _mongoproxy_cmd(MONGO_OP_INSERT, msg, true,nullptr, cb_data, cb_size);
 }
-int		mongoproxy_remove(const google::protobuf::Message & msg){
-	return _mongoproxy_cmd(MONGO_OP_DELETE, msg, false);
+int		mongoproxy_remove(const google::protobuf::Message & msg, int limit,
+                        const char * cb_data, int cb_size){
+    MongoOPReq reqremove;
+    reqremove.mutable_remove()->set_limit(limit);
+    return _mongoproxy_cmd(MONGO_OP_DELETE, msg, false, &reqremove, cb_data, cb_size);
 }
-int		mongoproxy_find(const google::protobuf::Message & msg){
-	return _mongoproxy_cmd(MONGO_OP_FIND, msg, false);
+int		mongoproxy_find(const google::protobuf::Message & msg, const char * fields ,
+                        int skip , int limit , const char * sort,
+                        const char * cb_data, int cb_size){
+    MongoOPReq reqfind;
+    if (limit > 0)
+        reqfind.mutable_find()->set_limit(limit);
+    if (skip > 0)
+       reqfind.mutable_find()->set_skip(skip);
+    if (fields){
+        std::vector<string> vs;
+        dcsutil::strsplit(fields,",", vs);
+        for (auto & f : vs){
+            reqfind.mutable_find()->add_projection(f);
+        }
+    }
+    if (sort){
+        std::vector<string> vs;
+        dcsutil::strsplit(fields, ",", vs);
+        for (auto & s : vs){
+            reqfind.mutable_find()->add_sort(s);
+        }
+    }
+    return _mongoproxy_cmd(MONGO_OP_FIND, msg, false, &reqfind, cb_data, cb_size);
 }
-int		mongoproxy_update(const google::protobuf::Message & msg){
-	return _mongoproxy_cmd(MONGO_OP_UPDATE, msg, true);
+int		mongoproxy_update(const google::protobuf::Message & msg, const std::string & fields, const char * cb_data, int cb_size){
+    MongoOPReq requpdate;
+    std::vector<string> vs;
+    dcsutil::strsplit(fields, ",", vs);
+    if (vs.empty()){
+        GLOG_ERR("not found the fields define :%s", fields.c_str());
+        return -1;
+    }
+    google::protobuf::Message * tmpmsg = msg.New();
+    auto reflect = tmpmsg->GetReflection();
+    auto desc = tmpmsg->GetDescriptor();
+    for (int i = 0; i < desc->field_count(); ++i){
+        auto field = desc->field(i);
+        if (std::find(vs.begin(), vs.end(), field->name()) != vs.end()){
+            continue;
+        }
+        reflect->ClearField(tmpmsg, field);
+    }
+    string fieldsquery;
+    pbjson::pb2json(tmpmsg, fieldsquery);
+    delete tmpmsg;
+
+    requpdate.set_q(fieldsquery);
+    return _mongoproxy_cmd(MONGO_OP_UPDATE, msg, true, &requpdate, cb_data, cb_size);
 }
-int		mongoproxy_count(const google::protobuf::Message & msg){
-	return _mongoproxy_cmd(MONGO_OP_COUNT, msg, false);
+int		mongoproxy_count(const google::protobuf::Message & msg, const char * cb_data, int cb_size){
+    return _mongoproxy_cmd(MONGO_OP_COUNT, msg, false, nullptr, cb_data, cb_size);
 }

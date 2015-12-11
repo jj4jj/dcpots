@@ -9,10 +9,25 @@ enum MongoOP {
     MONGO_OP_DELETE = 4;//del
     MONGO_OP_COUNT  = 5;//count for traversing
 }
+
+message MongoFindEx {
+   repeated		string		sort = 1; //sort
+   repeated		string		projection = 2;
+   optional		int32		skip = 3; 
+   optional		int32		limit = 4;//find.limit
+}
+
+message MongoRemoveEx {
+	optional	int32		limit = 1; //limit
+}
+
+
 message MongoOPReq {
    optional     string      q = 1;
    optional     string      u = 2;
    optional     string      cmd = 3; //cmd
+   optional		MongoFindEx			find = 4; //find ex
+   optional		MongoRemoveEx		remove = 5; //remove ex
 }
 message MongoOPRsp {
     optional    int32       status = 1;//0:is ok
@@ -25,5 +40,6 @@ message MongoORM {
     optional    string      coll = 3;//.collection
     optional    MongoOPReq  req = 4;
     optional    MongoOPRsp  rsp = 5;
+	optional	bytes		cb = 6;//
 }
 

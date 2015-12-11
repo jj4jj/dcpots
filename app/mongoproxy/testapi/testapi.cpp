@@ -7,7 +7,7 @@
 
 void test_cb(mongoproxy_cmd_t cmd, void * ud, const mongoproxy_result_t & result){
 	GLOG_TRA("cmd:%d %d count:%d success:%d msg:%d", cmd, result.status,
-        result.count, result.nsuccess, result.results.size());
+        result.n, result.ok, result.results.size());
 }
 int main(int argc, char ** argv){
 	using namespace std;

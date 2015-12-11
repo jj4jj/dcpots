@@ -34,6 +34,8 @@ void  protobuf_AddDesc_mongo_2eproto();
 void protobuf_AssignDesc_mongo_2eproto();
 void protobuf_ShutdownFile_mongo_2eproto();
 
+class MongoFindEx;
+class MongoRemoveEx;
 class MongoOPReq;
 class MongoOPRsp;
 class MongoORM;
@@ -62,6 +64,208 @@ inline bool MongoOP_Parse(
     MongoOP_descriptor(), name, value);
 }
 // ===================================================================
+
+class MongoFindEx : public ::google::protobuf::Message {
+ public:
+  MongoFindEx();
+  virtual ~MongoFindEx();
+
+  MongoFindEx(const MongoFindEx& from);
+
+  inline MongoFindEx& operator=(const MongoFindEx& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const MongoFindEx& default_instance();
+
+  void Swap(MongoFindEx* other);
+
+  // implements Message ----------------------------------------------
+
+  MongoFindEx* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const MongoFindEx& from);
+  void MergeFrom(const MongoFindEx& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated string sort = 1;
+  inline int sort_size() const;
+  inline void clear_sort();
+  static const int kSortFieldNumber = 1;
+  inline const ::std::string& sort(int index) const;
+  inline ::std::string* mutable_sort(int index);
+  inline void set_sort(int index, const ::std::string& value);
+  inline void set_sort(int index, const char* value);
+  inline void set_sort(int index, const char* value, size_t size);
+  inline ::std::string* add_sort();
+  inline void add_sort(const ::std::string& value);
+  inline void add_sort(const char* value);
+  inline void add_sort(const char* value, size_t size);
+  inline const ::google::protobuf::RepeatedPtrField< ::std::string>& sort() const;
+  inline ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_sort();
+
+  // repeated string projection = 2;
+  inline int projection_size() const;
+  inline void clear_projection();
+  static const int kProjectionFieldNumber = 2;
+  inline const ::std::string& projection(int index) const;
+  inline ::std::string* mutable_projection(int index);
+  inline void set_projection(int index, const ::std::string& value);
+  inline void set_projection(int index, const char* value);
+  inline void set_projection(int index, const char* value, size_t size);
+  inline ::std::string* add_projection();
+  inline void add_projection(const ::std::string& value);
+  inline void add_projection(const char* value);
+  inline void add_projection(const char* value, size_t size);
+  inline const ::google::protobuf::RepeatedPtrField< ::std::string>& projection() const;
+  inline ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_projection();
+
+  // optional int32 skip = 3;
+  inline bool has_skip() const;
+  inline void clear_skip();
+  static const int kSkipFieldNumber = 3;
+  inline ::google::protobuf::int32 skip() const;
+  inline void set_skip(::google::protobuf::int32 value);
+
+  // optional int32 limit = 4;
+  inline bool has_limit() const;
+  inline void clear_limit();
+  static const int kLimitFieldNumber = 4;
+  inline ::google::protobuf::int32 limit() const;
+  inline void set_limit(::google::protobuf::int32 value);
+
+  // @@protoc_insertion_point(class_scope:dcorm.MongoFindEx)
+ private:
+  inline void set_has_skip();
+  inline void clear_has_skip();
+  inline void set_has_limit();
+  inline void clear_has_limit();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::google::protobuf::RepeatedPtrField< ::std::string> sort_;
+  ::google::protobuf::RepeatedPtrField< ::std::string> projection_;
+  ::google::protobuf::int32 skip_;
+  ::google::protobuf::int32 limit_;
+  friend void  protobuf_AddDesc_mongo_2eproto();
+  friend void protobuf_AssignDesc_mongo_2eproto();
+  friend void protobuf_ShutdownFile_mongo_2eproto();
+
+  void InitAsDefaultInstance();
+  static MongoFindEx* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class MongoRemoveEx : public ::google::protobuf::Message {
+ public:
+  MongoRemoveEx();
+  virtual ~MongoRemoveEx();
+
+  MongoRemoveEx(const MongoRemoveEx& from);
+
+  inline MongoRemoveEx& operator=(const MongoRemoveEx& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const MongoRemoveEx& default_instance();
+
+  void Swap(MongoRemoveEx* other);
+
+  // implements Message ----------------------------------------------
+
+  MongoRemoveEx* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const MongoRemoveEx& from);
+  void MergeFrom(const MongoRemoveEx& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // optional int32 limit = 1;
+  inline bool has_limit() const;
+  inline void clear_limit();
+  static const int kLimitFieldNumber = 1;
+  inline ::google::protobuf::int32 limit() const;
+  inline void set_limit(::google::protobuf::int32 value);
+
+  // @@protoc_insertion_point(class_scope:dcorm.MongoRemoveEx)
+ private:
+  inline void set_has_limit();
+  inline void clear_has_limit();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::google::protobuf::int32 limit_;
+  friend void  protobuf_AddDesc_mongo_2eproto();
+  friend void protobuf_AssignDesc_mongo_2eproto();
+  friend void protobuf_ShutdownFile_mongo_2eproto();
+
+  void InitAsDefaultInstance();
+  static MongoRemoveEx* default_instance_;
+};
+// -------------------------------------------------------------------
 
 class MongoOPReq : public ::google::protobuf::Message {
  public:
@@ -152,6 +356,24 @@ class MongoOPReq : public ::google::protobuf::Message {
   inline ::std::string* release_cmd();
   inline void set_allocated_cmd(::std::string* cmd);
 
+  // optional .dcorm.MongoFindEx find = 4;
+  inline bool has_find() const;
+  inline void clear_find();
+  static const int kFindFieldNumber = 4;
+  inline const ::dcorm::MongoFindEx& find() const;
+  inline ::dcorm::MongoFindEx* mutable_find();
+  inline ::dcorm::MongoFindEx* release_find();
+  inline void set_allocated_find(::dcorm::MongoFindEx* find);
+
+  // optional .dcorm.MongoRemoveEx remove = 5;
+  inline bool has_remove() const;
+  inline void clear_remove();
+  static const int kRemoveFieldNumber = 5;
+  inline const ::dcorm::MongoRemoveEx& remove() const;
+  inline ::dcorm::MongoRemoveEx* mutable_remove();
+  inline ::dcorm::MongoRemoveEx* release_remove();
+  inline void set_allocated_remove(::dcorm::MongoRemoveEx* remove);
+
   // @@protoc_insertion_point(class_scope:dcorm.MongoOPReq)
  private:
   inline void set_has_q();
@@ -160,6 +382,10 @@ class MongoOPReq : public ::google::protobuf::Message {
   inline void clear_has_u();
   inline void set_has_cmd();
   inline void clear_has_cmd();
+  inline void set_has_find();
+  inline void clear_has_find();
+  inline void set_has_remove();
+  inline void clear_has_remove();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -168,6 +394,8 @@ class MongoOPReq : public ::google::protobuf::Message {
   ::std::string* q_;
   ::std::string* u_;
   ::std::string* cmd_;
+  ::dcorm::MongoFindEx* find_;
+  ::dcorm::MongoRemoveEx* remove_;
   friend void  protobuf_AddDesc_mongo_2eproto();
   friend void protobuf_AssignDesc_mongo_2eproto();
   friend void protobuf_ShutdownFile_mongo_2eproto();
@@ -388,6 +616,18 @@ class MongoORM : public ::google::protobuf::Message {
   inline ::dcorm::MongoOPRsp* release_rsp();
   inline void set_allocated_rsp(::dcorm::MongoOPRsp* rsp);
 
+  // optional bytes cb = 6;
+  inline bool has_cb() const;
+  inline void clear_cb();
+  static const int kCbFieldNumber = 6;
+  inline const ::std::string& cb() const;
+  inline void set_cb(const ::std::string& value);
+  inline void set_cb(const char* value);
+  inline void set_cb(const void* value, size_t size);
+  inline ::std::string* mutable_cb();
+  inline ::std::string* release_cb();
+  inline void set_allocated_cb(::std::string* cb);
+
   // @@protoc_insertion_point(class_scope:dcorm.MongoORM)
  private:
   inline void set_has_op();
@@ -400,6 +640,8 @@ class MongoORM : public ::google::protobuf::Message {
   inline void clear_has_req();
   inline void set_has_rsp();
   inline void clear_has_rsp();
+  inline void set_has_cb();
+  inline void clear_has_cb();
 
   ::google::protobuf::UnknownFieldSet _unknown_fields_;
 
@@ -409,6 +651,7 @@ class MongoORM : public ::google::protobuf::Message {
   ::std::string* coll_;
   ::dcorm::MongoOPReq* req_;
   ::dcorm::MongoOPRsp* rsp_;
+  ::std::string* cb_;
   int op_;
   friend void  protobuf_AddDesc_mongo_2eproto();
   friend void protobuf_AssignDesc_mongo_2eproto();
@@ -421,6 +664,194 @@ class MongoORM : public ::google::protobuf::Message {
 
 
 // ===================================================================
+
+// MongoFindEx
+
+// repeated string sort = 1;
+inline int MongoFindEx::sort_size() const {
+  return sort_.size();
+}
+inline void MongoFindEx::clear_sort() {
+  sort_.Clear();
+}
+inline const ::std::string& MongoFindEx::sort(int index) const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoFindEx.sort)
+  return sort_.Get(index);
+}
+inline ::std::string* MongoFindEx::mutable_sort(int index) {
+  // @@protoc_insertion_point(field_mutable:dcorm.MongoFindEx.sort)
+  return sort_.Mutable(index);
+}
+inline void MongoFindEx::set_sort(int index, const ::std::string& value) {
+  // @@protoc_insertion_point(field_set:dcorm.MongoFindEx.sort)
+  sort_.Mutable(index)->assign(value);
+}
+inline void MongoFindEx::set_sort(int index, const char* value) {
+  sort_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcorm.MongoFindEx.sort)
+}
+inline void MongoFindEx::set_sort(int index, const char* value, size_t size) {
+  sort_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcorm.MongoFindEx.sort)
+}
+inline ::std::string* MongoFindEx::add_sort() {
+  return sort_.Add();
+}
+inline void MongoFindEx::add_sort(const ::std::string& value) {
+  sort_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:dcorm.MongoFindEx.sort)
+}
+inline void MongoFindEx::add_sort(const char* value) {
+  sort_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:dcorm.MongoFindEx.sort)
+}
+inline void MongoFindEx::add_sort(const char* value, size_t size) {
+  sort_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:dcorm.MongoFindEx.sort)
+}
+inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
+MongoFindEx::sort() const {
+  // @@protoc_insertion_point(field_list:dcorm.MongoFindEx.sort)
+  return sort_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::std::string>*
+MongoFindEx::mutable_sort() {
+  // @@protoc_insertion_point(field_mutable_list:dcorm.MongoFindEx.sort)
+  return &sort_;
+}
+
+// repeated string projection = 2;
+inline int MongoFindEx::projection_size() const {
+  return projection_.size();
+}
+inline void MongoFindEx::clear_projection() {
+  projection_.Clear();
+}
+inline const ::std::string& MongoFindEx::projection(int index) const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoFindEx.projection)
+  return projection_.Get(index);
+}
+inline ::std::string* MongoFindEx::mutable_projection(int index) {
+  // @@protoc_insertion_point(field_mutable:dcorm.MongoFindEx.projection)
+  return projection_.Mutable(index);
+}
+inline void MongoFindEx::set_projection(int index, const ::std::string& value) {
+  // @@protoc_insertion_point(field_set:dcorm.MongoFindEx.projection)
+  projection_.Mutable(index)->assign(value);
+}
+inline void MongoFindEx::set_projection(int index, const char* value) {
+  projection_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcorm.MongoFindEx.projection)
+}
+inline void MongoFindEx::set_projection(int index, const char* value, size_t size) {
+  projection_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcorm.MongoFindEx.projection)
+}
+inline ::std::string* MongoFindEx::add_projection() {
+  return projection_.Add();
+}
+inline void MongoFindEx::add_projection(const ::std::string& value) {
+  projection_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:dcorm.MongoFindEx.projection)
+}
+inline void MongoFindEx::add_projection(const char* value) {
+  projection_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:dcorm.MongoFindEx.projection)
+}
+inline void MongoFindEx::add_projection(const char* value, size_t size) {
+  projection_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:dcorm.MongoFindEx.projection)
+}
+inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
+MongoFindEx::projection() const {
+  // @@protoc_insertion_point(field_list:dcorm.MongoFindEx.projection)
+  return projection_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::std::string>*
+MongoFindEx::mutable_projection() {
+  // @@protoc_insertion_point(field_mutable_list:dcorm.MongoFindEx.projection)
+  return &projection_;
+}
+
+// optional int32 skip = 3;
+inline bool MongoFindEx::has_skip() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void MongoFindEx::set_has_skip() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void MongoFindEx::clear_has_skip() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void MongoFindEx::clear_skip() {
+  skip_ = 0;
+  clear_has_skip();
+}
+inline ::google::protobuf::int32 MongoFindEx::skip() const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoFindEx.skip)
+  return skip_;
+}
+inline void MongoFindEx::set_skip(::google::protobuf::int32 value) {
+  set_has_skip();
+  skip_ = value;
+  // @@protoc_insertion_point(field_set:dcorm.MongoFindEx.skip)
+}
+
+// optional int32 limit = 4;
+inline bool MongoFindEx::has_limit() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void MongoFindEx::set_has_limit() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void MongoFindEx::clear_has_limit() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void MongoFindEx::clear_limit() {
+  limit_ = 0;
+  clear_has_limit();
+}
+inline ::google::protobuf::int32 MongoFindEx::limit() const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoFindEx.limit)
+  return limit_;
+}
+inline void MongoFindEx::set_limit(::google::protobuf::int32 value) {
+  set_has_limit();
+  limit_ = value;
+  // @@protoc_insertion_point(field_set:dcorm.MongoFindEx.limit)
+}
+
+// -------------------------------------------------------------------
+
+// MongoRemoveEx
+
+// optional int32 limit = 1;
+inline bool MongoRemoveEx::has_limit() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void MongoRemoveEx::set_has_limit() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void MongoRemoveEx::clear_has_limit() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void MongoRemoveEx::clear_limit() {
+  limit_ = 0;
+  clear_has_limit();
+}
+inline ::google::protobuf::int32 MongoRemoveEx::limit() const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoRemoveEx.limit)
+  return limit_;
+}
+inline void MongoRemoveEx::set_limit(::google::protobuf::int32 value) {
+  set_has_limit();
+  limit_ = value;
+  // @@protoc_insertion_point(field_set:dcorm.MongoRemoveEx.limit)
+}
+
+// -------------------------------------------------------------------
 
 // MongoOPReq
 
@@ -650,6 +1081,88 @@ inline void MongoOPReq::set_allocated_cmd(::std::string* cmd) {
     cmd_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
   // @@protoc_insertion_point(field_set_allocated:dcorm.MongoOPReq.cmd)
+}
+
+// optional .dcorm.MongoFindEx find = 4;
+inline bool MongoOPReq::has_find() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void MongoOPReq::set_has_find() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void MongoOPReq::clear_has_find() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void MongoOPReq::clear_find() {
+  if (find_ != NULL) find_->::dcorm::MongoFindEx::Clear();
+  clear_has_find();
+}
+inline const ::dcorm::MongoFindEx& MongoOPReq::find() const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoOPReq.find)
+  return find_ != NULL ? *find_ : *default_instance_->find_;
+}
+inline ::dcorm::MongoFindEx* MongoOPReq::mutable_find() {
+  set_has_find();
+  if (find_ == NULL) find_ = new ::dcorm::MongoFindEx;
+  // @@protoc_insertion_point(field_mutable:dcorm.MongoOPReq.find)
+  return find_;
+}
+inline ::dcorm::MongoFindEx* MongoOPReq::release_find() {
+  clear_has_find();
+  ::dcorm::MongoFindEx* temp = find_;
+  find_ = NULL;
+  return temp;
+}
+inline void MongoOPReq::set_allocated_find(::dcorm::MongoFindEx* find) {
+  delete find_;
+  find_ = find;
+  if (find) {
+    set_has_find();
+  } else {
+    clear_has_find();
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcorm.MongoOPReq.find)
+}
+
+// optional .dcorm.MongoRemoveEx remove = 5;
+inline bool MongoOPReq::has_remove() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void MongoOPReq::set_has_remove() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void MongoOPReq::clear_has_remove() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void MongoOPReq::clear_remove() {
+  if (remove_ != NULL) remove_->::dcorm::MongoRemoveEx::Clear();
+  clear_has_remove();
+}
+inline const ::dcorm::MongoRemoveEx& MongoOPReq::remove() const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoOPReq.remove)
+  return remove_ != NULL ? *remove_ : *default_instance_->remove_;
+}
+inline ::dcorm::MongoRemoveEx* MongoOPReq::mutable_remove() {
+  set_has_remove();
+  if (remove_ == NULL) remove_ = new ::dcorm::MongoRemoveEx;
+  // @@protoc_insertion_point(field_mutable:dcorm.MongoOPReq.remove)
+  return remove_;
+}
+inline ::dcorm::MongoRemoveEx* MongoOPReq::release_remove() {
+  clear_has_remove();
+  ::dcorm::MongoRemoveEx* temp = remove_;
+  remove_ = NULL;
+  return temp;
+}
+inline void MongoOPReq::set_allocated_remove(::dcorm::MongoRemoveEx* remove) {
+  delete remove_;
+  remove_ = remove;
+  if (remove) {
+    set_has_remove();
+  } else {
+    clear_has_remove();
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcorm.MongoOPReq.remove)
 }
 
 // -------------------------------------------------------------------
@@ -1093,6 +1606,82 @@ inline void MongoORM::set_allocated_rsp(::dcorm::MongoOPRsp* rsp) {
     clear_has_rsp();
   }
   // @@protoc_insertion_point(field_set_allocated:dcorm.MongoORM.rsp)
+}
+
+// optional bytes cb = 6;
+inline bool MongoORM::has_cb() const {
+  return (_has_bits_[0] & 0x00000020u) != 0;
+}
+inline void MongoORM::set_has_cb() {
+  _has_bits_[0] |= 0x00000020u;
+}
+inline void MongoORM::clear_has_cb() {
+  _has_bits_[0] &= ~0x00000020u;
+}
+inline void MongoORM::clear_cb() {
+  if (cb_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cb_->clear();
+  }
+  clear_has_cb();
+}
+inline const ::std::string& MongoORM::cb() const {
+  // @@protoc_insertion_point(field_get:dcorm.MongoORM.cb)
+  return *cb_;
+}
+inline void MongoORM::set_cb(const ::std::string& value) {
+  set_has_cb();
+  if (cb_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cb_ = new ::std::string;
+  }
+  cb_->assign(value);
+  // @@protoc_insertion_point(field_set:dcorm.MongoORM.cb)
+}
+inline void MongoORM::set_cb(const char* value) {
+  set_has_cb();
+  if (cb_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cb_ = new ::std::string;
+  }
+  cb_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcorm.MongoORM.cb)
+}
+inline void MongoORM::set_cb(const void* value, size_t size) {
+  set_has_cb();
+  if (cb_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cb_ = new ::std::string;
+  }
+  cb_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcorm.MongoORM.cb)
+}
+inline ::std::string* MongoORM::mutable_cb() {
+  set_has_cb();
+  if (cb_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    cb_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcorm.MongoORM.cb)
+  return cb_;
+}
+inline ::std::string* MongoORM::release_cb() {
+  clear_has_cb();
+  if (cb_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = cb_;
+    cb_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void MongoORM::set_allocated_cb(::std::string* cb) {
+  if (cb_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete cb_;
+  }
+  if (cb) {
+    set_has_cb();
+    cb_ = cb;
+  } else {
+    clear_has_cb();
+    cb_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcorm.MongoORM.cb)
 }
 
 

@@ -5,6 +5,7 @@ build()
     make -C dcnode/proto/
     #cd -
     make -C dagent/proto/
+    make -C app/mongoproxy/
     cd build && cmake ../ && make -j 6
     cd -
 }
