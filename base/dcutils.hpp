@@ -2,7 +2,7 @@
 #include "stdinc.h"
 
 NS_BEGIN(dcsutil)
-
+    //-----------------noncopy----------------------------
 	class noncopyable
 	{
 	protected:
@@ -12,7 +12,24 @@ NS_BEGIN(dcsutil)
 		noncopyable(const noncopyable&);
 		const noncopyable& operator=(const noncopyable&);
 	};
+    //-----------------lock-------------------------------
+    template<bool threadsafe>
+    struct lock_mixin;
 
+    template<>
+    struct lock_mixin<false>{
+        void lock(){}
+        void unlock(){}
+    };
+
+    template<>
+    struct lock_mixin<true>{
+        void lock(){ lock_.lock(); }
+        void unlock(){ lock_.unlock(); }
+    private:
+        std::mutex  lock_;
+    };
+    //----------misc------------------------------------------------------------
 	//time 
 	uint64_t			time_unixtime_us();
 	inline	time_t		time_unixtime_s(){ return time_unixtime_us() / 1000000L; }

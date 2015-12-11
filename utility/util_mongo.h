@@ -19,7 +19,6 @@ struct mongo_client_t {
 		result_t() :err_no(0){
 			err_msg.reserve(RESULT_MAX_ERR_MSG_SZ);
 		}
-#if 0
 		result_t(const result_t & rhs){
 			this->operator = (rhs);
 		}
@@ -33,7 +32,6 @@ struct mongo_client_t {
             }
 			return *this;
 		}
-#endif
 	};
 private:
 	void	*		handle;

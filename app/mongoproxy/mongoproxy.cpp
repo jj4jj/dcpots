@@ -25,7 +25,7 @@ on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result){
 	dcorm::MongoOPRsp & rsp = *msg.mutable_rsp();
 	if (result.err_no){
 		rsp.set_status(result.err_no);
-		rsp.set_error(result.err_msg);
+		rsp.set_error(result.err_msg.data());
 	}
 	else {
 		rsp.set_status(0);

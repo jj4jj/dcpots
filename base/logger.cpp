@@ -1,9 +1,13 @@
 #include "logger.h"
-#include "stdinc.h"
-#include "dcutils.hpp"
 
+#define  THREAD_SAFE
 struct logger_t {
 	logger_config_t	conf;
+#ifdef  THREAD_SAFE
+    dcsutil::lock_mixin<true>   lock;
+#else
+    dcsutil::lock_mixin<false>  lock;
+#endif //  THREAD_SAFE
 	//lock info todo ?
 	int			last_err;
 	string		last_msg;
@@ -17,9 +21,13 @@ struct logger_t {
 		inited = false;
 	}
 };
+#undef THREAD_SAFE
 
 static	logger_t * G_LOGGER = nullptr;
 logger_t *		global_logger(){
+    if (!G_LOGGER){
+        global_logger_init(logger_config_t());
+    }
 	return G_LOGGER;
 }
 int				global_logger_init(const logger_config_t & conf){
@@ -82,6 +90,19 @@ logger_t *	logger_create(const logger_config_t & conf){
 
 	return em;
 }
+void            logger_lock(logger_t * logger){
+    if (!logger){
+        return global_logger()->lock.lock();
+    }
+    return logger->lock.lock();
+}
+void            logger_unlock(logger_t * logger){
+    if (!logger){
+        return global_logger()->lock.unlock();
+    }
+    return logger->lock.unlock();
+}
+
 void			logger_destroy(logger_t * logger){
 	if (logger) {
 		if (logger->pf){
@@ -129,8 +150,7 @@ int				logger_write(logger_t * logger, int loglv, const char* fmt, ...)
 	if (loglv < logger->conf.lv){
 		return 0;
 	}
-	//logger lock ?
-
+    logger_lock(logger);
 	va_list ap;
 	va_start(ap, fmt);
 	int n = 0;
@@ -165,5 +185,6 @@ int				logger_write(logger_t * logger, int loglv, const char* fmt, ...)
 	else{
 		fputs(logger->last_msg.c_str(), stderr);
 	}
+    logger_unlock(logger);
 	return n;
 }

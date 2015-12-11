@@ -29,9 +29,10 @@ struct mongo_command_t {
         if (this != &rhs){
             this->db.swap(const_cast<string&>(rhs.db));
             this->coll.swap(const_cast<string&>(rhs.coll));
-            this->cmd.assign(rhs.cmd.data(), rhs.cmd.length());
+            this->cmd.assign(rhs.cmd.data(), rhs.length);
             //this->cmd.swap(const_cast<string&>(rhs.cmd));
             this->flag = rhs.flag;
+            this->length = rhs.length;
         }
     }
 };
@@ -65,8 +66,9 @@ struct mongo_client_impl_t {
 };
 
 #define _THIS_HANDLE	((mongo_client_impl_t*)(handle))
-#define LOG_S_E(str, format, ...)	LOGRSTR((str), "mongo", " [%d@%d (%s)] " format, error.code, error.domain, error.message, ##__VA_ARGS__)
-#define LOG_S(str, format, ...)		LOGRSTR((str), "mongo", format, ##__VA_ARGS__)
+
+#define LOG_S_E(str, format, ...)	LOGRSTR((str), "mongo", "[%d@%d(%s)]", error.code, error.domain, error.message);GLOG_ERR("[%d@%d(%s)]" format, error.code, error.domain, error.message, ##__VA_ARGS__)
+#define LOG_S(str, format, ...)		LOGRSTR((str), "mongo", format, ##__VA_ARGS__);GLOG_ERR(format, ##__VA_ARGS__)
 
 mongo_client_t::mongo_client_t(){
 	handle = new mongo_client_impl_t();
@@ -101,7 +103,7 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	if (!command){
 		rsp.result.err_no = error.code;
 		LOG_S_E(rsp.result.err_msg, "bson_new_from_json error!");
-		return;
+        return;
 	}
 	bool ret = false;
 	if (!req.cmd.coll.empty()){
@@ -117,11 +119,10 @@ _real_excute_command(mongoc_client_t * client, mongo_response_t & rsp, const mon
 	if (ret) {
 		char *str = bson_as_json(&reply, NULL);
 		rsp.result.rst = str;
-        GLOG_TRA("rsp result:%s", str);
 		bson_free(str);
 	}
 	else {
-		rsp.result.err_no = error.code;
+        rsp.result.err_no = error.code;
 		LOG_S_E(rsp.result.err_msg, "excute command:%s error !", req.cmd.cmd.c_str());
 	}
 	bson_destroy(command);
@@ -301,17 +302,5 @@ mongo_client_t::poll(int max_proc, int timeout_ms){//same thread cb call back
 	}
 	return nproc;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
 NS_END()
