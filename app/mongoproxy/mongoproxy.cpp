@@ -98,7 +98,7 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
         do {
             string deletes = "{ \"q\":";
             deletes.append(msg.req().q());
-            deletes.append("},{ \"limit\": ");
+            deletes.append(",\"limit\": ");
             deletes.append(std::to_string(msg.req().remove().limit()) + "}");
             cbp->mc->remove(msg.db(), msg.coll(), deletes, on_mongo_result, cbp);
         } while (false);

@@ -54,7 +54,7 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 		cerr << "msg unpack error !" << endl;
 		return -1;
 	}
-    GLOG_TRA("recv proxy msg:%s", msg.Debug());
+    GLOG_TRA("recv proxy msg:%s bytes:%d", msg.Debug(), msg.ByteSize());
 	mongoproxy_result_t result;
 	result.status = msg.rsp().status();
 	result.error = msg.rsp().error().c_str();

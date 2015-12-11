@@ -68,7 +68,6 @@ mongo_client_t::~mongo_client_t(){
 }
 static void 
 _real_excute_command(mongoc_client_t * client, mongo_client_t::result_t & result, const mongo_client_t::command_t & command){
-	//////////////////////////////////////////
 	bson_error_t error;
 	bson_t reply;
 	result.err_no = 0;
@@ -209,11 +208,10 @@ mongo_client_t::command(const string & db, const string & coll,
     req.cmd.db = db;
     req.cmd.coll = coll;
     /////////////////////////////////////////////////////////////////////////////////////////
-	va_list ap;
+    va_list ap;
 	va_start(ap, cmd_fmt);
     req.cmd.cmd_length = vstrprintf(req.cmd.cmd_data, cmd_fmt, ap);
 	va_end(ap);
-    GLOG_TRA("excute command json:%s", req.cmd.cmd_data.c_str());
 	////////////////////////////////////////////////////////
 	if (_THIS_HANDLE->client){
         process_one(_THIS_HANDLE->client, _THIS_HANDLE, reqid);

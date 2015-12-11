@@ -30,6 +30,7 @@ struct mongo_client_t {
 		}
 	};
     struct command_t {
+        enum { MAX_COMMAND_LENGTH = 1024 * 1024};
         string  db;
         string	coll;
         string	cmd_data;
@@ -37,7 +38,9 @@ struct mongo_client_t {
         int		flag;
         string  cb_data;
         int     cb_size;
-        command_t() :cmd_length(0), flag(0), cb_size(0){}
+        command_t() :cmd_length(0), flag(0), cb_size(0){
+            cmd_data.reserve(MAX_COMMAND_LENGTH);
+        }
         command_t(const command_t & rhs){
             this->operator=(rhs);
         }
@@ -45,11 +48,11 @@ struct mongo_client_t {
             if (this != &rhs){
                 this->db.swap(const_cast<string&>(rhs.db));
                 this->coll.swap(const_cast<string&>(rhs.coll));
-                this->cmd_length = rhs.cmd_length;
-                this->cmd_data.assign(rhs.cmd_data.data(), rhs.cmd_length);
                 this->flag = rhs.flag;
-                this->cb_data.assign(rhs.cb_data.data(), rhs.cb_size);
+                this->cmd_length = rhs.cmd_length;
+                this->cmd_data.assign(rhs.cmd_data.data(), rhs.cmd_data.capacity()); //max capa
                 this->cb_size = rhs.cb_size;
+                this->cb_data.swap(const_cast<string&>(rhs.cb_data));
             }
         }
     };

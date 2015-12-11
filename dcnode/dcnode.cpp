@@ -611,7 +611,7 @@ static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint6
 static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_sz, const string & dst) {
 	if (_is_smq_leaf(dc)){
 		//to msgq
-		GLOG_TRA("foward msg to :%s with smq to parent", dst.c_str());
+		GLOG_TRA("foward msg to :[%s] with smq to parent", dst.c_str());
 		auto entry = _name_smq_entry_find(dc, dst);
 		if (!entry){ //to parent 
 			return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t(buff, buff_sz));
