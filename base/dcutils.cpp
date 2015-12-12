@@ -259,28 +259,24 @@ namespace dcsutil {
     const char         *strspack(std::string & str, const std::string & sep, const std::string & ks, ...){
         //{K=V,}
         str = "{";
+        //name=v
+        std::map<string, string>      kvmap;
+        std::vector<string> vs;
+        strsplit(ks, ",", vs, true);
         va_list ap;
         va_start(ap, ks);
-        string::size_type bpos = 0;
-        do {
-            string::size_type pos = ks.find(sep, bpos);
-            if (pos != bpos){
-                if (bpos < ks.length()){
-                    if (bpos > 0){
-                        strrepeat(str, sep.c_str(), 1);//,
-                    }
-                    //k=v
-                    str += ks.substr(bpos);//k
-                    const string * v = va_arg(ap, std::string *);
-                    strrepeat(str, sep.c_str(), 2);//=
-                    str += *v;//v
+        for (auto & kv : vs){
+            if (bpos < ks.length()){
+                if (bpos > 0){
+                    strrepeat(str, sep.c_str(), 1);//,
                 }
+                //k=v
+                str += ks.substr(bpos);//k
+                const string * v = va_arg(ap, std::string *);
+                strrepeat(str, sep.c_str(), 2);//=
+                str += *v;//v
             }
-            if (pos == string::npos){
-                break;
-            }
-            bpos = pos + sep.length();
-        } while (true);
+        }
         va_end(ap);
         str += "}";
         return str.data();

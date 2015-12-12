@@ -282,7 +282,7 @@ mongo_client_t::command(const string & db, const string & coll,
 	va_start(ap, cmd_fmt);
     req.cmd.cmd_length = vstrprintf(req.cmd.cmd_data, cmd_fmt, ap);
 	va_end(ap);
-    GLOG_TRA("mongo client excute command:(%s)", req.cmd.cmd_data.c_str());
+    GLOG_TRA("mongo client excute command:(%s) op:%d", req.cmd.cmd_data.c_str(), req.cmd.op);
 	/////////////////////////////////////////////////////////////////////////////////////////
 	if (_THIS_HANDLE->client){
         process_one(_THIS_HANDLE->client, _THIS_HANDLE, reqid);
