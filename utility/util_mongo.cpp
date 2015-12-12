@@ -29,8 +29,8 @@ struct mongo_client_impl_t {
 	mongoc_client_t			*client;
 	//////////////////////////////////////////////////////
 	mongoc_client_pool_t	*pool;
-	blocking_queue<uint64_t>			command_queue;
-    blocking_queue<uint64_t>		    result_queue;
+	blocking_queue<size_t>			        command_queue;
+    blocking_queue<size_t>		            result_queue;
 	std::atomic<int>						running;
 	std::thread								workers[MAX_MOGNO_THREAD_POOL_SIZE];
     object_pool<mongo_request_t>            request_pool;
@@ -66,41 +66,111 @@ mongo_client_t::~mongo_client_t(){
 		delete _THIS_HANDLE;
 	}
 }
+
+enum MongoOptFlag {
+    MONGO_OPT_CMD = 0,
+    MONGO_OPT_FIND = 1
+};
+#define MONGO_OPT_PARAM_SEP  ("\r\n")
 static void 
 _real_excute_command(mongoc_client_t * client, mongo_client_t::result_t & result, const mongo_client_t::command_t & command){
 	bson_error_t error;
-	bson_t reply;
 	result.err_no = 0;
 	result.err_msg[0] = 0;
-	result.rst[0] = 0;
-	bson_t *bscommand = bson_new_from_json((const uint8_t *)command.cmd_data.data(), command.cmd_length, &error);// BCON_NEW(BCON_UTF8(command.cmd.c_str()));
-    if (!bscommand){
-		result.err_no = error.code;
-		LOG_S_E(result.err_msg, "bson_new_from_json error!");
-        return;
-	}
-	bool ret = false;
-	if (!command.coll.empty()){
-		mongoc_collection_t * collection = mongoc_client_get_collection(client, command.db.c_str(), command.coll.c_str());
-        ret = mongoc_collection_command_simple(collection, bscommand, NULL, &reply, &error);
-		mongoc_collection_destroy(collection);
-	}
-	else {
-		mongoc_database_t * database = mongoc_client_get_database(client, command.db.c_str());
-        ret = mongoc_database_command_simple(database, bscommand, NULL, &reply, &error);
-		mongoc_database_destroy(database);
-	}
-	if (ret) {
-		char *str = bson_as_json(&reply, NULL);
-		result.rst = str;
-		bson_free(str);
-	}
-	else {
-        result.err_no = error.code;
-		LOG_S_E(result.err_msg, "excute command:%s error !", command.cmd_data.c_str());
-	}
-    bson_destroy(bscommand);
-	bson_destroy(&reply);
+	result.rst[0] = 0;   
+    if (command.op == MONGO_OPT_CMD){
+        bson_t reply;
+        bson_t *bscommand = bson_new_from_json((const uint8_t *)command.cmd_data.data(), command.cmd_length, &error);// BCON_NEW(BCON_UTF8(command.cmd.c_str()));
+        if (!bscommand){
+            result.err_no = error.code;
+            LOG_S_E(result.err_msg, "bson_new_from_json error!");
+            return;
+        }
+        bool ret = false;
+        if (!command.coll.empty()){
+            mongoc_collection_t * collection = mongoc_client_get_collection(client, command.db.c_str(), command.coll.c_str());
+            ret = mongoc_collection_command_simple(collection, bscommand, NULL, &reply, &error);
+            mongoc_collection_destroy(collection);
+        }
+        else {
+            mongoc_database_t * database = mongoc_client_get_database(client, command.db.c_str());
+            ret = mongoc_database_command_simple(database, bscommand, NULL, &reply, &error);
+            mongoc_database_destroy(database);
+        }
+        if (ret) {
+            char *str = bson_as_json(&reply, NULL);
+            result.rst = str;
+            bson_free(str);
+        }
+        else {
+            result.err_no = error.code;
+            LOG_S_E(result.err_msg, "excute command:%s error !", command.cmd_data.c_str());
+        }
+        bson_destroy(bscommand);
+        bson_destroy(&reply);
+    }
+    else if (command.op == MONGO_OPT_FIND){
+        //query, order, fields, skip, limit
+        string query, order, fields, skip, limit;
+        strsunpack(command.cmd_data.data(), MONGO_OPT_PARAM_SEP, "query,order,fields,skip,limit",
+            &query, &order, &fields, &skip, &limit);
+        string jsoncmd = "{ \"$query\":" + query;
+        if (!order.empty()){
+            jsoncmd += ", \"$orderby\":" + order;
+        }
+        jsoncmd += "}";
+        int iskip = std::stoi(skip);
+        int ilimit = std::stoi(limit);
+
+        bson_t *bsquery = bson_new_from_json((const uint8_t *)jsoncmd.data(), jsoncmd.length(), &error);
+        if (!bsquery){
+            result.err_no = error.code;
+            LOG_S_E(result.err_msg, "query bson_new_from_json error!");
+            return;
+        }
+        bson_t * bsfieldsquery = NULL;
+        if (!fields.empty()){
+            bsfieldsquery = bson_new_from_json((const uint8_t *)fields.data(), fields.length(), &error);
+            if (!bsfieldsquery){
+                result.err_no = error.code;
+                LOG_S_E(result.err_msg, "fields bson_new_from_json error!");
+                bson_destroy(bsquery);
+                return;
+            }
+        }
+
+        //-----------------------------------------------------------------------------
+        const bson_t *doc;
+        mongoc_collection_t * collection = mongoc_client_get_collection(client, command.db.c_str(), command.coll.c_str());
+        if (!collection){
+            result.err_no = -1;
+            LOG_S(result.err_msg, "get collection error db:%s coll:%s", command.db.c_str(), command.coll.c_str());
+            return;
+        }
+        mongoc_cursor_t * cursor = mongoc_collection_find(collection, MONGOC_QUERY_NONE, iskip, ilimit, 0, bsquery, bsfieldsquery, NULL);
+        result.rst = "{\"values\": [";
+        int count = 0;
+        while (mongoc_cursor_more(cursor) && mongoc_cursor_next(cursor, &doc)) {
+            char *str = bson_as_json(doc, NULL);
+            if (count != 0){
+                result.rst.append(",");
+            }
+            result.rst.append(str);
+            /////////////////////////////////
+            ++count;
+            GLOG_TRA("get result %s\n", str);
+            bson_free(str);
+        }
+        result.rst = "]}";
+        if (mongoc_cursor_error(cursor, &error)) {
+            LOG_S_E(result.err_msg, "cursor error occurred!");
+        }
+        mongoc_cursor_destroy(cursor);
+        bson_destroy(bsquery);
+        if (bsfieldsquery){
+            bson_destroy(bsfieldsquery);
+        }
+    }
 }
 static inline void 
 process_one(mongoc_client_t *client, mongo_client_impl_t *mci, size_t reqid){
@@ -196,7 +266,7 @@ mongo_client_t::init(const mongo_client_config_t & conf){
 
 int		
 mongo_client_t::command(const string & db, const string & coll,
-					on_result_cb_t cb, void * ud, int flag, const char * cmd_fmt, ...){
+					on_result_cb_t cb, void * ud, int op, const char * cmd_fmt, ...){
 	if (_THIS_HANDLE->command_queue.size() > MAX_QUEUE_REQUEST_SIZE){
 		return -1;
 	}
@@ -204,7 +274,7 @@ mongo_client_t::command(const string & db, const string & coll,
     mongo_request_t & req = *_THIS_HANDLE->request_pool.ptr(reqid);
 	req.cb = cb;
 	req.cb_ud = ud;
-    req.cmd.flag = flag;
+    req.cmd.op = op;
     req.cmd.db = db;
     req.cmd.coll = coll;
     /////////////////////////////////////////////////////////////////////////////////////////
@@ -240,24 +310,14 @@ mongo_client_t::remove(const string & db, const string & coll, const string & js
 		"{\"delete\": \"%s\",\"deletes\": [%s]}",
 		coll.c_str(), jsonmsg.c_str());
 }
-int				
+int
 mongo_client_t::find(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud,
     const char * projection, const char * sort, int skip , int limit ){
-    string ex = "";
-    if (projection && projection[0]){
-        ex += ",\"fields\": {";
-        ex += projection;
-        ex += "}";
-    }
-    if (sort && sort[0]){
-        ex += ",\"sort\": {";
-        ex += sort;
-        ex += "}";
-    }
-    GLOG_TRA("find ex:%s skip:%d limit:%d", ex.c_str(), skip, limit);
-	return command(db, coll, cb, ud, 0,
-		"{\"find\": \"%s\",\"query\": %s %s}",
-		coll.c_str(), jsonmsg.c_str(), ex.c_str());
+    string findcmd;
+    string sskip = std::to_string(skip), slimit = std::to_string(limit);
+    strspack(findcmd, MONGO_OPT_PARAM_SEP, "query,fields,skip,limit,order",
+        &jsonmsg, &projection, &sskip, &slimit, &sort);
+    return command(db, coll, cb, ud, MONGO_OPT_FIND, findcmd.c_str());
 }
 int				
 mongo_client_t::count(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud){

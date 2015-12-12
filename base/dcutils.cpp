@@ -115,14 +115,19 @@ namespace dcsutil {
 
 		return pid;
 	}
-	int			strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty, int maxsplit){
+    int			strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs,
+                        bool ignore_empty, int maxsplit, int beg_ , int end_ ){
 		vs.clear();
-		string::size_type beg = 0;
+        string::size_type beg = beg_;
+        string::size_type end = str.length();
+        if (end_ > 0){
+            end = end_;
+        }
 		string::size_type pos = 0;
 		//if pos not found add the rest then return , else add substr . again
 		do {
 			pos = str.find(sep, beg);
-			if (pos != string::npos){
+			if ( pos != string::npos && pos < end ){
 				if (pos > beg){
 					vs.push_back(str.substr(beg, pos - beg));
 				}
@@ -132,9 +137,10 @@ namespace dcsutil {
 				beg = pos + sep.length();
 			}
 			if (pos == string::npos || //last one
-				(maxsplit > 0 && (int)vs.size() + 1 == maxsplit)){
-				if (beg < str.length()){
-					vs.push_back(str.substr(beg));
+				(maxsplit > 0 && (int)vs.size() + 1 == maxsplit) ||
+                pos > end){
+				if (beg < end){
+					vs.push_back(str.substr(beg, end - beg));
 				}
 				else if (!ignore_empty){
 					vs.push_back(""); //empty 
@@ -206,6 +212,79 @@ namespace dcsutil {
 		}
 		return randoms.c_str();
 	}
+
+    int                 strsunpack(const std::string & str, const std::string & sep, const std::string & ks, ...){
+        //{K=V,}
+        if (str[0] != '{' || *str.rbegin() != '}'){
+            return -1;//valid format
+        }
+        //name=v
+        std::map<string, string>      kvmap;
+        std::vector<string> vs;
+        strsplit(str, sep, vs, true, 0, 1, str.length() - 1); //{<---------->}
+        string kvsep;
+        strrepeat(kvsep, sep.c_str(), 2);//=
+        for (auto & kv : vs){
+            std::vector<string> skv;
+            int lkv = strsplit(kv, kvsep, skv, true, 2);//k=v
+            if (lkv == 2){
+                kvmap[skv[0]] = skv[1];
+            }
+        }
+        va_list ap;
+        va_start(ap, ks);
+        int count = 0;
+        string::size_type bpos = 0;
+        do {
+            string::size_type pos = ks.find(sep, bpos);
+            if (pos != bpos){
+                if (bpos < ks.length()){
+                    //k=v
+                    string * v = va_arg(ap, std::string *);
+                    auto it = kvmap.find(ks.substr(bpos));
+                    if (it != kvmap.end()){
+                        v->assign(it->second);
+                    }
+                    ++count;
+                }
+            }
+            if (pos == string::npos){
+                break;
+            }
+            bpos = pos + sep.length();
+        } while (true);
+        va_end(ap);
+        return count;
+    }
+    const char         *strspack(std::string & str, const std::string & sep, const std::string & ks, ...){
+        //{K=V,}
+        str = "{";
+        va_list ap;
+        va_start(ap, ks);
+        string::size_type bpos = 0;
+        do {
+            string::size_type pos = ks.find(sep, bpos);
+            if (pos != bpos){
+                if (bpos < ks.length()){
+                    if (bpos > 0){
+                        strrepeat(str, sep.c_str(), 1);//,
+                    }
+                    //k=v
+                    str += ks.substr(bpos);//k
+                    const string * v = va_arg(ap, std::string *);
+                    strrepeat(str, sep.c_str(), 2);//=
+                    str += *v;//v
+                }
+            }
+            if (pos == string::npos){
+                break;
+            }
+            bpos = pos + sep.length();
+        } while (true);
+        va_end(ap);
+        str += "}";
+        return str.data();
+    }
 
 
 

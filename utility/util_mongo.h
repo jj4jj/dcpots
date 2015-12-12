@@ -35,10 +35,10 @@ struct mongo_client_t {
         string	coll;
         string	cmd_data;
         size_t  cmd_length;
-        int		flag;
+        int		op;
         string  cb_data;
         int     cb_size;
-        command_t() :cmd_length(0), flag(0), cb_size(0){
+        command_t() :cmd_length(0), op(0), cb_size(0){
             cmd_data.reserve(MAX_COMMAND_LENGTH);
         }
         command_t(const command_t & rhs){
@@ -48,7 +48,7 @@ struct mongo_client_t {
             if (this != &rhs){
                 this->db.swap(const_cast<string&>(rhs.db));
                 this->coll.swap(const_cast<string&>(rhs.coll));
-                this->flag = rhs.flag;
+                this->op = rhs.op;
                 this->cmd_length = rhs.cmd_length;
                 this->cmd_data.assign(rhs.cmd_data.data(), rhs.cmd_data.capacity()); //max capa
                 this->cb_size = rhs.cb_size;
@@ -68,7 +68,7 @@ public:
 	int				init(const mongo_client_config_t & conf);
     typedef	 void(*on_result_cb_t)(void * ud, const mongo_client_t::result_t & result, const mongo_client_t::command_t & command);
 	int				command(const string & db, const string & coll,
-							on_result_cb_t cb, void * ud, int flag, const char * cmd_fmt, ...);
+							on_result_cb_t cb, void * ud, int op, const char * cmd_fmt, ...);
 	int				insert(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
 	int				update(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);
 	int				remove(const string & db, const string & coll, const string & jsonmsg, on_result_cb_t cb, void * ud);

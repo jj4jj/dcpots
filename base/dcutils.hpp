@@ -48,15 +48,14 @@ NS_BEGIN(dcsutil)
 	int					lockpidfile(const char * pidfile, int kill_other_sig = 0, bool nb = true);
 
 	///////////str////////////////////////////////////////////////////////////////////////////////
-	int					strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty = true, int maxsplit = 0);
+	int					strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty = true, int maxsplit = 0, int beg = 0, int end = 0);
 	size_t				strprintf(std::string & str, const char * format, ...);
 	size_t				strnprintf(std::string & str, size_t max_sz, const char * format, ...);
 	size_t				vstrprintf(std::string & str, const char* format, va_list va);
 	void				strrepeat(std::string & str, const char * rep, int repcount);
 	const char*			strrandom(std::string & randoms, int length = 8, char charbeg = 0x21, char charend = 0x7E);
-    //
     template <typename StrItable>
-    const char*         strjoin(std::string & val, const std::string & sep, StrItable it){
+    const char         *strjoin(std::string & val, const std::string & sep, StrItable it){
         size_t i = 0;
         val.clear();
         for (auto & v : it){
@@ -67,8 +66,13 @@ NS_BEGIN(dcsutil)
             ++i;
         }
     }
-	///////////uuid////////////////////////////////////////////////////////////////////////////////////////////////
+    const char          *strspack(std::string & str, const std::string & sep, const std::string & ks, ...);
+    int                 strsunpack(const std::string & str, const std::string & sep, const std::string & k, ...);
+    //todo variadic  
 
+
+
+    ///////////uuid////////////////////////////////////////////////////////////////////////////////////////////////
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
