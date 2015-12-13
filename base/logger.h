@@ -12,12 +12,12 @@ enum log_msg_level_type {
 	LOG_LVL_FATAL = 6,
 	LOG_LVL_INVALID = 255
 };
-static const char*	STR_LOG_LEVEL(int lv){
+static inline const char *	STR_LOG_LEVEL(int lv){
 	static const char * s_strlv[] = {
-		"PROF", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "ALL"
+		"PROF", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
 	};
 	if (lv < 0 || lv >= (int)(sizeof(s_strlv) / sizeof(s_strlv[0]))){
-		lv = LOG_LVL_INVALID;
+		return "";
 	}
 	return s_strlv[lv];
 }
@@ -58,17 +58,18 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 
 //raw log
 #ifndef LOGR
-#define RAW_LOG_MSG_FORMAT_PREFIX	"%s|%s|"
-#define RAW_LOG_MSG_FORMAT_VALUES	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec)
+#define RAW_LOG_MSG_FORMAT_PREFIX	"%19s|%s|"
+#define RAW_LOG_MSG_FORMAT_VALUES(tag)	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec),tag
+
 #define LOGR(log_lv_, format,...)	do{\
     if ((log_lv_) >= logger_level((nullptr))){\
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-        logger_write((nullptr), (log_lv_), RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+        logger_write((nullptr), (log_lv_), RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL((log_lv_))), ##__VA_ARGS__); \
     }\
     else {\
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
         logger_lock(); \
-        fprintf(stderr, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+        fprintf(stderr, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL((log_lv_))), ##__VA_ARGS__); \
         logger_unlock();\
     }\
 } while (0)
@@ -79,20 +80,21 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 #ifndef LOGRSTR
 #define LOGRSTR(str, tag, format,...)	do{\
     timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-    dcsutil::strprintf((str), RAW_LOG_MSG_FORMAT_PREFIX format, RAW_LOG_MSG_FORMAT_VALUES, (tag), ##__VA_ARGS__); \
+    dcsutil::strprintf((str), RAW_LOG_MSG_FORMAT_PREFIX format, RAW_LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
 } while (0)
 #endif
 
 
 //general log prefix and values
-#define LOG_MSG_FORMAT_PREFIX	"%s.%lu|%ld@%d|%s:%d|%s|"
-#define LOG_MSG_FORMAT_VALUES	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec),err_tv_.tv_usec,gettid(),getpid(),__FUNCTION__,__LINE__
+//2010-10-12T12:08:08.123456|TID@PID|DEBUG|FUNC:LINE|
+#define LOG_MSG_FORMAT_PREFIX	"%19s.%06lu|%05ld@05%d|%s|%s:%d|"
+#define LOG_MSG_FORMAT_VALUES(tag)	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec),err_tv_.tv_usec,gettid(),getpid(),(tag),__FUNCTION__,__LINE__
 
 //log to str
 #ifndef LOGSTR
 #define LOGSTR(str, tag, format,...)    do{\
-    timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-    dcsutil::strprintf((str), LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES, (tag), ##__VA_ARGS__); \
+	timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
+    dcsutil::strprintf((str), LOG_MSG_FORMAT_PREFIX "%s|" format, LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
 } while (0)
 #endif
 
@@ -102,12 +104,12 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 #define LOG(logger_, log_lv_, format_, ...)	do{\
     if ((log_lv_) >= logger_level((logger_))){\
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-        logger_write((logger_), (log_lv_), LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+		logger_write((logger_), (log_lv_), LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL(log_lv_)), ##__VA_ARGS__); \
     }\
     else {\
         logger_lock(logger_); \
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-        fprintf(stderr, LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES, STR_LOG_LEVEL((log_lv_)), ##__VA_ARGS__); \
+		fprintf(stderr, LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL(log_lv_)), ##__VA_ARGS__); \
         logger_unlock(logger_); \
     }\
 }while (0)

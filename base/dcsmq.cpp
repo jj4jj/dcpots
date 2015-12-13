@@ -27,13 +27,13 @@ int		_msgq_create(key_t key, int flag, size_t max_size){
 	int id = msgget(key, flag);
 	if (id < 0){
 		//get error
-		GLOG(LOG_LVL_ERROR, "msg get error !");
+		GLOG_ERR( "msg get error !");
 		return -1;
 	}
 	struct msqid_ds mds;
 	int ret = msgctl(id, IPC_STAT, (struct msqid_ds *)&mds);
 	if (ret != 0){
-		GLOG(LOG_LVL_ERROR, "msgctl error !");
+		GLOG_ERR( "msgctl error !");
 		return -2;
 	}
 
@@ -41,7 +41,7 @@ int		_msgq_create(key_t key, int flag, size_t max_size){
 		mds.msg_qbytes = max_size;
 		ret = msgctl(id, IPC_SET, (struct msqid_ds *)&mds);
 		if (ret != 0){
-			GLOG(LOG_LVL_ERROR, "msgctl error !");
+			GLOG_ERR( "msgctl error !");
 			return -3;
 		}
 	}
@@ -62,14 +62,14 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	key_t key = ftok(conf.key.c_str(), prj_id[0]);
 	if (key == -1){
 		//error no
-		GLOG(LOG_LVL_ERROR, "ftok error key:%s , prj_id:%d",
+		GLOG_ERR( "ftok error key:%s , prj_id:%d",
 			conf.key.c_str(), prj_id[0]);
 		return nullptr;
 	}
 	int sender = _msgq_create(key, flag, conf.max_queue_buff_size);
 	if (sender < 0){
 		//errno
-		GLOG(LOG_LVL_ERROR, "create msgq sender error flag :%d buff size:%u",
+		GLOG_ERR( "create msgq sender error flag :%d buff size:%u",
 			flag, conf.max_queue_buff_size);
 		return nullptr;
 	}
@@ -80,7 +80,7 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	int recver = _msgq_create(key, flag, conf.max_queue_buff_size);
 	if (recver < 0){
 		//errno
-		GLOG(LOG_LVL_ERROR, "create msgq recver error flag :%d buff size:%u",
+		GLOG_ERR( "create msgq recver error flag :%d buff size:%u",
 			flag, conf.max_queue_buff_size);
 		return nullptr;
 	}
@@ -90,7 +90,7 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	dcsmq_t * smq = new dcsmq_t();
 	if (!smq){
 		//memalloc
-		GLOG(LOG_LVL_FATAL, "malloc error");
+		GLOG_FTL("malloc error");
 		return nullptr;
 	}
 	smq->sendbuff = (msgbuf	*)malloc(conf.msg_buffsz);
@@ -98,7 +98,7 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	if (!smq->sendbuff ||
 		!smq->recvbuff){
 		//mem alloc
-		GLOG(LOG_LVL_FATAL, "malloc error");
+		GLOG_FTL("malloc error");
 		return nullptr;
 	}
 	smq->conf = conf;

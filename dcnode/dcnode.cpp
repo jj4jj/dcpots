@@ -758,7 +758,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 
 		n->smq = dcsmq_create(smc);
 		if (!n->smq) {
-			GLOG(LOG_LVL_ERROR, "dcnode create msg q error !");;
+			GLOG_ERR("dcnode create msg q error !");;
 			dcnode_destroy(n);
 			return nullptr;
 		}

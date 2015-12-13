@@ -72,30 +72,28 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
         }
 		else if (cmd_type == MONGO_FIND){
             mongoproxy_result_t::mongo_record_t record;
-            if (result.ok == 1){//ok
-                auto oid = jdc.get("/value/_id/$oid");
-                if (!oid || !oid->IsString()){
-                    GLOG_TRA("not found the oid result:%s , empty found set", msg.rsp().result().c_str());
-                }
-                else {
-                    record.first = oid->GetString();
-                    auto new_msg = protobuf_alloc_msg(msg_type_name);
-                    if (!new_msg){
-                        GLOG_ERR("alloc msg error msg type:%s", msg_type_name.c_str());
-                    }
-                    else {
-                        if (pbjson::jsonobject2pb(jdc.get("value"), new_msg, debug_msg)){
-                            GLOG_ERR("json 2 pb error for:%s", debug_msg.c_str());
-                            protobuf_free_msg(new_msg);
-                            new_msg = nullptr;
-                        }
-                    }
-                    if (new_msg){
-                        record.second = new_msg;
-                        result.results.push_back(record);
-                    }
-                }
-            }
+			//values
+			auto & jdvalues = jdc["values"];
+			result.n = jdvalues.Size();
+			for (int i = 0; i < jdvalues.Size(); ++i){
+				auto & jdv = jdvalues[i];
+				record.first = jdv["_id"]["$oid"].GetString();
+				auto new_msg = protobuf_alloc_msg(msg_type_name);
+				if (!new_msg){
+					GLOG_ERR("alloc msg error msg type:%s", msg_type_name.c_str());
+				}
+				else {
+					if (pbjson::jsonobject2pb(&jdv, new_msg, debug_msg)){
+						GLOG_ERR("json 2 pb error for:%s", debug_msg.c_str());
+						protobuf_free_msg(new_msg);
+						new_msg = nullptr;
+					}
+				}
+				if (new_msg){
+					record.second = new_msg;
+					result.results.push_back(record);
+				}
+			}
 		}
         else if (cmd_type == MONGO_COUNT){
             result.n = jdc["n"].GetInt();
@@ -170,7 +168,7 @@ _mongoproxy_cmd(MongoOP op, const google::protobuf::Message & msg, bool update,
     }
 	string json;
 	pbjson::pb2json(&msg, json);
-	GLOG(LOG_LVL_TRACE, "pb2json :%s", json.c_str());
+	GLOG_TRA("pb2json :%s", json.c_str());
     if (ex){
         mongo_msg.mutable_req()->MergeFrom(*ex);
     }
@@ -181,7 +179,7 @@ _mongoproxy_cmd(MongoOP op, const google::protobuf::Message & msg, bool update,
 		mongo_msg.mutable_req()->set_q(json);
 	}
 	if (!mongo_msg.Pack(MONGO.msg_buffer)){
-		GLOG(LOG_LVL_WARNING, "pack error :%s", mongo_msg.Debug());
+		GLOG_WAR("pack error :%s", mongo_msg.Debug());
 		return -1;
 	}
 	return dcnode_send(MONGO.dc, "", MONGO.msg_buffer.buffer, MONGO.msg_buffer.valid_size);

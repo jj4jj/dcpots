@@ -221,61 +221,46 @@ namespace dcsutil {
         //name=v
         std::map<string, string>      kvmap;
         std::vector<string> vs;
-        strsplit(str, sep, vs, true, 0, 1, str.length() - 1); //{<---------->}
-        string kvsep;
-        strrepeat(kvsep, sep.c_str(), 2);//=
+		string kvsep;
+		strrepeat(kvsep, sep.c_str(), 2);//,
+		strsplit(str, kvsep, vs, true, 0, 1, str.length() - 1); //{<---------->}
         for (auto & kv : vs){
             std::vector<string> skv;
-            int lkv = strsplit(kv, kvsep, skv, true, 2);//k=v
+            int lkv = strsplit(kv, sep, skv, true, 2);//k=v
             if (lkv == 2){
                 kvmap[skv[0]] = skv[1];
             }
         }
-        va_list ap;
-        va_start(ap, ks);
-        int count = 0;
-        string::size_type bpos = 0;
-        do {
-            string::size_type pos = ks.find(sep, bpos);
-            if (pos != bpos){
-                if (bpos < ks.length()){
-                    //k=v
-                    string * v = va_arg(ap, std::string *);
-                    auto it = kvmap.find(ks.substr(bpos));
-                    if (it != kvmap.end()){
-                        v->assign(it->second);
-                    }
-                    ++count;
-                }
-            }
-            if (pos == string::npos){
-                break;
-            }
-            bpos = pos + sep.length();
-        } while (true);
-        va_end(ap);
-        return count;
+		/////////////////////////////////////////
+		std::vector<string> vsks;
+		strsplit(ks, ",", vsks, true);
+		va_list ap;
+		va_start(ap, ks);
+		for (auto & k : vsks){
+			//k=v
+			string * v = va_arg(ap, std::string *);
+			v->assign(kvmap[k]);
+		}
+		va_end(ap);
+        return vs.size();
     }
     const char         *strspack(std::string & str, const std::string & sep, const std::string & ks, ...){
         //{K=V,}
         str = "{";
         //name=v
-        std::map<string, string>      kvmap;
         std::vector<string> vs;
         strsplit(ks, ",", vs, true);
         va_list ap;
         va_start(ap, ks);
-        for (auto & kv : vs){
-            if (bpos < ks.length()){
-                if (bpos > 0){
-                    strrepeat(str, sep.c_str(), 1);//,
-                }
-                //k=v
-                str += ks.substr(bpos);//k
-                const string * v = va_arg(ap, std::string *);
-                strrepeat(str, sep.c_str(), 2);//=
-                str += *v;//v
+		for (size_t i = 0; i < vs.size(); ++i){
+            if (i > 0){
+                strrepeat(str, sep.c_str(), 2);//,
             }
+            //k=v
+            str += vs[i];//k
+            const string * v = va_arg(ap, std::string *);
+            strrepeat(str, sep.c_str(), 1);//=
+            str += *v;
         }
         va_end(ap);
         str += "}";

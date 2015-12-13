@@ -161,9 +161,10 @@ _real_excute_command(mongoc_client_t * client, mongo_client_t::result_t & result
             GLOG_TRA("get result %s\n", str);
             bson_free(str);
         }
-        result.rst = "]}";
+        result.rst.append("]}");
         if (mongoc_cursor_error(cursor, &error)) {
-            LOG_S_E(result.err_msg, "cursor error occurred!");
+			result.err_no = error.code;
+			LOG_S_E(result.err_msg, "cursor error occurred!");
         }
         mongoc_cursor_destroy(cursor);
         bson_destroy(bsquery);

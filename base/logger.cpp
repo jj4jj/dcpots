@@ -53,7 +53,7 @@ FILE * logfile_open(const char * filename, int & nextrollid){
 		pf = fopen(filename, "w");
 	}
 	if (pf == nullptr){
-		GLOG(LOG_LVL_FATAL, "open file :%s error!", filename);
+		GLOG_FTL("open file :%s error!", filename);
 		return nullptr;
 	}
 	if (nextrollid == 0){
