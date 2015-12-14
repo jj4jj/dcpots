@@ -6,8 +6,16 @@
 #include "utility/util_proto.h"
 
 void test_cb(mongoproxy_cmd_t cmd, void * ud, const mongoproxy_result_t & result){
-	GLOG_TRA("cmd:%d %d count:%d success:%d msg:%d", cmd, result.status,
-        result.n, result.ok, result.results.size());
+    GLOG_TRA("cmd:%d status:%d ok:%d nquery:%d nupdate:%d msg num:%d cb_data:%s cb_length:%d",
+        cmd, result.status,
+        result.ok, result.nq, result.nu,
+        result.results.size(),
+        result.cb_data, result.cb_size);
+    for (int i = 0; i < result.results.size(); ++i){
+        GLOG_DBG("result [%d] %s => %s", i,
+            result.results[i].first.c_str(),
+            result.results[i].second->ShortDebugString().c_str());
+    }
 }
 int main(int argc, char ** argv){
 	using namespace std;

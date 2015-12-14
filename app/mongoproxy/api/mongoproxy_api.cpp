@@ -68,13 +68,14 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 		GLOG_TRA("cmmongo proxy result: (%s)", jdc.dumps(debug_msg));
         result.ok = jdc["ok"].GetInt();
         if (cmd_type == MONGO_INSERT){
-            result.n = jdc["n"].GetInt();
+            result.nq = jdc["n"].GetInt();
         }
 		else if (cmd_type == MONGO_FIND){
             mongoproxy_result_t::mongo_record_t record;
 			//values
-			auto & jdvalues = jdc["values"];
-			result.n = jdvalues.Size();
+            auto & jdvalues = jdc["values"];
+            result.ok = 1;
+            result.nq = jdvalues.Size();
 			for (int i = 0; i < jdvalues.Size(); ++i){
 				auto & jdv = jdvalues[i];
 				record.first = jdv["_id"]["$oid"].GetString();
@@ -96,14 +97,14 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 			}
 		}
         else if (cmd_type == MONGO_COUNT){
-            result.n = jdc["n"].GetInt();
+            result.nq = jdc["n"].GetInt();
         }
 		else if (cmd_type == MONGO_UPDATE){
-            result.n = jdc["n"].GetInt();
-            result.modified = jdc["nModified"].GetInt();
+            result.nq = jdc["n"].GetInt();
+            result.nu = jdc["nModified"].GetInt();
 		}
 		else if (cmd_type == MONGO_REMOVE){
-            result.n = jdc["n"].GetInt();
+            result.nq = jdc["n"].GetInt();
 		}
 	}	
     result.cb_data = msg.cb().data();

@@ -9,9 +9,9 @@ namespace google {
 
 struct mongoproxy_result_t {
     int status; //for call status
-    int ok; //.ok for status 1:true;0:false
-    int n; //n
-    int modified;
+    int ok; //.ok for status 1:true; 0:false
+    int nq; //n for mdl removed and inserted
+    int nu;//modified update
     const  char * cb_data;
     size_t cb_size;
     //id, msg
@@ -21,8 +21,8 @@ struct mongoproxy_result_t {
     mongoproxy_result_t(){
         status = 0;
         ok = 0;
-        n = 0;
-        modified = 0;
+        nq = 0;
+        nu = 0;
         error = nullptr;
         cb_data = nullptr;
         cb_size = 0;
