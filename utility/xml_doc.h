@@ -18,6 +18,12 @@ public:
 	const	char *		pretty(std::string & str);
 	int					loads(char * buffer);
 	const	char *		dumps(std::string & str);
+	enum sax_event_type {
+		BEGIN_NODE,
+		END_NODE
+	};
+	typedef void(*sax_event_cb_t)(xml_node_t * node, int lv, void * ud, sax_event_type ev);
+	void				sax(sax_event_cb_t cb, void * cb_ud, xml_node_t * node, int lv = 0);
 	///////////////////////////////////////////////////////
 	//get and add
 	xml_attribute_t *	get_attr(const char * key, xml_node_t * node = nullptr, const char * deafultvale = nullptr);
@@ -29,4 +35,10 @@ public:
 	xml_attribute_t *	path_get_attr(const char* path, const char* defavalue = nullptr);
 	xml_node_t *		path_get_node(const char* path, bool create_if_not_exist = false);
 	void				path_set(const char * path, const char * val, bool create_if_not_exist = false);
+
+	////////////////////////////////////////////////////////////////////////////
+	static	const	char *		node_name(xml_node_t * node);
+	static	const	char *		node_value(xml_node_t * node);
+	static	size_t				node_value_size(xml_node_t * node);
+
 };

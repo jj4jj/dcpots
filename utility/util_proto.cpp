@@ -120,8 +120,7 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 		strnprintf(error, 64, "not found field :%s", name.c_str());
 		return -1;
 	}
-
-	if (field->is_repeated()){
+	if (field->is_repeated() && idx >= 0){ //set
 		switch (field->cpp_type()){
 		case FieldDescriptor::CPPTYPE_INT32:     // TYPE_INT32, TYPE_SINT32, TYPE_SFIXED32
 			reflection->SetRepeatedInt32(&msg, field, idx, std::stoi(value));
@@ -175,6 +174,60 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 			return -10;
 		}
 	}
+	else if (field->is_repeated() && idx < 0){ //add
+		switch (field->cpp_type()){
+		case FieldDescriptor::CPPTYPE_INT32:     // TYPE_INT32, TYPE_SINT32, TYPE_SFIXED32
+			reflection->AddInt32(&msg, field, std::stoi(value));
+			break;
+		case FieldDescriptor::CPPTYPE_INT64:     // TYPE_INT64, TYPE_SINT64, TYPE_SFIXED64
+			reflection->AddInt64(&msg, field, stoll(value));
+			break;
+		case FieldDescriptor::CPPTYPE_UINT32:     // TYPE_UINT32, TYPE_FIXED32			
+			reflection->AddUInt32(&msg, field, (uint32_t)(stoi(value)));
+			break;
+		case FieldDescriptor::CPPTYPE_UINT64:     // TYPE_UINT64, TYPE_FIXED64
+			reflection->AddUInt64(&msg, field, (uint64_t)(stoll(value)));
+			break;
+		case FieldDescriptor::CPPTYPE_DOUBLE:     // TYPE_DOUBLE
+			reflection->AddDouble(&msg, field, stod(value));
+			break;
+		case FieldDescriptor::CPPTYPE_FLOAT:     // TYPE_FLOAT
+			reflection->AddFloat(&msg, field, stof(value));
+			break;
+		case FieldDescriptor::CPPTYPE_BOOL:     // TYPE_BOOL
+			reflection->AddBool(&msg, field, (value == "true") ? true : false);
+			break;
+		case FieldDescriptor::CPPTYPE_ENUM:     // TYPE_ENUM
+			do {
+				auto ev = field->enum_type()->FindValueByName(value);
+				if (!ev){
+					strprintf(error, "enum value:%s not found", value.c_str());
+					return -1;
+				}
+				reflection->AddEnum(&msg, field, ev);
+				break;
+			} while (false);
+			break;
+		case FieldDescriptor::CPPTYPE_STRING:     // TYPE_STRING, TYPE_BYTES
+			reflection->AddString(&msg, field, value);
+			break;
+		case FieldDescriptor::CPPTYPE_MESSAGE:    // TYPE_MESSAGE, TYPE_GROUP
+			do {
+				auto nmsg = reflection->AddMessage(&msg, field);
+				if (!nmsg){
+					strnprintf(error, 200, "mutable idx msg error :%s , %d", field->full_name().c_str(), idx);
+					return -2;
+				}
+				if (!nmsg->ParseFromString(value)){
+					strnprintf(error, 200, "parse from value error :%s <= %s !", field->full_name().c_str(), value.c_str());
+					return -3;
+				}
+			} while (false);
+			break;
+		default:
+			return -10;
+		}
+	}
 	else {
 		switch (field->cpp_type()){
 		case FieldDescriptor::CPPTYPE_INT32:     // TYPE_INT32, TYPE_SINT32, TYPE_SFIXED32
@@ -214,7 +267,7 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 			break;
 		case FieldDescriptor::CPPTYPE_MESSAGE:    // TYPE_MESSAGE, TYPE_GROUP
 			do {
-				auto nmsg = reflection->MutableRepeatedMessage(&msg, field, idx);
+				auto nmsg = reflection->MutableMessage(&msg, field);
 				if (!nmsg){
 					strnprintf(error, 200, "mutable idx msg error :%s , %d", field->full_name().c_str(), idx);
 					return -2;
@@ -313,6 +366,48 @@ protobuf_saveto_xml(const google::protobuf::Message & msg, const std::string & x
 	writefile(xmlfile.c_str(), xml.c_str(), xml.length());
 	return 0;
 }
+
+static void
+convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type evt){
+	std::stack<Message *> * msgstack = (std::stack<Message *> *)ud;
+	auto msg = msgstack->top();
+	auto desc =	msg->GetDescriptor();
+	auto reflection = msg->GetReflection();
+	auto field = desc->FindFieldByName(xml_doc_t::node_name(node));
+	switch (evt){
+	case xml_doc_t::BEGIN_NODE:
+		if (field){
+			if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
+				Message * nmsg = nullptr;
+				if (field->is_repeated()){
+					nmsg = reflection->AddMessage(msg, field);
+				}
+				else {
+					nmsg = reflection->MutableMessage(msg, field);
+				}
+				msgstack->push(nmsg);
+			}
+			else {
+				string error;
+				if (field->cpp_type() != FieldDescriptor::CPPTYPE_MESSAGE){
+					int ret = protobuf_msg_field_set_value(*msg, xml_doc_t::node_name(node), -1, xml_doc_t::node_value(node), error);
+					if (ret){
+						GLOG_ERR("set value error ret:%d for :%s", ret, error.c_str());
+					}
+				}
+			}
+		}
+		break;
+	case xml_doc_t::END_NODE:
+		if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
+			msgstack->pop();
+		}
+		break;
+	default:
+		return;
+	}
+}
+
 int				
 protobuf_readfrom_xml(google::protobuf::Message & msg, const std::string & xmlfile, std::string & error){
 	xml_doc_t xml;
@@ -321,8 +416,9 @@ protobuf_readfrom_xml(google::protobuf::Message & msg, const std::string & xmlfi
 		error = "parse from file error !";
 		return ret;
 	}
-
-
+	std::stack<Message*>		msgstack;
+	msgstack.push(&msg);
+	xml.sax(convert_xml_to_pb, &msgstack, nullptr);
 	return 0;
 }
 
