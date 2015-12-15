@@ -58,8 +58,14 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	int flag = 0666;
 	if (!conf.attach){
 		flag |= IPC_CREAT;
-	}
-	key_t key = ftok(conf.key.c_str(), prj_id[0]);
+    }
+    key_t key = -1;
+    if (dcsutil::strisint(conf.key)){
+        key = stoi(conf.key);
+    }
+    else {
+        key = ftok(conf.key.c_str(), prj_id[0]);
+    }
 	if (key == -1){
 		//error no
 		GLOG_ERR( "ftok error key:%s , prj_id:%d",

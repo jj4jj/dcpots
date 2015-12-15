@@ -53,7 +53,10 @@ NS_BEGIN(dcsutil)
 	size_t				strnprintf(std::string & str, size_t max_sz, const char * format, ...);
 	size_t				vstrprintf(std::string & str, const char* format, va_list va);
 	void				strrepeat(std::string & str, const char * rep, int repcount);
-	const char*			strrandom(std::string & randoms, int length = 8, char charbeg = 0x21, char charend = 0x7E);
+    bool                strisint(const std::string & str, int base = 10);
+    const char*			strrandom(std::string & randoms, int length = 8, char charbeg = 0x21, char charend = 0x7E);
+    const char*			strcharsetrandom(std::string & randoms, int length = 8, const char * charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ_!@#$%&*-+");
+
     template <typename StrItable>
     const char         *strjoin(std::string & val, const std::string & sep, StrItable it){
         size_t i = 0;
@@ -95,6 +98,13 @@ NS_BEGIN(dcsutil)
         }
         bool      is_null(pointer p){
             return p == pool.end();
+        }
+        size_t    alloc(std::mutex & lock){
+            std::lock_guard<std::mutex> lock_gurad(lock);
+            if (MAX_NUM > 0 && pool.size() >= MAX_NUM){
+                return 0; //error
+            }
+            return genid();
         }
         size_t    alloc(){
             if (MAX_NUM > 0 && pool.size() >= MAX_NUM){

@@ -35,6 +35,7 @@ struct mongo_client_impl_t {
 	std::thread								workers[MAX_MOGNO_THREAD_POOL_SIZE];
     object_pool<mongo_request_t>            request_pool;
     object_pool<mongo_response_t>           response_pool;
+    std::mutex                              lock;
 
 	mongo_client_impl_t() {
 		pool = NULL;
@@ -175,9 +176,9 @@ _real_excute_command(mongoc_client_t * client, mongo_client_t::result_t & result
 }
 static inline void 
 process_one(mongoc_client_t *client, mongo_client_impl_t *mci, size_t reqid){
-    size_t rspid = mci->response_pool.alloc();
+    mongo_request_t & req = *(mci->request_pool.ptr(reqid));   
+    size_t rspid = mci->response_pool.alloc(mci->lock);
     mongo_response_t & rsp = *(mci->response_pool.ptr(rspid));
-    mongo_request_t & req = *(mci->request_pool.ptr(reqid));
     rsp.reqid = reqid;
     _real_excute_command(client, rsp.result, req.cmd);
     mci->result_queue.push(rspid);

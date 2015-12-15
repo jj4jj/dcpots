@@ -20,6 +20,15 @@ struct msg_buffer_t {
 		valid_size = 0;
 		return 0;
 	}
+    int  copy(const char * buf, int sz){
+        destroy();
+        if (create(sz)){
+            return -1;
+        }
+        memcpy(buffer, buf, sz);
+        valid_size = sz;
+        return 0;
+    }
 	void destroy()
 	{
 		if (buffer && max_size > 0) {

@@ -716,6 +716,53 @@ static int _check_conf(const dcnode_config_t & conf){
 	}
 	return 0;
 }
+
+//pattern
+//msgq://push|pull:msgqaddr
+//tcp://push|pull:tcpaddr
+dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
+    if (!addrpatt){ return; }
+    //proto
+#define MSGQ_PROTO  "msgq://"
+#define TCP_PROTO   "tcp://"
+#define PULL_MODE   "pull:"
+    int  type = -1; //0:msq, 1:tcp
+    const char * s_addr = strstr(addrpatt, MSGQ_PROTO);
+    if (s_addr){
+        type = 0;//msgq
+        s_addr += strlen(MSGQ_PROTO);
+    }
+    else {
+        const char * s_addr = strstr(addrpatt, TCP_PROTO);
+        if (s_addr){
+            type = 1;
+            s_addr += strlen(TCP_PROTO);
+        }
+    }
+    if (type == -1){
+        GLOG_ERR("proto type error addr pattern:%s", addrpatt);
+        return;
+    }
+    int  mode = 0; //0:push, 1:pull
+    s_addr = strstr(s_addr, PULL_MODE);
+    if (s_addr){
+        mode = 1;
+    }
+    //////////////////////////////////////////////////////////
+    if (type == 0){
+        msgq_push = (mode == 0);
+        msgq_path = s_addr;
+    }
+    else if (type == 1){
+        if (mode == 0){
+            parent_addr = s_addr;
+        }
+        else {
+            listen_addr = s_addr;
+        }
+    }
+}
+
 dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 	if (_check_conf(conf)){
 		//config error

@@ -41,7 +41,10 @@ struct dcnode_addr_t
 	bool   msgq_push; //client push mode as a client , not server
 	string listen_addr; //listen ip:port
 	string parent_addr;  //parent ip:port
-	dcnode_addr_t() :msgq_push(true){}
+    //pattern
+    //msgq://push|pull:key|path
+    //tcp://push|pull:ip|domain:port
+    dcnode_addr_t(const char * addrpatt = nullptr);
 };
 
 #define DCNODE_MAX_LOCAL_NODES_NUM	(1024)	//max local client in one parent

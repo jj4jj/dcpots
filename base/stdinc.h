@@ -8,6 +8,7 @@
 #include <cmath>
 #include <ctime>
 #include <cstdint>
+#include <climits>
 #include <cstddef>
 #include <csetjmp>
 #include <cctype>

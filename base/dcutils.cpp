@@ -173,6 +173,17 @@ namespace dcsutil {
 		stm.tm_isdst = 0;
 		return mktime(&stm);
 	}
+    bool            strisint(const std::string & str, int base){
+        char * endptr;
+        auto v = strtoll(str.c_str(), &endptr, base);
+        if (endptr == str.c_str()){
+            return false;
+        }
+        if (v == LLONG_MAX || v == LLONG_MIN){
+            return false;
+        }
+        return true;
+    }
 	void			strrepeat(std::string & str, const char * rep, int repcount){
 		while (repcount-- > 0){
 			str.append(rep);
@@ -204,7 +215,18 @@ namespace dcsutil {
 
 
 	//////////////////////////////////////////////////////////////////////////////////////////
-	const char*			strrandom(std::string & randoms, int length, char charbeg, char charend){
+    const char*			strcharsetrandom(std::string & randoms, int length , const char * charset){
+        if (!charset || !(*charset)){
+            return nullptr;
+        }
+        int charsetlen = strlen(charset);
+        std::random_device	rd;
+        for (int i = 0; i < length; ++i){
+            randoms.append(1, charset[rd() % charsetlen]);
+        }
+        return randoms.c_str();
+    }
+    const char*			strrandom(std::string & randoms, int length, char charbeg, char charend){
 		if (charbeg > charend){std::swap(charbeg, charend);}
 		std::random_device	rd;
 		for (int i = 0; i < length; ++i){
