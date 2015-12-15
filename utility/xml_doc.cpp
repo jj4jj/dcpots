@@ -207,7 +207,7 @@ xml_node_t *		xml_doc_t::path_get_node(const char* path, bool create_if_not_exis
 	} while (true);
 	return node;
 }
-void				xml_doc_t::path_set(const char * path, const char * val){
+void				xml_doc_t::path_set(const char * path, const char * val, bool create_if_not_exist){
 	if (strchr(path, XML_PATH_NODE_ATTRIBUTE_SEP)){
 		auto it = path_get_attr(path, val);
 		if (it){
@@ -216,6 +216,18 @@ void				xml_doc_t::path_set(const char * path, const char * val){
 		}
 	}
 	else{
-		GLOG_TRA("path:%s is not valid format , not found attribute name !", path);
+		//node
+		if (create_if_not_exist){
+			auto node = path_get_node(path, true);
+			if (node){
+				node->value(val);
+			}
+			else {
+				GLOG_ERR("create node error path:%s", path);
+			}
+		}
+		else {
+			GLOG_TRA("path:%s is not valid format , not found attribute name !", path);
+		}
 	}
 }

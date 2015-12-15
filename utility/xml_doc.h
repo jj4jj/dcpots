@@ -28,5 +28,5 @@ public:
 	//path : hello.ffx.fff#1:fff=v
 	xml_attribute_t *	path_get_attr(const char* path, const char* defavalue = nullptr);
 	xml_node_t *		path_get_node(const char* path, bool create_if_not_exist = false);
-	void				path_set(const char * path, const char * val);
+	void				path_set(const char * path, const char * val, bool create_if_not_exist = false);
 };
