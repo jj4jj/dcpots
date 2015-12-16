@@ -527,6 +527,20 @@ static int mongo_test(const char * p){
 	return 0;
 }
 
+#include "dcnode/proto/dcnode.pb.h"
+#include "utility/util_proto.h"
+static int pbxml_test(const char* arg){
+	dcnode::MsgDCNode mdn;
+	string error;
+	mdn.set_dst("fffffffffffff");
+	mdn.set_src("src-----");
+	mdn.set_type(dcnode::MSG_HEART_BEAT);
+	mdn.mutable_ext()->set_unixtime(time(NULL));
+	dcsutil::protobuf_saveto_xml(mdn, "dcnode.xml");
+	return 0;
+}
+
+
 int main(int argc, char* argv[])
 {
 	global_logger_init(logger_config_t());
@@ -536,6 +550,9 @@ int main(int argc, char* argv[])
 	{
 		if (strstr(argv[1], "mongo")){
 			return mongo_test(argv[2]);
+		}
+		if (strstr(argv[1], "pbxml")){
+			return pbxml_test(argv[2]);
 		}
 
 		switch (argv[1][0])

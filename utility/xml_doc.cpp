@@ -61,6 +61,24 @@ int					xml_doc_t::loads(char * buffer){
 const	char *		xml_doc_t::dumps(std::string & str){
 	return pretty(str);
 }
+
+void				
+xml_doc_t::sax(sax_event_cb_t cb, void * cb_ud, xml_node_t * node, int lv){
+	if (node == nullptr){
+		node = reinterpret_cast<xml_node_t*>(doc);
+	}
+	cb(node, lv, cb_ud, BEGIN_NODE);
+	auto it = node->first_node();
+	while (it){
+		auto subnode = reinterpret_cast<xml_node_t *>(it);
+		sax(cb, cb_ud, subnode, lv + 1);
+		it = it->next_sibling();
+	}
+	cb(node, lv, cb_ud, BEGIN_NODE);
+}
+
+
+
 xml_attribute_t *		xml_doc_t::get_attr(const char * key, xml_node_t * node , const char * deafultvale ){
 	if (node == nullptr){
 		node = reinterpret_cast<xml_node_t*>(doc);
@@ -207,7 +225,7 @@ xml_node_t *		xml_doc_t::path_get_node(const char* path, bool create_if_not_exis
 	} while (true);
 	return node;
 }
-void				xml_doc_t::path_set(const char * path, const char * val){
+void				xml_doc_t::path_set(const char * path, const char * val, bool create_if_not_exist){
 	if (strchr(path, XML_PATH_NODE_ATTRIBUTE_SEP)){
 		auto it = path_get_attr(path, val);
 		if (it){
@@ -216,6 +234,31 @@ void				xml_doc_t::path_set(const char * path, const char * val){
 		}
 	}
 	else{
-		GLOG_TRA("path:%s is not valid format , not found attribute name !", path);
+		//node
+		if (create_if_not_exist){
+			auto node = path_get_node(path, true);
+			if (node){
+				node->value(val);
+			}
+			else {
+				GLOG_ERR("create node error path:%s", path);
+			}
+		}
+		else {
+			GLOG_TRA("path:%s is not valid format , not found attribute name !", path);
+		}
 	}
 }
+
+const	char *		xml_doc_t::node_name(xml_node_t * node){
+	return node->name();
+
+}
+const	char *		xml_doc_t::node_value(xml_node_t * node){
+	return node->value();
+}
+size_t				xml_doc_t::node_value_size(xml_node_t * node){
+	return node->value_size();
+}
+
+
