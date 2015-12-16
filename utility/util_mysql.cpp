@@ -84,14 +84,14 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
 		LOG_S("auto commit set error ");
 		goto FAIL_CONN;
 	}
-    if (!conf.dbname.empty()){
-        string select_db = "use ";
-        select_db += conf.dbname.c_str();
-        execute(select_db);
-    }
     ////////////////////////////////////////////////
 	_THIS_HANDLE->conf = conf;
 	_THIS_HANDLE->mysql_conn = conn;
+	if (!conf.dbname.empty()){
+		string select_db = "use ";
+		select_db += conf.dbname.c_str();
+		execute(select_db);
+	}
 	return 0;
 FAIL_CONN:
 	mysql_close(conn);

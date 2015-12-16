@@ -16,7 +16,7 @@ if(BUILDING_IN_SOURCE)
 endif()
 
 # compile option
-option(DEBUG "Debug mode" 0)
+option(DEBUG "Debug mode" 1)
 option(PCH "Use precompiled headers" 0)
 
 
