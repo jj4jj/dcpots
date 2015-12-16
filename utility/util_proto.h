@@ -31,7 +31,7 @@ const google::protobuf::Descriptor *
                 protobuf_find_desc(const std::string & full_name);
 
 typedef void(*sax_event_cb_t)(const string & name, const google::protobuf::Message & msg, int idx, int level, void *ud, protobuf_sax_event_type evt);
-void			protobuf_msg_sax(const string & name, const google::protobuf::Message & msg, sax_event_cb_t fn, void *ud, int level = 0);
+void			protobuf_msg_sax(const string & name, const google::protobuf::Message & msg, sax_event_cb_t fn, void *ud, int level = 0, bool default_init = true);
 
 int				protobuf_saveto_xml(const google::protobuf::Message & msg, const std::string & xmlfile);
 int				protobuf_readfrom_xml(google::protobuf::Message & msg, const std::string & xmlfile, std::string & error);

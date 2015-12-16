@@ -68,6 +68,7 @@ NS_BEGIN(dcsutil)
             v.append(v);
             ++i;
         }
+        return val.c_str();
     }
     const char          *strspack(std::string & str, const std::string & sep, const std::string & ks, ...);
     int                 strsunpack(const std::string & str, const std::string & sep, const std::string & k, ...);

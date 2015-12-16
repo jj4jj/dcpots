@@ -74,7 +74,7 @@ xml_doc_t::sax(sax_event_cb_t cb, void * cb_ud, xml_node_t * node, int lv){
 		sax(cb, cb_ud, subnode, lv + 1);
 		it = it->next_sibling();
 	}
-	cb(node, lv, cb_ud, BEGIN_NODE);
+	cb(node, lv, cb_ud, END_NODE);
 }
 
 

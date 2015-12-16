@@ -164,7 +164,7 @@ int				logger_write(logger_t * logger, int loglv, const char* fmt, ...)
 		if (msg_start[n-1] == '\n'){
 			--n;
 		}
-		snprintf(&msg_start[n], available_size, "[system errno:%d(%s)]\n", errno,
+		snprintf(&msg_start[n], available_size, " [system errno:%d(%s)]\n", errno,
 			strerror_r(errno, errorno_msg_buff, sizeof(errorno_msg_buff)-1));
 	}
 	if (logger->pf){

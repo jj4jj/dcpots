@@ -286,13 +286,13 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 }
 
 void	
-protobuf_msg_sax(const string & name, const Message & msg, sax_event_cb_t fn, void *ud, int level){
+protobuf_msg_sax(const string & name, const Message & msg, sax_event_cb_t fn, void *ud, int level, bool default_init){
 	auto desc = msg.GetDescriptor();
 	auto reflection = msg.GetReflection();
 	fn(name, msg, -1, level, ud, BEGIN_MSG);
 	for (int i = 0; i < desc->field_count(); ++i){
 		auto field = desc->field(i);
-		if (!reflection->HasField(msg, field)){
+        if (!default_init && !reflection->HasField(msg, field)){
 			continue;
 		}
 		if (field->is_repeated()){
@@ -301,7 +301,7 @@ protobuf_msg_sax(const string & name, const Message & msg, sax_event_cb_t fn, vo
 			for (int j = 0; j < acount; ++j){
 				if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
 					auto & amsg = reflection->GetRepeatedMessage(msg, field, j);
-					protobuf_msg_sax(field->name(), amsg, fn, ud, level + 1);
+                    protobuf_msg_sax(field->name(), amsg, fn, ud, level + 1, default_init);
 				}
 				else {
 					fn(field->name(), msg, j, level, ud, VISIT_VALUE);
@@ -312,7 +312,7 @@ protobuf_msg_sax(const string & name, const Message & msg, sax_event_cb_t fn, vo
 		else {
 			if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
 				auto & amsg = reflection->GetMessage(msg, field);
-				protobuf_msg_sax(field->name(), amsg, fn, ud, level + 1);
+                protobuf_msg_sax(field->name(), amsg, fn, ud, level + 1, default_init);
 			}
 			else {
 				fn(field->name(), msg, -1, level + 1, ud, VISIT_VALUE);
@@ -330,6 +330,9 @@ int level, void * ud, protobuf_sax_event_type ev_type){
 	strrepeat(*xml, "    ", level);
 	switch (ev_type){
 	case BEGIN_MSG:
+        if (level == 0){
+            xml->append("<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n");
+        }
 		xml->append("<");
 		xml->append(name);
 		xml->append(" type=\"");
@@ -338,8 +341,8 @@ int level, void * ud, protobuf_sax_event_type ev_type){
 		break;
 	case END_MSG:
 		xml->append("</");
-		xml->append(msg.GetDescriptor()->name());
-		xml->append(">");
+        xml->append(name);
+        xml->append(">");
 		break;
 	case BEGIN_ARRAY:
 		break;
@@ -373,7 +376,15 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
 	auto msg = msgstack->top();
 	auto desc =	msg->GetDescriptor();
 	auto reflection = msg->GetReflection();
-	auto field = desc->FindFieldByName(xml_doc_t::node_name(node));
+    auto name = xml_doc_t::node_name(node);
+    GLOG_TRA("xml sax converting => %s.%s evt:%d", msg->GetTypeName().c_str(), name, evt);
+    auto field = desc->FindFieldByName(name);
+    if (!field){
+        if (desc->name() != name){
+            GLOG_WAR("not found the field :%s.%s ", msg->GetTypeName().c_str(), name);
+        }
+        return;
+    }
 	switch (evt){
 	case xml_doc_t::BEGIN_NODE:
 		if (field){
