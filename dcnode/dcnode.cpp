@@ -710,6 +710,7 @@ static int _stcp_cb(dctcp_t* server, const dctcp_event_t & ev, void * ud) {
 }
 static int _check_conf(const dcnode_config_t & conf){
 	if (!conf.addr.parent_addr.empty() &&
+		!conf.addr.msgq_path.empty() &&
 		conf.addr.msgq_push){	//tcp parent and smq using .
 		//invalid node
 		return -1;
@@ -718,16 +719,33 @@ static int _check_conf(const dcnode_config_t & conf){
 }
 
 //pattern
-//msgq://push|pull:msgqaddr
-//tcp://push|pull:tcpaddr
+//push|pull:tcp://ip:port
 dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
     if (!addrpatt){ return; }
     //proto
+#define PULL_MODE   "pull:"
+#define PUSH_MODE   "push:"
 #define MSGQ_PROTO  "msgq://"
 #define TCP_PROTO   "tcp://"
-#define PULL_MODE   "pull:"
-    int  type = -1; //0:msq, 1:tcp
-    const char * s_addr = strstr(addrpatt, MSGQ_PROTO);
+
+	int  mode = 0; //0:push, 1:pull
+	const char * s_addr = strstr(addrpatt, PULL_MODE);
+	if (s_addr){
+		mode = 1;
+		s_addr += strlen(PULL_MODE);
+	}
+	else {
+		s_addr = strstr(addrpatt, PUSH_MODE);
+		if (!s_addr){
+			GLOG_ERR("proto mode error addr pattern:%s", addrpatt);
+			return;
+		}
+		mode = 0;
+		s_addr += strlen(PUSH_MODE);
+	}
+	///////////////////////////////////////////////////////////////	
+	int  type = -1; //0:msq, 1:tcp
+	s_addr = strstr(s_addr, MSGQ_PROTO);
     if (s_addr){
         type = 0;//msgq
         s_addr += strlen(MSGQ_PROTO);
@@ -739,15 +757,9 @@ dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
             s_addr += strlen(TCP_PROTO);
         }
     }
-    if (type == -1 || !s_addr){
+    if (type == -1){
         GLOG_ERR("proto type error addr pattern:%s", addrpatt);
         return;
-    }
-    int  mode = 0; //0:push, 1:pull
-    s_addr = strstr(s_addr, PULL_MODE);
-    if (s_addr){
-        mode = 1;
-        s_addr += strlen(PULL_MODE);
     }
     //////////////////////////////////////////////////////////
     if (type == 0){
