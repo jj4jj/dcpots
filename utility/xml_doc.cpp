@@ -249,6 +249,9 @@ void				xml_doc_t::path_set(const char * path, const char * val, bool create_if_
 		}
 	}
 }
+int                 xml_doc_t::node_type(xml_node_t * node){
+    return node->type();
+}
 
 const	char *		xml_doc_t::node_name(xml_node_t * node){
 	return node->name();

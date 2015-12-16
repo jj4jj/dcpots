@@ -34,7 +34,6 @@ struct mysqlclient_pool_t {
     int             running();
     //========================================================================
     ~mysqlclient_pool_t();
-    void            cleanup(int timeout_ms = 1000);
 };
 
 

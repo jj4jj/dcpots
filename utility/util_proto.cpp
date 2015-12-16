@@ -373,14 +373,26 @@ protobuf_saveto_xml(const google::protobuf::Message & msg, const std::string & x
 static void
 convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type evt){
 	std::stack<Message *> * msgstack = (std::stack<Message *> *)ud;
-	auto msg = msgstack->top();
+    if (xml_doc_t::node_type(node) != 1){//must be element
+        return;
+    }
+    if (msgstack->empty()){
+        GLOG_ERR("msg stack is empty ! please check the error !");
+        return;
+    }
+    auto msg = msgstack->top();
 	auto desc =	msg->GetDescriptor();
 	auto reflection = msg->GetReflection();
     auto name = xml_doc_t::node_name(node);
-    GLOG_TRA("xml sax converting => %s.%s evt:%d", msg->GetTypeName().c_str(), name, evt);
+    // GLOG_TRA("xml sax converting => %s.%s evt:%d node type:%d",
+    //     msg->GetTypeName().c_str(), name, evt, xml_doc_t::node_type(node));
     auto field = desc->FindFieldByName(name);
     if (!field){
-        if (desc->name() != name){
+        if (evt == xml_doc_t::END_NODE){
+            GLOG_TRA("pop msg type:%s", msg->GetTypeName().c_str());
+            msgstack->pop();
+        }
+        else {
             GLOG_WAR("not found the field :%s.%s ", msg->GetTypeName().c_str(), name);
         }
         return;
@@ -396,12 +408,13 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
 				else {
 					nmsg = reflection->MutableMessage(msg, field);
 				}
-				msgstack->push(nmsg);
+                GLOG_TRA("push msg type:%s", nmsg->GetTypeName().c_str());
+                msgstack->push(nmsg);
 			}
 			else {
 				string error;
 				if (field->cpp_type() != FieldDescriptor::CPPTYPE_MESSAGE){
-					int ret = protobuf_msg_field_set_value(*msg, xml_doc_t::node_name(node), -1, xml_doc_t::node_value(node), error);
+					int ret = protobuf_msg_field_set_value(*msg, name, -1, xml_doc_t::node_value(node), error);
 					if (ret){
 						GLOG_ERR("set value error ret:%d for :%s", ret, error.c_str());
 					}
@@ -410,9 +423,7 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
 		}
 		break;
 	case xml_doc_t::END_NODE:
-		if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
-			msgstack->pop();
-		}
+        //visit end
 		break;
 	default:
 		return;

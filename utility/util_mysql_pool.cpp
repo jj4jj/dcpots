@@ -108,11 +108,20 @@ mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum
         threadsnum = 1;
         GLOG_WAR("threadsnum config is less than 0 using thread num :%d", threadsnum);
     }
+
     g_ctx.stop = false;
+    for (int i = 0; i < threadsnum; ++i){
+        if (g_ctx.clients[i].init(conf)){
+            GLOG_ERR("mysql client init error ! %d:%s",
+                g_ctx.clients[i].err_no(), g_ctx.clients->err_msg());
+            return -1;
+        }
+    }
     for (int i = 0; i < threadsnum; ++i){
         g_ctx.threads[i] = std::thread(_worker, &i);
         g_ctx.threads[i].detach();
     }
+
 }
 int
 mysqlclient_pool_t::poll(int timeout_ms, int maxproc){
@@ -161,18 +170,13 @@ mysqlclient_pool_t::running(){
 }
 //========================================================================
 mysqlclient_pool_t::~mysqlclient_pool_t(){
-    cleanup();
-}
-void
-mysqlclient_pool_t::cleanup(int timeout_ms){
     stop();
-    while (running() && timeout_ms > 0){
+    int timeout_ms = 1000;
+    while (running() > 0 && timeout_ms > 0){
         usleep(10);
         timeout_ms - 10;
     }
-    g_ctx.threadsnum = 0;
 }
-
 
 
 NS_END()

@@ -38,6 +38,7 @@ public:
 
 	////////////////////////////////////////////////////////////////////////////
 	static	const	char *		node_name(xml_node_t * node);
+    static  int                 node_type(xml_node_t * node);
 	static	const	char *		node_value(xml_node_t * node);
 	static	size_t				node_value_size(xml_node_t * node);
 
