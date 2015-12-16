@@ -389,7 +389,7 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
     auto field = desc->FindFieldByName(name);
     if (!field){
         if (evt == xml_doc_t::END_NODE){
-            GLOG_TRA("pop msg type:%s", msg->GetTypeName().c_str());
+            //GLOG_TRA("pop msg type:%s", msg->GetTypeName().c_str());
             msgstack->pop();
         }
         else {
@@ -408,7 +408,7 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
 				else {
 					nmsg = reflection->MutableMessage(msg, field);
 				}
-                GLOG_TRA("push msg type:%s", nmsg->GetTypeName().c_str());
+                //GLOG_TRA("push msg type:%s", nmsg->GetTypeName().c_str());
                 msgstack->push(nmsg);
 			}
 			else {

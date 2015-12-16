@@ -47,7 +47,8 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
 	mysqlclient_cleanup(handle); //for reinit
 	auto conn = mysql_init(NULL);
 	if (!conn){
-		LOG_S("mysql client init error ");
+		LOG_S("mysql client init error ip:%s port:%d db:%s",
+            conf.ip.c_str(), conf.port, conf.dbname.c_str());
 		return -1;
 	}
 	char tmpset[255] = "";
@@ -83,7 +84,12 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
 		LOG_S("auto commit set error ");
 		goto FAIL_CONN;
 	}
-	////////////////////////////////////////////////
+    if (!conf.dbname.empty()){
+        string select_db = "use ";
+        select_db += conf.dbname.c_str();
+        execute(select_db);
+    }
+    ////////////////////////////////////////////////
 	_THIS_HANDLE->conf = conf;
 	_THIS_HANDLE->mysql_conn = conn;
 	return 0;

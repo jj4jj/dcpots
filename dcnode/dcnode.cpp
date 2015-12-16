@@ -733,13 +733,13 @@ dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
         s_addr += strlen(MSGQ_PROTO);
     }
     else {
-        const char * s_addr = strstr(addrpatt, TCP_PROTO);
+        s_addr = strstr(addrpatt, TCP_PROTO);
         if (s_addr){
             type = 1;
             s_addr += strlen(TCP_PROTO);
         }
     }
-    if (type == -1){
+    if (type == -1 || !s_addr){
         GLOG_ERR("proto type error addr pattern:%s", addrpatt);
         return;
     }
@@ -747,6 +747,7 @@ dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
     s_addr = strstr(s_addr, PULL_MODE);
     if (s_addr){
         mode = 1;
+        s_addr += strlen(PULL_MODE);
     }
     //////////////////////////////////////////////////////////
     if (type == 0){
