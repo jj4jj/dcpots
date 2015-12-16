@@ -22,7 +22,7 @@ struct mysqlclient_impl_t {
 };
 
 #define _THIS_HANDLE	((mysqlclient_impl_t*)(handle))
-#define LOG_S(format, ...)	LOGSTR(_THIS_HANDLE->error_msg, "mysql", " [%d (%s)]" format,mysql_errno(_THIS_HANDLE->mysql_conn),mysql_error(_THIS_HANDLE->mysql_conn), ##__VA_ARGS__)
+#define LOG_S(format, ...)	LOGRSTR(_THIS_HANDLE->error_msg, "mysql", "[%d (%s)]" format,mysql_errno(_THIS_HANDLE->mysql_conn),mysql_error(_THIS_HANDLE->mysql_conn), ##__VA_ARGS__)
 
 mysqlclient_t::mysqlclient_t(){
 	handle = new mysqlclient_impl_t();

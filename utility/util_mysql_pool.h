@@ -6,10 +6,13 @@ NS_BEGIN(dcsutil)
 struct mysqlclient_pool_t {
     struct command_t {
         std::string     sql;
-        std::string     table_name;
+        std::string     full_msg_type_name;;
         msg_buffer_t    cbdata;
         bool            need_result;
-        command_t() :need_result(0){}
+        int64_t         opaque;
+        string          src;
+        bool            flatmode;
+        command_t() :need_result(0), opaque(0), flatmode(false){}
     };
     struct result_t {
         int             status;
@@ -23,6 +26,8 @@ struct mysqlclient_pool_t {
         typedef std::vector< row_field_t >          row_t;
         typedef std::vector< row_t>                 results_t;
         results_t                                   fetched_results;
+        void    alloc_mysql_row_converted(mysqlclient_t::table_row_t & tbrow, int idx) const;
+        void    free_mysql_row(mysqlclient_t::table_row_t & tbrow) const;
     };
     typedef void (*cb_func_t)(void *ud, const result_t & result, const command_t & cmd);
     //========================================================================
@@ -32,6 +37,7 @@ struct mysqlclient_pool_t {
     int			    execute(const command_t & cmd, cb_func_t cb, void * ud);
     void            stop();
     int             running();
+    void *          mysqlhandle();
     //========================================================================
     ~mysqlclient_pool_t();
 };

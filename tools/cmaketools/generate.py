@@ -27,6 +27,14 @@ def src_files(path):
     aux_source='aux_source_directory(' + incpath + ' cur_aSRCS)\nset(cur_SRCS "${cur_SRCS};${cur_aSRCS}")'
     return aux_source
 
+def src_extra_files(path):
+    incpath = path
+    if path.find('/') != 0:
+        incpath = '${PROJECT_SOURCE_DIR}'+'/'+path;
+    aux_source='set(cur_SRCS "${cur_SRCS};' + incpath + '")'
+    return aux_source
+
+
 def generate(desc , path):
     rootf = os.path.join(template_path,'root.txt')
     libf = os.path.join(template_path,'lib.txt')
@@ -84,6 +92,10 @@ def generate(desc , path):
         if lib.has_key('src_dirs') and len(lib['src_dirs']) > 0:
             extra_srcs = '\n'.join(map(src_files, lib['src_dirs']))
 
+        if lib.has_key('extra_srcs') and len(lib['extra_srcs']) > 0:
+            extra_srcs += '\n'
+            extra_srcs += '\n'.join(map(src_extra_files, lib['extra_srcs']))
+
         lib_type = 'STATIC'
         if lib.has_key('type'):
             lib_type = lib['type']
@@ -115,6 +127,10 @@ def generate(desc , path):
         extra_srcs = ''
         if exe.has_key('src_dirs') and len(exe['src_dirs']) > 0:
             extra_srcs = '\n'.join(map(src_files, exe['src_dirs']))
+
+        if exe.has_key('extra_srcs') and len(exe['extra_srcs']) > 0:
+            extra_srcs += '\n'
+            extra_srcs += '\n'.join(map(src_extra_files, exe['extra_srcs']))
 
         copy_replace_file(exef, subf,
             {'<exe_name>': exe['name'],

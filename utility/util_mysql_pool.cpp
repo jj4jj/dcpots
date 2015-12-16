@@ -39,22 +39,48 @@ static struct {
 } g_ctx;
 
 
+void   mysqlclient_pool_t::result_t::free_mysql_row(mysqlclient_t::table_row_t & tbrow)  const {
+    if (tbrow.fields_name){
+        free(tbrow.fields_name);
+    }
+    if (tbrow.row_data){
+        free(tbrow.row_data);
+    }
+    if (tbrow.row_length){
+        free(tbrow.row_length);
+    }
+    memset(&tbrow, 0, sizeof(tbrow));
+}
+void    mysqlclient_pool_t::result_t::alloc_mysql_row_converted(mysqlclient_t::table_row_t & tbrow, int idx) const {
+    auto & vr = fetched_results.at(idx);
+    memset(&tbrow, 0, sizeof(tbrow));
+    tbrow.fields_count = vr.size();
+    tbrow.fields_name = (const char**)malloc(sizeof(char*) * tbrow.fields_count);
+    tbrow.row_data = (const char**)malloc(sizeof(char*)* tbrow.fields_count);
+    tbrow.row_length = (size_t*)malloc(sizeof(size_t)* tbrow.fields_count);
+    for (size_t i = 0; i < tbrow.fields_count; ++i){
+        tbrow.fields_name[i] = vr.at(i).first.data();
+        tbrow.row_data[i] = vr.at(i).second.buffer;
+        tbrow.row_length[i] = vr.at(i).second.valid_size;
+    }
+}
+
+
 static void	
-result_cb_func(void* ud, OUT bool & need_more, const mysqlclient_t::table_row_t & row){
+result_cb_func(void* ud, OUT bool & need_more, const mysqlclient_t::table_row_t & tbrow){
     auto results = (mysqlclient_pool_t::result_t::results_t *)ud;   
     const char * *	fields_name;
     const char * *  row_data;
     size_t	*		row_length;
     results->push_back(mysqlclient_pool_t::result_t::row_t());
     auto & mrow = results->back();
-    for (int i = 0; i < row.fields_count; ++i){
+    for (int i = 0; i < tbrow.fields_count; ++i){
         mrow.push_back(mysqlclient_pool_t::result_t::row_field_t());
         auto & mfield = mrow.back();
-        mfield.first = row.fields_name[i];
-        mfield.second.copy(row.row_data[i], row.row_length[i]);
+        mfield.first = tbrow.fields_name[i];
+        mfield.second.copy(tbrow.row_data[i], tbrow.row_length[i]);
     }
 }
-
 static void inline 
 _process_one(mysqlclient_t & client, size_t reqid){
      size_t rspid =  g_ctx.response_pool.alloc(g_ctx.lock);
@@ -143,6 +169,14 @@ mysqlclient_pool_t::poll(int timeout_ms, int maxproc){
         }
     }
     return nproc;
+}
+
+void *          
+mysqlclient_pool_t::mysqlhandle(){
+    if (g_ctx.threadsnum > 0){
+        return g_ctx.clients[0].mysql_handle();
+    }
+    return nullptr;
 }
 
 int

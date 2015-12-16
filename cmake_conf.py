@@ -1,6 +1,6 @@
 PROJECT='dcagent'
 VERSION='0.0.1'
-DEBUG = 0    #0/1
+DEBUG = 1    #0/1
 DEFS = []
 VERBOSE = 'off'    #on/off
 EXTRA_C_FLAGS = ''
@@ -46,12 +46,12 @@ LIBS = [
                 'protobuf','python2.7'
             ]
         },
-		        {
+                {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
             'includes':['/usr/local/include','3rd'],
             'linkpaths':['/usr/local/lib'],
-			'src_dirs': ['app/mongoproxy/proto','3rd/pbjson'],
+            'src_dirs': ['app/mongoproxy/proto','3rd/pbjson'],
             'linklibs' : [
                 'dagent',
                 'python2.7',
@@ -81,7 +81,7 @@ EXES = [
             'subdir':'app/mongoproxy',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linkpaths':['/usr/local/lib'],
-			'src_dirs': ['app/mongoproxy/proto'],
+            'src_dirs': ['app/mongoproxy/proto'],
             'linklibs' : [
                 'dagent',
                 'python2.7',
@@ -95,10 +95,10 @@ EXES = [
             'subdir':'app/mongoproxy/testapi',
             'includes':['/usr/local/include'],
             'linkpaths':['/usr/local/lib'],
-			'src_dirs': [],
+            'src_dirs': [],
             'linklibs' : [
                 'dagent',
-				'mongoproxyapi',
+                'mongoproxyapi',
                 'python2.7',
                 'libprotobuf.a',
                 'mongoc-1.0',
