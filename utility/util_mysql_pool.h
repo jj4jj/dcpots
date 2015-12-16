@@ -26,7 +26,8 @@ struct mysqlclient_pool_t {
     };
     typedef void (*cb_func_t)(void *ud, const result_t & result, const command_t & cmd);
     //========================================================================
-    int			    init(const mysqlclient_t::cnnx_conf_t & conf, int threadnum = 0);
+    typedef typename mysqlclient_t::cnnx_conf_t     mysqlconnx_config_t;
+    int			    init(const mysqlconnx_config_t & conf, int threadnum = 0);
     int             poll(int timeout_ms = 10, int maxproc = 100);
     int			    execute(const command_t & cmd, cb_func_t cb, void * ud);
     void            stop();
