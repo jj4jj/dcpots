@@ -82,7 +82,6 @@ void				dctcp_event_cb(dctcp_t*, dctcp_event_cb_t cb, void *ud);
 int					dctcp_poll(dctcp_t *, int timeout_us, int max_proc = 100);
 int					dctcp_listen(dctcp_t *, const dctcp_addr_t & addr); //return a fd >= 0when success
 int					dctcp_connect(dctcp_t *, const dctcp_addr_t & addr, int retry = 0);
-int					dctcp_reconnect(dctcp_t* , int fd);
 int					dctcp_send(dctcp_t *, int fd, const dctcp_msg_t & msg);
 void				dctcp_close(dctcp_t *, int fd);
 

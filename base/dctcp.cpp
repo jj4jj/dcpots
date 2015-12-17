@@ -322,7 +322,19 @@ static int _read_tcp_socket(dctcp_t * stcp, int fd){
 	}
 	return nmsg;
 }
-static void _connect_check(dctcp_t * stcp, int fd){
+static inline  int	_reconnect(dctcp_t* stcp, int fd, dctcp_connecting_t & cnx){
+    socklen_t addrlen = sizeof(cnx.connect_addr);
+    int ret = connect(fd, (sockaddr*)&cnx.connect_addr, addrlen);
+    if (ret && errno != EALREADY &&
+        errno != EINPROGRESS) {
+        //error
+        return -1;
+    }
+    cnx.reconnect++;
+    GLOG_TRA("tcp connect fd:%d tried:%d  ....", fd, cnx.reconnect);
+    return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
+}
+static inline void _connect_check(dctcp_t * stcp, int fd){
 	int error = 0;
 	auto it = stcp->connectings.find(fd);
 	if (it == stcp->connectings.end()){
@@ -335,8 +347,6 @@ static void _connect_check(dctcp_t * stcp, int fd){
 		dctcp_event_t sev;
 		sev.fd = fd;
 		if (0 == error){
-			//clear when connection established
-			stcp->connectings.erase(fd);
 			sev.type = dctcp_event_type::DCTCP_CONNECTED;
 			stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 			_op_poll(stcp, EPOLL_CTL_MOD, fd, EPOLLIN);
@@ -347,7 +357,7 @@ static void _connect_check(dctcp_t * stcp, int fd){
 		if (cnx.reconnect < cnx.max_reconnect){
 			//reconnect
 			_op_poll(stcp, EPOLL_CTL_DEL, fd);
-			dctcp_reconnect(stcp, fd);
+            _reconnect(stcp, fd, cnx);
 		}
 		else{
 			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CONNECT_ERR);
@@ -469,26 +479,6 @@ int				dctcp_send(dctcp_t * stcp, int fd, const dctcp_msg_t & msg){
 	if (fd < 0) {return -1; }
 	return _write_tcp_socket(stcp, fd, msg.buff, msg.buff_sz);
 }
-int				dctcp_reconnect(dctcp_t* stcp, int fd){
-	auto it = stcp->connectings.find(fd);
-	dctcp_connecting_t * cnx = nullptr;
-	if (it != stcp->connectings.end()) {
-		cnx = &it->second;
-	}
-	else{
-		return -1;
-	}
-	socklen_t addrlen = sizeof(cnx->connect_addr);
-	int ret = connect(fd, (sockaddr*)&cnx->connect_addr, addrlen);
-	if (ret && errno != EALREADY &&
-			   errno != EINPROGRESS) {
-		//error
-		return -1;
-	}
-	cnx->reconnect++;
-	GLOG_TRA("tcp connect fd:%d tried:%d  ....", fd, cnx->reconnect);
-	return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
-}
 int				dctcp_listen(dctcp_t * stcp, const dctcp_addr_t & addr){ //return a fd >= 0when success
 	int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
 	if (fd < 0) { return -1; }
@@ -511,6 +501,7 @@ int				dctcp_listen(dctcp_t * stcp, const dctcp_addr_t & addr){ //return a fd >=
 	_add_listenner(stcp,fd, addrin);
 	return fd;
 }
+
 int             dctcp_connect(dctcp_t * stcp, const dctcp_addr_t & addr, int retry){
 	//allocate
 	int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
@@ -529,5 +520,5 @@ int             dctcp_connect(dctcp_t * stcp, const dctcp_addr_t & addr, int ret
 	cnx.connect_addr = saddr;
 	stcp->connectings[fd] = cnx;
 
-	return dctcp_reconnect(stcp, fd);
+	return _reconnect(stcp, fd, cnx);
 }

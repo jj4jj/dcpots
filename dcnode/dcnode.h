@@ -41,9 +41,9 @@ struct dcnode_addr_t
 	bool   msgq_push; //client push mode as a client , not server
 	string listen_addr; //listen ip:port
 	string parent_addr;  //parent ip:port
-    //pattern
-    //msgq://push|pull:key|path
-    //tcp://push|pull:ip|domain:port
+    //pattern 
+    //push:tcp://...
+    //pull:msgq://
     dcnode_addr_t(const char * addrpatt = nullptr);
 };
 
