@@ -14,6 +14,7 @@ struct mysqlclient_impl_t {
 	mysqlclient_t::cnnx_conf_t		conf;
 	std::string		error_msg;
 	time_t			last_ping_time;
+	std::mutex		lock;
 	mysqlclient_impl_t() {
 		mysql_conn = NULL;
 		last_ping_time = 0;
@@ -101,19 +102,31 @@ size_t	mysqlclient_t::affects(){
 	return mysql_affected_rows(_THIS_HANDLE->mysql_conn);
 }
 
+#define LOCK_MYSQL()	this->lock()
+#define UNLOCK_MYSQL()	this->unlock()
+
+
 //return affects num
 int		mysqlclient_t::execute(const std::string & sql){
+	LOCK_MYSQL();
 	GLOG_TRA("exec sql = \n[%s]\n", sql.c_str());
 	if (mysql_query(_THIS_HANDLE->mysql_conn, sql.c_str())){
 		LOG_S("execute sql:%s error ", sql.c_str());
+		if (_THIS_HANDLE->conf.multithread){
+			_THIS_HANDLE->lock.unlock();
+		}
+		UNLOCK_MYSQL();
 		return -1;
 	}
+	UNLOCK_MYSQL();
 	return 0;
 }
 int		mysqlclient_t::commit(){//if not auto commit
+	LOCK_MYSQL();
 	if (mysql_commit(_THIS_HANDLE->mysql_conn)){
 		LOG_S("commit error ");
 	}
+	UNLOCK_MYSQL();
 	return 0;
 }
 int		mysqlclient_t::ping(){
@@ -122,19 +135,24 @@ int		mysqlclient_t::ping(){
 		return 0;
 	_THIS_HANDLE->last_ping_time = tnow;
 	unsigned long mtid1 = mysql_thread_id(_THIS_HANDLE->mysql_conn);
+	LOCK_MYSQL();
 	int ret = mysql_ping(_THIS_HANDLE->mysql_conn);
 	if (ret){
 		LOG_S("mysql server ping error !");
+		UNLOCK_MYSQL();
 		return -1;
 	}
+	UNLOCK_MYSQL();
 	unsigned long mtid2 = mysql_thread_id(_THIS_HANDLE->mysql_conn);
 	if (mtid2 != mtid1)	return 1;
 	return 0;
 }
 int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for select
+	LOCK_MYSQL();
 	MYSQL_RES *res_set = mysql_store_result(_THIS_HANDLE->mysql_conn);
 	if (res_set == NULL){
 		LOG_S("mysql_store_result failed ");
+		UNLOCK_MYSQL();
 		return -1;
 	}
 	struct table_row_t row_store;
@@ -172,6 +190,7 @@ int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for sele
 FREE_RESULT:
 	free(row_store.fields_name);
 	mysql_free_result(res_set);
+	UNLOCK_MYSQL();
 	return ret;
 }
 int				mysqlclient_t::err_no(){
@@ -184,6 +203,16 @@ void *			mysqlclient_t::mysql_handle(){
 	return _THIS_HANDLE->mysql_conn;
 }
 
+void			mysqlclient_t::lock(){
+	if (_THIS_HANDLE->conf.multithread){
+		_THIS_HANDLE->lock.lock();
+	}
+}
+void			mysqlclient_t::unlock(){
+	if (_THIS_HANDLE->conf.multithread){
+		_THIS_HANDLE->lock.unlock();
+	}
+}
 
 
 

@@ -136,11 +136,13 @@ mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum
     }
 
     g_ctx.stop = false;
+	g_ctx.mconf = conf;
+	g_ctx.mconf.multithread = true;
     for (int i = 0; i < threadsnum; ++i){
-        if (g_ctx.clients[i].init(conf)){
+		if (g_ctx.clients[i].init(g_ctx.mconf)){
             GLOG_ERR("mysql client init error ! error (%d:%s) config ip:%s config port:%s",
                 g_ctx.clients[i].err_no(), g_ctx.clients->err_msg(),
-                conf.ip.c_str(), conf.port);
+				g_ctx.mconf.ip.c_str(), g_ctx.mconf.port);
             return -1;
         }
     }
@@ -148,6 +150,8 @@ mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum
         g_ctx.threads[i] = std::thread(_worker, &i);
         g_ctx.threads[i].detach();
     }
+	g_ctx.threadsnum = threadsnum;
+
     return 0;
 }
 int
@@ -172,10 +176,19 @@ mysqlclient_pool_t::poll(int timeout_ms, int maxproc){
     return nproc;
 }
 
+mysqlclient_t*
+mysqlclient_pool_t::mysql(int i){
+	if (g_ctx.threadsnum > 0 && i < g_ctx.threadsnum){
+		return &g_ctx.clients[i];
+	}
+	return nullptr;
+}
+
 void *          
 mysqlclient_pool_t::mysqlhandle(){
-    if (g_ctx.threadsnum > 0){
-        return g_ctx.clients[0].mysql_handle();
+	for (int i = 0; i < g_ctx.threadsnum; ++i){
+		auto p = g_ctx.clients[i].mysql_handle();
+		if (p) { return p;}
     }
     return nullptr;
 }

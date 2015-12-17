@@ -28,6 +28,7 @@ struct mysqlclient_t {
 		int     intr_timeout;
 		int		ping_chkgap;
 		long    cliflag;
+		bool	multithread;
 		cnnx_conf_t()
 		{
 			port = cliflag = wait_timeout = intr_timeout = 0;
@@ -35,6 +36,7 @@ struct mysqlclient_t {
 			auto_commit = auto_reconnect = true;
 			char_set = "utf8";
 			ping_chkgap = 10;//10s
+			multithread = false;
 		}
 	};
 private:
@@ -56,6 +58,8 @@ public:
 	const char *	err_msg();
 	//mysql conn
 	void *			mysql_handle();
+	void			lock();
+	void			unlock();
 };
 
 NS_END()

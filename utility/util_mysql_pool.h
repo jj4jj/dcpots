@@ -38,6 +38,7 @@ struct mysqlclient_pool_t {
     void            stop();
     int             running();
     void *          mysqlhandle();
+	mysqlclient_t*	mysql(int i);
     //========================================================================
     ~mysqlclient_pool_t();
 };
