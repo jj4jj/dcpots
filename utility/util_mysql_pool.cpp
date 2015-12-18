@@ -91,8 +91,6 @@ result_cb_func(void* ud, OUT bool & need_more, const mysqlclient_t::table_row_t 
 static void inline 
 _process_one(mysqlclient_t & client, size_t transid){
      mysql_transaction_t & trans = *g_ctx.transactions_pool.ptr(transid);
-     
-     GLOG_TRA("excute command :[%s]", trans.cmd.sql.c_str());
      trans.result.status = client.execute(trans.cmd.sql);
      if (trans.result.status){
          //error
