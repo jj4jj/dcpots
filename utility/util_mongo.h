@@ -54,6 +54,7 @@ struct mongo_client_t {
                 this->cb_size = rhs.cb_size;
                 this->cb_data.swap(const_cast<string&>(rhs.cb_data));
             }
+            return *this;
         }
     };
 

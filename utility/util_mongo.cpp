@@ -14,15 +14,13 @@ NS_BEGIN(dcsutil)
 #define MAX_QUEUE_REQUEST_SIZE		(4096)
 #define MAX_MONGO_CMD_SIZE			(512*1024)		//512K
 
-struct mongo_request_t {
+struct mongo_transaction_t {
     mongo_client_t::command_t			cmd;
-	mongo_client_t::on_result_cb_t		cb;
-	void							   *cb_ud;
+    mongo_client_t::on_result_cb_t		cb;
+    void							   *cb_ud;
+    mongo_client_t::result_t			result;
 };
-struct mongo_response_t {
-    size_t                               reqid;
-	mongo_client_t::result_t			 result;
-};
+
 struct mongo_client_impl_t {
 	mongo_client_config_t	conf;
 	bool					stop;
@@ -33,8 +31,8 @@ struct mongo_client_impl_t {
     blocking_queue<size_t>		            result_queue;
 	std::atomic<int>						running;
 	std::thread								workers[MAX_MOGNO_THREAD_POOL_SIZE];
-    object_pool<mongo_request_t>            request_pool;
-    object_pool<mongo_response_t>           response_pool;
+    object_pool<mongo_transaction_t>        transactions_pool;
+
     std::mutex                              lock;
 
 	mongo_client_impl_t() {
@@ -175,13 +173,10 @@ _real_excute_command(mongoc_client_t * client, mongo_client_t::result_t & result
     }
 }
 static inline void 
-process_one(mongoc_client_t *client, mongo_client_impl_t *mci, size_t reqid){
-    mongo_request_t & req = *(mci->request_pool.ptr(reqid));   
-    size_t rspid = mci->response_pool.alloc(mci->lock);
-    mongo_response_t & rsp = *(mci->response_pool.ptr(rspid));
-    rsp.reqid = reqid;
-    _real_excute_command(client, rsp.result, req.cmd);
-    mci->result_queue.push(rspid);
+process_one(mongoc_client_t *client, mongo_client_impl_t *mci, size_t transid){
+    mongo_transaction_t & trans = *(mci->transactions_pool.ptr(transid));
+    _real_excute_command(client, trans.result, trans.cmd);
+    mci->result_queue.push(transid);
 }
 static void * 
 _worker(void * data){
@@ -272,25 +267,26 @@ mongo_client_t::command(const string & db, const string & coll,
 	if (_THIS_HANDLE->command_queue.size() > MAX_QUEUE_REQUEST_SIZE){
 		return -1;
 	}
-	size_t	reqid = _THIS_HANDLE->request_pool.alloc();
-    mongo_request_t & req = *_THIS_HANDLE->request_pool.ptr(reqid);
-	req.cb = cb;
-	req.cb_ud = ud;
-    req.cmd.op = op;
-    req.cmd.db = db;
-    req.cmd.coll = coll;
+
+	size_t	transid = _THIS_HANDLE->transactions_pool.alloc();
+    mongo_transaction_t & trans = *_THIS_HANDLE->transactions_pool.ptr(transid);
+    trans.cb = cb;
+    trans.cb_ud = ud;
+    trans.cmd.op = op;
+    trans.cmd.db = db;
+    trans.cmd.coll = coll;
     /////////////////////////////////////////////////////////////////////////////////////////
     va_list ap;
 	va_start(ap, cmd_fmt);
-    req.cmd.cmd_length = vstrprintf(req.cmd.cmd_data, cmd_fmt, ap);
+    trans.cmd.cmd_length = vstrprintf(trans.cmd.cmd_data, cmd_fmt, ap);
 	va_end(ap);
-    GLOG_TRA("mongo client excute command:(%s) op:%d", req.cmd.cmd_data.c_str(), req.cmd.op);
+    GLOG_TRA("mongo client excute command:(%s) op:%d", trans.cmd.cmd_data.c_str(), trans.cmd.op);
 	/////////////////////////////////////////////////////////////////////////////////////////
 	if (_THIS_HANDLE->client){
-        process_one(_THIS_HANDLE->client, _THIS_HANDLE, reqid);
+        process_one(_THIS_HANDLE->client, _THIS_HANDLE, transid);
     }
 	else {
-		_THIS_HANDLE->command_queue.push(reqid);
+		_THIS_HANDLE->command_queue.push(transid);
 	}
 	return 0;
 }
@@ -347,15 +343,13 @@ mongo_client_t::poll(int max_proc, int timeout_ms){//same thread cb call back
 	}
     int nproc = 0;
 	//a cb
-    size_t rspid = 0;
+    size_t transid = 0;
 	for (nproc = 0; nproc < max_proc && !_THIS_HANDLE->result_queue.empty(); ++nproc){
-		if (!_THIS_HANDLE->result_queue.pop(rspid, timeout_ms)){           
-            mongo_response_t & rsp = *_THIS_HANDLE->response_pool.ptr(rspid);
-            mongo_request_t & req = *_THIS_HANDLE->request_pool.ptr(rsp.reqid);
-            req.cb(req.cb_ud, rsp.result, req.cmd);
+        if (!_THIS_HANDLE->result_queue.pop(transid, timeout_ms)){
+            mongo_transaction_t & trans = *_THIS_HANDLE->transactions_pool.ptr(transid);
+            trans.cb(trans.cb_ud, trans.result, trans.cmd);
             //////////////////////////////////////////////////////////////////////
-            _THIS_HANDLE->request_pool.free(rsp.reqid);
-            _THIS_HANDLE->response_pool.free(rspid);
+            _THIS_HANDLE->transactions_pool.free(transid);
 		}
 	}
 	return nproc;

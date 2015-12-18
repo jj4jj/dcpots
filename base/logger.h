@@ -87,8 +87,8 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 
 //general log prefix and values
 //2010-10-12T12:08:08.123456|TID@PID|DEBUG|FUNC:LINE|
-#define LOG_MSG_FORMAT_PREFIX	"%s.%lu|%ld@%d|%s|%s:%d|"
-#define LOG_MSG_FORMAT_VALUES(tag)	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec),err_tv_.tv_usec,gettid(),getpid(),(tag),__FUNCTION__,__LINE__
+#define LOG_MSG_FORMAT_PREFIX	"%s.%lu|%ld@%d|%s|%s:%d|%s|"
+#define LOG_MSG_FORMAT_VALUES(tag)	dcsutil::strftime(_str_alloc_,err_tv_.tv_sec),err_tv_.tv_usec,gettid(),getpid(),(tag),basename(__FILE__),__LINE__,__FUNCTION__
 
 //log to str
 #ifndef LOGSTR

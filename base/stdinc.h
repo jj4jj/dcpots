@@ -20,6 +20,7 @@
 #include <cerrno>
 #include <fcntl.h>
 #include <strings.h>
+#include <limits.h>
 //-------------------std c++03----------------------
 
 #include <string>
@@ -120,6 +121,9 @@ using std::bitset;
 #define IN
 #endif
 
+#if !defined(UNUSED)
+#define UNUSED(x)	((void)(x))
+#endif
 
 ///////////////////////////////////////////////////////
 #ifndef NS_BEGIN

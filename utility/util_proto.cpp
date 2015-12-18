@@ -6,6 +6,7 @@
 NS_BEGIN(dcsutil)
 
 using namespace google::protobuf;
+static logger_t * g_debug_logger = nullptr;
 static void 
 _protobuf_global_logger_printer(google::protobuf::LogLevel level, 
 	const char* filename, int line,
@@ -23,11 +24,12 @@ _protobuf_global_logger_printer(google::protobuf::LogLevel level,
 	default:
 		loglv = LOG_LVL_DEBUG;
 	}
-	GLOG(loglv, "protobuf log info (lv:%d filename:%s:%d msg:%s)",
+	LOG(g_debug_logger, loglv, "protobuf log info (lv:%d filename:%s:%d msg:%s)",
 		level, filename, line, message.c_str());
 }
 void
 protobuf_logger_init(logger_t * logger){
+    g_debug_logger = logger;
 	google::protobuf::SetLogHandler(_protobuf_global_logger_printer);
 }
 
@@ -296,7 +298,7 @@ protobuf_msg_sax(const string & name, const Message & msg, sax_event_cb_t fn, vo
 			continue;
 		}
 		if (field->is_repeated()){
-			fn(field->name(), msg, -1, level, ud, BEGIN_ARRAY);
+			fn(field->name(), msg, -1, level + 1, ud, BEGIN_ARRAY);
 			int acount = reflection->FieldSize(msg, field);
 			for (int j = 0; j < acount; ++j){
 				if (field->cpp_type() == FieldDescriptor::CPPTYPE_MESSAGE){
@@ -304,7 +306,7 @@ protobuf_msg_sax(const string & name, const Message & msg, sax_event_cb_t fn, vo
                     protobuf_msg_sax(field->name(), amsg, fn, ud, level + 1, default_init);
 				}
 				else {
-					fn(field->name(), msg, j, level, ud, VISIT_VALUE);
+					fn(field->name(), msg, j, level + 1, ud, VISIT_VALUE);
 				}
 			}
 			fn(field->name(), msg, -1, level + 1, ud, END_ARRAY);
@@ -372,6 +374,7 @@ protobuf_saveto_xml(const google::protobuf::Message & msg, const std::string & x
 
 static void
 convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type evt){
+    UNUSED(lv);
 	std::stack<Message *> * msgstack = (std::stack<Message *> *)ud;
     if (xml_doc_t::node_type(node) != 1){//must be element
         return;
@@ -392,8 +395,8 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
             //GLOG_TRA("pop msg type:%s", msg->GetTypeName().c_str());
             msgstack->pop();
         }
-        else {
-            GLOG_WAR("not found the field :%s.%s ", msg->GetTypeName().c_str(), name);
+        else if (msg->GetDescriptor()->name() != name) {
+            GLOG_WAR("not found the field current env msg:%s node:%s", msg->GetTypeName().c_str(), name);
         }
         return;
     }

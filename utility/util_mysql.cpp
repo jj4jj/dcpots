@@ -9,9 +9,10 @@ NS_BEGIN(dcsutil)
 ///////////////////////////////////////////////////////////////
 static const int MAX_MYSQL_ERR_MSG_SZ = 1024;
 struct mysqlclient_impl_t {
-	MYSQL *			mysql_conn;
-	///////////////////////////////////////////////////////////
-	mysqlclient_t::cnnx_conf_t		conf;
+	MYSQL			mysqlenv;
+    MYSQL           *mysql_conn;
+    ///////////////////////////////////////////////////////////
+	mysqlclient_t::cnnx_conf_t	conf;
 	std::string		error_msg;
 	time_t			last_ping_time;
 	std::mutex		lock;
@@ -46,7 +47,7 @@ mysqlclient_t::~mysqlclient_t(){
 //
 int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
 	mysqlclient_cleanup(handle); //for reinit
-	auto conn = mysql_init(NULL);
+    auto conn = mysql_init(&_THIS_HANDLE->mysqlenv);
 	if (!conn){
 		LOG_S("mysql client init error ip:%s port:%d db:%s",
             conf.ip.c_str(), conf.port, conf.dbname.c_str());
@@ -90,7 +91,8 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
 	_THIS_HANDLE->mysql_conn = conn;
 	if (!conf.dbname.empty()){
 		string select_db = "use ";
-		select_db += conf.dbname.c_str();
+        select_db.append(conf.dbname.c_str());
+        select_db.append(";");
 		execute(select_db);
 	}
 	return 0;

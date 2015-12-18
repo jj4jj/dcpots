@@ -54,8 +54,8 @@ NS_BEGIN(dcsutil)
 	size_t				vstrprintf(std::string & str, const char* format, va_list va);
 	void				strrepeat(std::string & str, const char * rep, int repcount);
     bool                strisint(const std::string & str, int base = 10);
-    const char*			strrandom(std::string & randoms, int length = 8, char charbeg = 0x21, char charend = 0x7E);
-    const char*			strcharsetrandom(std::string & randoms, int length = 8, const char * charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ_!@#$%&*-+");
+    const char *		strrandom(std::string & randoms, int length = 8, char charbeg = 0x21, char charend = 0x7E);
+    const char *		strcharsetrandom(std::string & randoms, int length = 8, const char * charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ_!@#$%&*-+");
 
     template <typename StrItable>
     const char         *strjoin(std::string & val, const std::string & sep, StrItable it){
@@ -81,7 +81,7 @@ NS_BEGIN(dcsutil)
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     //max size = 0 , unlimited
-    template<class T, size_t MAX_NUM = 0>
+    template<class T, size_t MAX_NUM = 1024>
     class object_pool {
     public:
         typedef typename std::vector<T>::iterator    pointer;
@@ -90,25 +90,20 @@ NS_BEGIN(dcsutil)
         std::unordered_set<uint64_t>        free_pool;
     public:
         object_pool(){
-            if (MAX_NUM > 0){
-                pool.reserve(MAX_NUM);
-            }
-            else {
-                pool.reserve(1024);
-            }
+            pool.reserve(MAX_NUM);
         }
         bool      is_null(pointer p){
             return p == pool.end();
         }
         size_t    alloc(std::mutex & lock){
             std::lock_guard<std::mutex> lock_gurad(lock);
-            if (MAX_NUM > 0 && pool.size() >= MAX_NUM){
+            if (pool.size() >= MAX_NUM){
                 return 0; //error
             }
             return genid();
         }
         size_t    alloc(){
-            if (MAX_NUM > 0 && pool.size() >= MAX_NUM){
+            if (pool.size() >= MAX_NUM){
                 return 0; //error
             }
             return genid();

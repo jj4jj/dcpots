@@ -415,6 +415,7 @@ static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
 }
 static int	_fsm_check(dcnode_t * dc, bool checkforce){
 	PROFILE_FUNC();
+    UNUSED(checkforce);
 	switch (dc->fsm_state)
 	{
 	case dcnode_t::DCNODE_INIT:
@@ -526,9 +527,9 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 					if (expireit != dc->smq_hb_expire_time.end()){
 						//collision , alived node
 						string ftime;
-						GLOG_TRA("request name:%s session:%lu is collision [%lu] expired time:%ds(%s) ...",
+						GLOG_TRA("request name:%s session:%lu is collision [%lu] expired time:%lds(%s) ...",
 							dm.src().c_str(), dm.reg_name().session(), entry->id,
-							expireit->second - dcsutil::time_unixtime_ms() / 1000,
+							expireit->second - dcsutil::time_unixtime_s(),
 								dcsutil::strftime(ftime, expireit->second));
                         ret = -2;
                         error_msg = "request register name is collision ! check others name !";
@@ -682,13 +683,15 @@ static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buf
 	}
 }
 static int _smq_cb(dcsmq_t * smq, uint64_t src, const dcsmq_msg_t & msg, void * ud) {
+    UNUSED(smq);
 	dcnode_t * dc = (dcnode_t*)ud;
 	return _msg_cb(dc, -1, src, msg.buffer, msg.sz);
 }
 
 //server
-static int _stcp_cb(dctcp_t* server, const dctcp_event_t & ev, void * ud) {
-	dcnode_t * dc = (dcnode_t*)ud;
+static int _stcp_cb(dctcp_t* stcp, const dctcp_event_t & ev, void * ud) {
+    UNUSED(stcp);
+    dcnode_t * dc = (dcnode_t*)ud;
 	switch (ev.type)
 	{
 	case dctcp_event_type::DCTCP_NEW_CONNX:
