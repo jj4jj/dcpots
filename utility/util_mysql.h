@@ -12,7 +12,6 @@ struct mysqlclient_t {
 		//--------------------------
 		size_t			row_total;
 		size_t			row_offset;
-		const char *	table_name;
 	};
 	struct cnnx_conf_t {
 		std::string  ip;

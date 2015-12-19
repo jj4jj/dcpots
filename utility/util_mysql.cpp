@@ -183,10 +183,6 @@ int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for sele
 	}
 	for (size_t i = 0; i < row_store.fields_count; ++i){
 		row_store.fields_name[i] = fields_all[i].name;
-		if (table_name.empty()){
-			table_name = fields_all[i].table;
-			row_store.table_name = table_name.c_str();
-		}
 	}
 	for (; row_store.row_offset < row_store.row_total && need_more; ++row_store.row_offset){
 		row_store.row_data = (const char **)mysql_fetch_row(res_set);

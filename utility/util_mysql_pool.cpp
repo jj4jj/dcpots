@@ -65,7 +65,6 @@ static void
 result_cb_func(void* ud, OUT bool & need_more, const mysqlclient_t::table_row_t & tbrow){
     UNUSED(ud);
     UNUSED(need_more);
-
     auto results = (mysqlclient_pool_t::result_t::results_t *)ud;   
     results->push_back(mysqlclient_pool_t::result_t::row_t());
     auto & mrow = results->back();
@@ -79,6 +78,7 @@ result_cb_func(void* ud, OUT bool & need_more, const mysqlclient_t::table_row_t 
 static void inline 
 _process_one(mysqlclient_t & client, size_t transid){
      mysql_transaction_t & trans = *g_ctx.transactions_pool.ptr(transid);
+	 trans.result.init();
      trans.result.status = client.execute(trans.cmd.sql);
 	 if (trans.result.status){
          //error
@@ -119,7 +119,7 @@ _worker(void * data){
 }
 
 int			    
-mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum, int timeout_s){
+mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum){
     if (threadsnum == 0){
         threadsnum = std::thread::hardware_concurrency() * 2;
         GLOG_WAR("threadsnum config is 0 get hardware concurrency :%d", threadsnum);
@@ -131,9 +131,7 @@ mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum
     g_ctx.stop = false;
     g_ctx.mconf = conf;
     g_ctx.mconf.multithread = true;
-    g_ctx.threadsnum = 0;
     g_ctx.threadsnum = threadsnum;
-    //std::unique_lock<std::mutex> guard(g_ctx.lock);
     for (int idx = 0; idx < threadsnum; ++idx){
         mysqlclient_t & client = g_ctx.clients[idx];
         if (client.init(g_ctx.mconf)){
@@ -147,14 +145,7 @@ mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum
         g_ctx.threads[idx] = std::thread(_worker, &idx);
         g_ctx.threads[idx].detach();
     }
-    //g_ctx.cond.wait_for(guard, std::chrono::seconds(timeout_s), [this](){return !this->mysqlhandle(); });
-    if (this->mysqlhandle()){
-        return  0;
-    }
-    else {
-        GLOG_ERR("mysql client init error ! running:%d", (int)(g_ctx.running));
-        return -1;
-    }
+	return 0;
 }
 int
 mysqlclient_pool_t::poll(int timeout_ms, int maxproc){
@@ -181,15 +172,6 @@ mysqlclient_pool_t::mysql(int i){
 		return &g_ctx.clients[i];
 	}
 	return nullptr;
-}
-
-void *          
-mysqlclient_pool_t::mysqlhandle(){
-	for (int i = 0; i < g_ctx.threadsnum; ++i){
-		auto p = g_ctx.clients[i].mysql_handle();
-        if (p) { return p; }
-    }
-    return nullptr;
 }
 
 int
