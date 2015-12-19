@@ -101,7 +101,11 @@ FAIL_CONN:
 	return -2;
 }
 size_t	mysqlclient_t::affects(){
-	return mysql_affected_rows(_THIS_HANDLE->mysql_conn);
+	size_t rv = mysql_affected_rows(_THIS_HANDLE->mysql_conn);
+	if (rv == (size_t)-1){
+		LOG_S("affects error !");
+	}
+	return rv;
 }
 
 #define LOCK_MYSQL()	this->lock()
@@ -160,12 +164,14 @@ int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for sele
 	struct table_row_t row_store;
 	row_store.row_offset = 0;
 	row_store.row_total = mysql_num_rows(res_set);
-	row_store.fields_count = mysql_field_count(_THIS_HANDLE->mysql_conn);
+	row_store.fields_count = mysql_num_fields(res_set);//mysql_field_count(_THIS_HANDLE->mysql_conn);
+	row_store.fields_name = nullptr;
 	bool	need_more = true;
 	int		ret = 0;
 	string table_name = "";
 	MYSQL_FIELD * fields_all = mysql_fetch_fields(res_set);
-	if (row_store.row_total == 0 || row_store.fields_count == 0){
+	if (row_store.row_total == 0 ||
+		row_store.fields_count == 0){
 		goto FREE_RESULT;
 	}
 	row_store.fields_name = (const char **)malloc(sizeof(char*) * row_store.fields_count);
@@ -190,7 +196,9 @@ int		mysqlclient_t::result(void * ud, result_cb_func_t cb){//get result for sele
 	}
 	ret = (int)row_store.row_offset;
 FREE_RESULT:
-	free(row_store.fields_name);
+	if (row_store.fields_name){
+		free(row_store.fields_name);
+	}
 	mysql_free_result(res_set);
 	UNLOCK_MYSQL();
 	return ret;

@@ -8,24 +8,12 @@ NS_BEGIN(dcsutil)
 #define MAX_MYSQL_CLIENT_THREAD_NUM     (128)
 #define MAX_QUEUE_REQUEST_SIZE          (10240)
 
-struct mysqlclient_request_t {
-    mysqlclient_pool_t::command_t       cmd;
-    mysqlclient_pool_t::cb_func_t       cb;
-    void                               *cb_ud;
-};
-
-struct mysqlclient_response_t {
-    size_t      reqid;
-    mysqlclient_pool_t::result_t    result;
-};
-
 struct mysql_transaction_t {
     mysqlclient_pool_t::command_t       cmd;
     mysqlclient_pool_t::cb_func_t       cb;
     void                               *cb_ud;
     mysqlclient_pool_t::result_t        result;
 };
-
 
 static struct {
     mysqlclient_t::cnnx_conf_t          mconf;
@@ -92,14 +80,14 @@ static void inline
 _process_one(mysqlclient_t & client, size_t transid){
      mysql_transaction_t & trans = *g_ctx.transactions_pool.ptr(transid);
      trans.result.status = client.execute(trans.cmd.sql);
-     if (trans.result.status){
+	 if (trans.result.status){
          //error
          trans.result.error = client.err_msg();
          trans.result.err_no = client.err_no();
      }
      else {
          trans.result.affects = client.affects();
-         if (trans.cmd.need_result){
+		 if (trans.cmd.need_result){
              client.result(&trans.result.fetched_results, result_cb_func);
          }
      }
