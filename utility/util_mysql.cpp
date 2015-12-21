@@ -118,9 +118,6 @@ int		mysqlclient_t::execute(const std::string & sql){
 	GLOG_DBG("exec sql = [%s]", sql.c_str());
 	if (mysql_query(_THIS_HANDLE->mysql_conn, sql.c_str())){
 		LOG_S("execute sql:%s error ", sql.c_str());
-		if (_THIS_HANDLE->conf.multithread){
-			_THIS_HANDLE->lock.unlock();
-		}
 		UNLOCK_MYSQL();
 		return -1;
 	}
