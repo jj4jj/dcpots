@@ -56,7 +56,9 @@ struct dcnode_config_t
     int max_register_children;//max children
 	int max_msg_expired_time; //expired time s
 	int max_children_heart_beat_expired; //expire time for close -> 5*max_expire
-	string	name;
+	string	       name;
+    bool           durable;
+    int            max_send_queue_size;
 	dcnode_config_t()
 	{
 		name = "noname";
@@ -64,10 +66,9 @@ struct dcnode_config_t
 		parent_heart_beat_gap = 30;
 		max_children_heart_beat_expired = 3 * parent_heart_beat_gap; //children max hb timer
 		max_channel_buff_size = 1024 * 1024;
-		addr.listen_addr = "";
-		addr.parent_addr = "";
-		addr.msgq_path = "";
 		max_msg_expired_time = 60*30;	//half an hour
+        durable = false;
+        max_send_queue_size = 128;
 	}
 };
 

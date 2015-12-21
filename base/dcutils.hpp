@@ -79,7 +79,7 @@ NS_BEGIN(dcsutil)
     ///////////uuid////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///============================================================
     //max size = 0 , unlimited
     template<class T, size_t MAX_NUM = 1024>
     class object_pool {
@@ -108,10 +108,14 @@ NS_BEGIN(dcsutil)
             }
             return genid();
         }
-        void        free(size_t id){
-            if (id > 0 && id <= pool.size()){
+        int        free(size_t id){
+            if (id > 0 &&
+                    id <= pool.size() &&
+                    free_pool.find(id) == free_pool.end()){
                 free_pool.insert(id);
+                return 0;
             }
+            return -1;
         }
         size_t      id(pointer p){
             return std::distance(pool.begin(), p) + 1;
@@ -141,6 +145,48 @@ NS_BEGIN(dcsutil)
                 free_pool.erase(free_pool.begin());
                 return id;
             }
+        }
+    };
+    ///============================================================
+    template <typename T, size_t MAX>
+    struct object_queue {
+        size_t                front, rear;
+        std::vector<size_t>   q;
+        object_pool<T, MAX>   pool;
+        typedef typename object_pool<T, MAX>::pointer pointer;
+        // [--- front xxxxx rear------]
+        // [xxxx rear ---- front xxxxx]
+        object_queue(){
+            q.reserve(MAX);
+            front = rear = 0;
+        }
+        pointer push(){
+            if (rear + 1 == front || rear == front + MAX){//full 
+                return nullptr;
+            }
+            //allocate and push it
+            size_t id = pool.alloc();
+            if (id == 0){
+                return nullptr;
+            }
+            q[rear] = id;
+            rear = (rear + 1) % MAX;
+            return pool.ptr(id);
+        }
+        pointer take(){
+            if (front == rear){
+                return nullptr;
+            }
+            size_t id = q[front];
+            front = (front + 1) % MAX;
+            return pool.ptr(id);
+        }
+        int free(pointer p){
+            size_t id = pool.id(p);
+            if (id > 0){
+                return pool.free(id);
+            }
+            return -1;
         }
     };
     //////////////////////////////////////////////////////////////////////////////////////////////////////

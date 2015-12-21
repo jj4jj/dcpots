@@ -78,7 +78,10 @@ struct dcnode_t
 	//send buffer
 	msg_buffer_t										send_buffer;
 	dcnode_id_t											processing_id;
-
+    //send queue
+    size_t                                              send_queue_msg_total_size;
+    object_queue< dcnode_msgbuffer_t >                  send_queue;
+    
 	dcnode_t()
 	{
 		init();
@@ -100,6 +103,8 @@ struct dcnode_t
 		parent_hb_expire_time = 0;
 		parentfd = -1;
 		smq_name_mapping_shm = nullptr;
+        send_queue_msg_total_size = 0;
+        send_queue.clear();
 	}
 };
 
