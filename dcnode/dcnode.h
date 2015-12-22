@@ -71,6 +71,10 @@ struct dcnode_config_t
         max_send_queue_size = 128;
 	}
 };
+enum dcnode_error_type {
+    E_DCNODE_OK = 0,
+    E_DCNODE_SEND_FULL = 1,
+};
 
 typedef	std::function<void()>	dcnode_timer_callback_t;
 typedef int(*dcnode_dispatcher_t)(void * ud, const char * src, const msg_buffer_t & msg);

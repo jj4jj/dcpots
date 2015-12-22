@@ -28,6 +28,24 @@ struct dcnode_id_t {
 	const char * name;
 	int			 fd;
 	uint64_t	 smqid;
+    //////////////////
+    dcnode_id_t(){
+        destruct();
+    }
+    void construct(const char * n, int sfd, uint64_t mqid){
+        name = n;
+        fd = sfd;
+        smqid = mqid;
+    }
+    void destruct(){
+        name = nullptr;
+        fd = -1;
+        smqid = 0;
+    }
+    bool invalid(){
+        return name == nullptr && fd == -1 && smqid == 0;
+    }
+
 };
 
 struct dcnode_t
@@ -40,7 +58,7 @@ struct dcnode_t
 		DCNODE_NAME_REG_ING = 3,
 		DCNODE_NAME_REG = 4,
 		DCNODE_READY = 5,
-		DCNODE_ABORT = 6,	//ABORT
+		DCNODE_ABORT = 42,	//ABORT
 	};
 	dcnode_config_t conf;
 	//tcp node
@@ -112,11 +130,38 @@ struct dcnode_t
 	}
 };
 
-static uint32_t	s_cb_seq = 0;
+const char * _dcnode_state_str(int st){
+    static char state_buffer[12];
+    switch (st){
+    case dcnode_t::DCNODE_ERROR:	//ERROR , ABORT
+        return "error";
+    case dcnode_t::DCNODE_INIT:
+        return "init";
+    case dcnode_t::DCNODE_CONNECTING: //reconnect
+        return "connecting";
+    case dcnode_t::DCNODE_CONNECTED:
+        return "connected";
+    case dcnode_t::DCNODE_NAME_REG_ING:
+        return "registering";
+    case dcnode_t::DCNODE_NAME_REG:
+        return "registered";
+    case dcnode_t::DCNODE_READY:
+        return "ready";
+    case dcnode_t::DCNODE_ABORT:
+        return "abort";
+    default:
+        snprintf(state_buffer, sizeof(state_buffer), "0X%X", st);
+        return state_buffer;
+    }
+}
+//multithread is harmless
+std::atomic<uint32_t> timer_cb_seq(0);
 static inline uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_ms, dcnode_timer_callback_t cb, bool repeat = false) {
 	uint64_t cookie = dcsutil::time_unixtime_s();
 	cookie <<= 24; //24+32 = 56;
-	cookie |= s_cb_seq++;
+    timer_cb_seq.fetch_add(1);
+	cookie |= timer_cb_seq;
+    //57
 	cookie <<= 1;
 	if (repeat)
 		cookie |= 1;
@@ -126,7 +171,7 @@ static inline uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_m
 	dc->timer_callbacks[cookie] = cb;
 	if (repeat)
 		dc->callback_periods.insert(std::make_pair(cookie, expired_ms));
-	//LOGP("add callback timer delay:%dms ... cookie:%lu",expired_ms, cookie);
+	GLOG_TRA("add callback timer delay:%dms ... cookie:%lu",expired_ms, cookie);
 	return cookie;
 }
 static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
@@ -158,7 +203,7 @@ static bool _is_root(dcnode_t* dc){
 
 static int	_fsm_check(dcnode_t * dc, bool checkforce);
 static inline int _switch_dcnode_fsm(dcnode_t * dc, int state) {
-	GLOG_TRA("switch dcnode fsm %d -> %d ", dc->fsm_state, state);
+    GLOG_IFO("switch dcnode fsm %s -> %s ", _dcnode_state_str(dc->fsm_state), _dcnode_state_str(state));
 	dc->fsm_state = state;
 	return _fsm_check(dc, true);
 }
@@ -415,10 +460,8 @@ static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
 		shm_conf.shm_size = 0;
 	}
 	if (dcshm_create(shm_conf, (void **)&dc->smq_name_mapping_shm, shm_conf.attach)){
-		return -1;
-	}
-	if (shm_conf.attach){	//attached
-		_rebuild_smq_name_map(dc);
+        GLOG_ERR("attach shm error attach:%d !", shm_conf.attach);
+        return -1;
 	}
 	return 0;
 }
@@ -429,20 +472,16 @@ static int	_fsm_check(dcnode_t * dc, bool checkforce){
 	{
 	case dcnode_t::DCNODE_INIT:
 		//add timer hb
-		return _fsm_connect_parent(dc);
+		return _fsm_connect_parent(dc);//connecting
 	case dcnode_t::DCNODE_CONNECTED:
-		return _fsm_register_name(dc);
+		return _fsm_register_name(dc);//registering
 	case dcnode_t::DCNODE_NAME_REG:
-		if (dc->smq){
-			//reg name
+		if (dc->smq){ //register name succes , create the shm or attach		
 			if (_name_smq_maping_shm_create(dc, false)){
-				GLOG_TRA("attach shm error !");
 				dc->fsm_state = dcnode_t::DCNODE_ABORT;
 				return -1;
 			}
-			else {
-				_rebuild_smq_name_map(dc);
-			}
+			_rebuild_smq_name_map(dc);
 		}
 		dc->fsm_state = dcnode_t::DCNODE_READY;
 		GLOG_TRA("fsm ready !");
@@ -450,6 +489,9 @@ static int	_fsm_check(dcnode_t * dc, bool checkforce){
 	case dcnode_t::DCNODE_READY:
 		//nothing report parent
 		return 0;
+    case dcnode_t::DCNODE_ABORT:
+        //abort nothing todo
+        return 0;
 	default: return -1;
 	}
 }
@@ -497,6 +539,7 @@ static int _response_msg(dcnode_t * dc, int sockfd, uint64_t msgqpid, dcnode_msg
 
 static int _fsm_abort(dcnode_t * dc, int error){
 	dc->fsm_error = error;
+    GLOG_IFO("dcnode abort error = %d", error);
 	return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_ABORT);
 }
 static inline int _children_num(dcnode_t * dc){
@@ -566,6 +609,7 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 	else {
 		assert(dm.dst() == dc->conf.name);
 		if (dm.reg_name().ret() != 0) {
+            GLOG_ERR("register name error :%s", dm.Debug());
 			return _fsm_abort(dc, dm.reg_name().ret());
 		}
 		else {
@@ -678,14 +722,14 @@ static int _msg_cb(dcnode_t * dc, int sockfd, uint64_t msgqpid, const char * buf
 		return -1;
 	}
 	//update processing
-	dc->processing_id.name = dm.src().c_str();
-	dc->processing_id.fd = sockfd;
-	dc->processing_id.smqid = msgqpid;
-
 	if (dm.dst().length() == 0 ||
 		dm.dst() == dc->conf.name) {
-		//to me
-		return _handle_msg(dc, dm, sockfd, msgqpid);
+		//to me , handle it
+        int ret = 0;
+        dc->processing_id.construct(dm.src().c_str(), sockfd, msgqpid);
+        ret = _handle_msg(dc, dm, sockfd, msgqpid);
+        dc->processing_id.destruct();
+        return ret;
 	}
 	else {
 		return _forward_msg(dc, sockfd, buff, buff_sz, dm.dst());
@@ -837,10 +881,11 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		dcsmq_msg_cb(n->smq, _smq_cb, n);
 		if (smc.server_mode){
 			if (_name_smq_maping_shm_create(n, true)){
-				GLOG_TRA("create shm error !");
+				GLOG_ERR("create shm error !");
 				dcnode_destroy(n);
 				return nullptr;
 			}				
+            _rebuild_smq_name_map(n);
 		}
 		else {
 			dcsmq_set_session(n->smq, getpid());	//default session
@@ -961,8 +1006,8 @@ _send_msg(dcnode_t *dc, const std::string & dst, const dcnode_msg_t & dm){
     _check_send_queue(dc, dst, queue);
     auto pq = queue.q.push();
     if (queue.q.null() == pq){
-        GLOG_ERR("allocate queue error dst:%s!", dst.c_str());
-        return -2;
+        GLOG_ERR("allocate queue error dst:%s! queue is full msg size:%zu", dst.c_str(), queue.msg_size);
+        return E_DCNODE_SEND_FULL;
     }
     else { //push
         pq->reserve(dm.ByteSize());
@@ -979,6 +1024,10 @@ _send_msg(dcnode_t *dc, const std::string & dst, const dcnode_msg_t & dm){
 }
 int      dcnode_send(dcnode_t* dc, const std::string & dst, const char * buff, int sz){
     PROFILE_FUNC();
+    if (dc->fsm_state == dcnode_t::DCNODE_ABORT){
+        GLOG_ERR("dcnode is abort , can not send msg !");
+        return -1;
+    }
     if (!dc->conf.durable){ //not durable
         if (dc->fsm_state != dcnode_t::DCNODE_READY &&
             !_name_exists(dc, dst.c_str())) {
@@ -1030,8 +1079,12 @@ void	  dcnode_timer_cancel(dcnode_t * dc, uint64_t cookie) {
 	_remove_timer_callback(dc, cookie);
 }
 int      dcnode_reply(dcnode_t* dc, const char * buff, int sz){
-	dcnode_id_t * nodeid = &dc->processing_id;
-	////////////////////////////////////////////////////////////////////////
+    dcnode_id_t * nodeid = &dc->processing_id;
+    if (nodeid->invalid()){
+        GLOG_ERR("not found the processsing msg env !");
+        return -1;
+    }
+    ////////////////////////////////////////////////////////////////////////
 	dcnode_msg_t dm;
 	dm.set_src(dc->conf.name);
 	if (nodeid->name){

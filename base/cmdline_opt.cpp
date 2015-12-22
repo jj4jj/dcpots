@@ -32,12 +32,13 @@ cmdline_opt_t::~cmdline_opt_t(){
 void
 cmdline_opt_t::parse(const char * pattern){
 	std::vector<std::string>	sopts;
-    string pattern_ex = "help:n:h:show the help info:;";
+    string pattern_ex = "help:n:h:show the help info;";
     pattern_ex += pattern;
 	dcsutil::strsplit(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
 	std::vector<std::string>	longoptnames;
 	longoptnames.reserve(128);
+    std::unordered_map<int, string> shortopt_2_longopt;
 	string short_opt;
 	for (auto & sopt : sopts){
 		std::vector<std::string>	soptv;
@@ -71,6 +72,7 @@ cmdline_opt_t::parse(const char * pattern){
 			}
 			if (soptv[2][0]){
 				opt_.val = soptv[2][0];
+                shortopt_2_longopt[opt_.val] = opt_.name;
 			}
 			longopts.push_back(opt_);
 			//std::cout << "add dbg:" << opt_.name << ":val:" << opt_.val << std::endl;
@@ -156,6 +158,14 @@ cmdline_opt_t::parse(const char * pattern){
 			string opt_value = (optarg ? optarg : "");
 			_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
 			//std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
+
+            if (shortopt_2_longopt.find(opt) != shortopt_2_longopt.end()){
+                opt_name = shortopt_2_longopt[opt];
+                //std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
+                _THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
+            }
+
+
 		}
 		opt = getopt_long(_THIS_HANDLE->argc, _THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
 	}
