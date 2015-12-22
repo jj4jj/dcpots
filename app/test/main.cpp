@@ -146,7 +146,7 @@ int dc_cb(void * ud, const char* src, const msg_buffer_t & msg)
 int test_node(const char * p)
 {
 	dcnode_config_t dcf;
-	dcf.addr.msgq_path = "./gmon.out";
+	dcf.addr.msgq_addr = "./gmon.out";
 	dcf.addr.msgq_push = true;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = "leaf";
@@ -160,22 +160,22 @@ int test_node(const char * p)
 	if (p)
 	{
 		if (strcmp(p, "l1") == 0){
-			dcf.addr.msgq_path = "./gmon.out";
+			dcf.addr.msgq_addr = "./gmon.out";
 			dcf.addr.msgq_push = false;
-			dcf.addr.parent_addr = "127.0.0.1:8880";
+			dcf.addr.tcp_parent_addr = "127.0.0.1:8880";
 			dcf.name = "layer1";
 		}
 		else
 		if (strcmp(p, "l2") == 0){
-			dcf.addr.msgq_path = "";
+			dcf.addr.msgq_addr = "";
 			dcf.name = "layer2";
-			dcf.addr.listen_addr = "127.0.0.1:8880";
+			dcf.addr.tcp_listen_addr = "127.0.0.1:8880";
 		}
 		else 
 		if (strcmp(p, "l3") == 0){
-			dcf.addr.msgq_path = "";
+			dcf.addr.msgq_addr = "";
 			dcf.name = "test";
-			dcf.addr.listen_addr = "";
+			dcf.addr.tcp_listen_addr = "";
 			dcf.parent_heart_beat_gap = 0;
 			dcf.max_children_heart_beat_expired = 0;
 			ltest = 3;

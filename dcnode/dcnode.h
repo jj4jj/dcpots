@@ -37,10 +37,10 @@ struct dcnode_t;
 
 struct dcnode_addr_t
 {
-	string msgq_path;  //file path for machine sharing
+	string msgq_addr;  //file path for machine sharing
 	bool   msgq_push; //client push mode as a client , not server
-	string listen_addr; //listen ip:port
-	string parent_addr;  //parent ip:port
+	string tcp_listen_addr; //listen ip:port
+	string tcp_parent_addr;  //parent ip:port
     //pattern 
     //push:tcp://...
     //pull:msgq://
@@ -60,7 +60,6 @@ struct dcnode_config_t
     bool           durable;
     int            max_send_queue_size;
     string         dumpfile;
-    int            max_connect_retry;
 	dcnode_config_t()
 	{
 		name = "noname";
@@ -72,7 +71,6 @@ struct dcnode_config_t
         durable = false;
         max_send_queue_size = 128;
         dumpfile = "dcnode.dump";
-        max_connect_retry = 1000;
 	}
 };
 enum dcnode_error_type {

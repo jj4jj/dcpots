@@ -4,14 +4,11 @@ set(cur_SRCS "${cur_aSRCS}")
 
 aux_source_directory(${PROJECT_SOURCE_DIR}/app/mongoproxy/proto cur_aSRCS)
 set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
-aux_source_directory(${PROJECT_SOURCE_DIR}/3rd/pbjson cur_aSRCS)
-set(cur_SRCS "${cur_SRCS};${cur_aSRCS}")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
 /usr/include
-/usr/local/include
-${PROJECT_SOURCE_DIR}/3rd)
+/usr/local/include)
 
 add_library(mongoproxyapi STATIC ${cur_SRCS})
 

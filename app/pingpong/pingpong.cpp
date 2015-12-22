@@ -38,17 +38,17 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 static dcnode_t* _create(bool ping, const char* name, const char * key,
 	const char* listen_tcp , const char * conn_tcp ){
 	dcnode_config_t dcf;
-	dcf.addr.msgq_path = key;
+	dcf.addr.msgq_addr = key;
 	dcf.addr.msgq_push = ping;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = name;
 	dcf.parent_heart_beat_gap = 2;
 	dcf.max_children_heart_beat_expired = 5;
-	dcf.addr.parent_addr = conn_tcp; ;
-	dcf.addr.listen_addr = listen_tcp;
-	if (!dcf.addr.parent_addr.empty()){
+	dcf.addr.tcp_parent_addr = conn_tcp; ;
+	dcf.addr.tcp_listen_addr = listen_tcp;
+	if (!dcf.addr.tcp_parent_addr.empty()){
 		dcf.addr.msgq_push = false;
-		dcf.addr.msgq_path = "";
+		dcf.addr.msgq_addr = "";
 	}
 	auto dc = dcnode_create(dcf);
 	if (!dc){

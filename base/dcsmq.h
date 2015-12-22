@@ -3,12 +3,20 @@
 
 struct dcsmq_t;
 
+//c:/tmp/hanle
+//s:
+struct dcsmq_addr_t {
+	string		path; //->connect?listen:
+	bool		server;
+};
+
+
 struct dcsmq_config_t
 {
     string			key;
-    int				msg_buffsz;
-	int				max_queue_buff_size;
 	bool			server_mode;
+	int				msg_buffsz;
+	int				max_queue_buff_size;
 	bool			attach;
 	dcsmq_config_t()
 	{
@@ -27,7 +35,7 @@ struct dcsmq_msg_t
 };
 
 typedef int (*dcsmq_msg_cb_t)(dcsmq_t * , uint64_t src, const dcsmq_msg_t & msg, void * ud);
-dcsmq_t *		dcsmq_create(const dcsmq_config_t & conf);
+dcsmq_t *	dcsmq_create(const dcsmq_config_t & conf);
 void		dcsmq_destroy(dcsmq_t*);
 void		dcsmq_msg_cb(dcsmq_t *, dcsmq_msg_cb_t cb, void * ud);
 int			dcsmq_poll(dcsmq_t*, int max_time_us );

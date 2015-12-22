@@ -287,13 +287,13 @@ int     dagent_init(const dagent_config_t & conf){
 	dcf.parent_heart_beat_gap = conf.heartbeat;
 	dcf.max_children_heart_beat_expired = 3 * conf.heartbeat;
 	if (!conf.parent.empty()){
-		dcf.addr.parent_addr = conf.parent;
+		dcf.addr.tcp_parent_addr = conf.parent;
 	}
 	if (!conf.listen.empty()){
-		dcf.addr.listen_addr = conf.listen;
+		dcf.addr.tcp_listen_addr = conf.listen;
 	}
 	if (!conf.localkey.empty()){
-		dcf.addr.msgq_path = conf.localkey;
+		dcf.addr.msgq_addr = conf.localkey;
 	}
 	dcf.addr.msgq_push = true;
 	if (conf.routermode){
