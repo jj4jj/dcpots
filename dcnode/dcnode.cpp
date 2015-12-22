@@ -187,7 +187,7 @@ static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
 static bool _is_smq_leaf(dcnode_t* dc){
 	if (dc->conf.addr.tcp_listen_addr.empty() &&	//not tcp node
 		dc->conf.addr.tcp_parent_addr.empty()){
-		if (!dc->conf.addr.msgq_addr.empty() &&
+		if (!dc->conf.addr.msgq_sharekey.empty() &&
 			!dc->conf.addr.msgq_push)	//but a smq server
 		{
 			return false;
@@ -393,7 +393,7 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 	};
 	if (dc->conf.parent_heart_beat_gap > 0 && 
 		(!dc->conf.addr.tcp_parent_addr.empty() ||	//tcp client
-		  (!dc->conf.addr.msgq_addr.empty() && dc->conf.addr.msgq_push )))		//mq client
+		  (!dc->conf.addr.msgq_sharekey.empty() && dc->conf.addr.msgq_push )))		//mq client
 	{
 		GLOG_TRA("add parent heart-beat timer checker with:%ds", dc->conf.parent_heart_beat_gap);
 		dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
@@ -452,7 +452,7 @@ static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
 	}
 	dcshm_config_t shm_conf;
 	shm_conf.attach = !owner;
-	shm_conf.shm_path = dc->conf.addr.msgq_addr;
+	shm_conf.shm_path = dc->conf.addr.msgq_sharekey;
 	if (owner){
 		shm_conf.shm_size = sizeof(dcnode_name_map_t);
 	}
@@ -766,7 +766,7 @@ static int _stcp_cb(dctcp_t* stcp, const dctcp_event_t & ev, void * ud) {
 }
 static int _check_conf(const dcnode_config_t & conf){
 	if (!conf.addr.tcp_parent_addr.empty() &&
-		!conf.addr.msgq_addr.empty() &&
+		!conf.addr.msgq_sharekey.empty() &&
 		conf.addr.msgq_push){	//tcp parent and smq using .
 		//invalid node
 		return -1;
@@ -820,7 +820,7 @@ dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
     //////////////////////////////////////////////////////////
     if (type == 0){
         msgq_push = (mode == 0);
-        msgq_addr = s_addr;
+        msgq_sharekey = s_addr;
     }
     else if (type == 1){
         if (mode == 0){
@@ -867,12 +867,12 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		}
 		dctcp_event_cb(n->stcp, _stcp_cb, n);
 	}
-	if (!conf.addr.msgq_addr.empty())
+	if (!conf.addr.msgq_sharekey.empty())
 	{
 		dcsmq_config_t smc;
-		smc.key = conf.addr.msgq_addr;
+		smc.keypath = conf.addr.msgq_sharekey;
 		smc.msg_buffsz = conf.max_channel_buff_size;
-		smc.server_mode = !_is_smq_leaf(n);
+		smc.passive = !_is_smq_leaf(n);
 
 		n->smq = dcsmq_create(smc);
 		if (!n->smq) {
@@ -881,7 +881,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 			return nullptr;
 		}
 		dcsmq_msg_cb(n->smq, _smq_cb, n);
-		if (smc.server_mode){
+		if (smc.passive){
 			if (_name_smq_maping_shm_create(n, true)){
 				GLOG_ERR("dcnode.smq create shm error !");
 				dcnode_destroy(n);

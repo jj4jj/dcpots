@@ -37,11 +37,11 @@ struct dcnode_t;
 
 struct dcnode_addr_t
 {
-	string msgq_addr;  //file path for machine sharing
+	string msgq_sharekey;  //file path for machine sharing , push:/xxxx
 	bool   msgq_push; //client push mode as a client , not server
 	string tcp_listen_addr; //listen ip:port
 	string tcp_parent_addr;  //parent ip:port
-    //pattern 
+    //pattern
     //push:tcp://...
     //pull:msgq://
     dcnode_addr_t(const char * addrpatt = nullptr);
@@ -102,3 +102,4 @@ int       dcnode_reply(dcnode_t*, const char * buff, int sz); //reply current pr
 int		  dcnode_ready(dcnode_t *);
 void	  dcnode_abort(dcnode_t *);
 int       dcnode_dump(dcnode_t *, const char * fname = nullptr, dcnode_dump_format_type dtype = DCNODE_DUMP_BIN);
+

@@ -3,35 +3,61 @@
 
 struct dcsmq_t;
 
-//c:/tmp/hanle
-//s:
-struct dcsmq_addr_t {
-	string		path; //->connect?listen:
-	bool		server;
-};
+//initiative							passive
+//											s
+//	c1/2/3/4/.. = msgq.type
+//	c1.send(c1, msg)		=>		s.recive(any, msg) , any = c1
+//	c1.receive(c1, msg)		<=		s.send(c1, msg)
 
 
-struct dcsmq_config_t
-{
-    string			key;
-	bool			server_mode;
+//	c1				----------->					
+//					<-----------
+
+//	c2				----------->			
+//					<-----------
+
+//	c3				----------->			
+//					<-----------
+
+//	c4				----------->			
+//					<-----------
+
+
+struct dcsmq_config_t {
+    string			keypath;
+	bool			passive;//if true, receive all type msg, else receive 
 	int				msg_buffsz;
 	int				max_queue_buff_size;
 	bool			attach;
-	dcsmq_config_t()
-	{
+	dcsmq_config_t(){
 		msg_buffsz = 1024 * 1024;
 		max_queue_buff_size = 10 * 1024 * 1024; //10MB
-		server_mode = false;
+		passive = false;
 		attach = false;
 	}
 };
 
-struct dcsmq_msg_t
-{
+struct dcsmq_msg_t {
     const char * buffer;
     int			 sz;
 	dcsmq_msg_t(const char * buf, int s) :buffer(buf), sz(s){}
+};
+
+struct dcsmq_stat_t {
+	//global data
+	int					client_key;
+	int					server_key;
+	size_t				total_size;
+	struct msqid_ds		ds;
+	//-------------------------------
+	int					nchannel;
+	struct dcsmq_channel_t {
+		uint64_t	session;
+		size_t		req_num;
+		size_t		rsp_num;
+	}	*channels;
+	dcsmq_stat_t();
+	~dcsmq_stat_t();
 };
 
 typedef int (*dcsmq_msg_cb_t)(dcsmq_t * , uint64_t src, const dcsmq_msg_t & msg, void * ud);
@@ -44,6 +70,6 @@ int			dcsmq_push(dcsmq_t*, uint64_t dst, const dcsmq_msg_t & msg);//send to peer
 bool		dcsmq_server_mode(dcsmq_t *);
 void		dcsmq_set_session(dcsmq_t *, uint64_t session); //send or recv type
 uint64_t	dcsmq_session(dcsmq_t *);
-//for debug
-//status report
+//status report for debug
+void		dcsmq_stat(const std::string & keypath, dcsmq_stat & stat);
 

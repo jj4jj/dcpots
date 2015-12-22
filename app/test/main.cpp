@@ -47,8 +47,8 @@ int test_mq(const char * ap)
 	char * test_msg = (char*)malloc(test_msg_len);
 
 	dcsmq_config_t	sc;
-	sc.key = msgqpath;
-	sc.server_mode = ap ? true : false;
+	sc.keypath = msgqpath;
+	sc.passive = ap ? true : false;
 	auto p = dcsmq_create(sc);
 	if (!p)
 	{
@@ -56,7 +56,7 @@ int test_mq(const char * ap)
 		return -1;
 	}
 	dcsmq_msg_cb(p, mq_cb, nullptr);
-	if (!sc.server_mode)
+	if (!sc.passive)
 	{
 		start_us = dcsutil::time_unixtime_us();
 		pingpong = 1;
@@ -146,7 +146,7 @@ int dc_cb(void * ud, const char* src, const msg_buffer_t & msg)
 int test_node(const char * p)
 {
 	dcnode_config_t dcf;
-	dcf.addr.msgq_addr = "./gmon.out";
+	dcf.addr.msgq_sharekey = "./gmon.out";
 	dcf.addr.msgq_push = true;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = "leaf";
@@ -160,20 +160,20 @@ int test_node(const char * p)
 	if (p)
 	{
 		if (strcmp(p, "l1") == 0){
-			dcf.addr.msgq_addr = "./gmon.out";
+			dcf.addr.msgq_sharekey = "./gmon.out";
 			dcf.addr.msgq_push = false;
 			dcf.addr.tcp_parent_addr = "127.0.0.1:8880";
 			dcf.name = "layer1";
 		}
 		else
 		if (strcmp(p, "l2") == 0){
-			dcf.addr.msgq_addr = "";
+			dcf.addr.msgq_sharekey = "";
 			dcf.name = "layer2";
 			dcf.addr.tcp_listen_addr = "127.0.0.1:8880";
 		}
 		else 
 		if (strcmp(p, "l3") == 0){
-			dcf.addr.msgq_addr = "";
+			dcf.addr.msgq_sharekey = "";
 			dcf.name = "test";
 			dcf.addr.tcp_listen_addr = "";
 			dcf.parent_heart_beat_gap = 0;

@@ -51,7 +51,7 @@ int		_msgq_create(key_t key, int flag, size_t max_size){
 dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	//sender : recver (1:2) : client
 	int prj_id[] = { 1, 2 };
-	if (conf.server_mode){
+	if (conf.passive){
 		prj_id[0] = 2;
 		prj_id[1] = 1;
 	}
@@ -60,16 +60,16 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 		flag |= IPC_CREAT;
     }
     key_t key = -1;
-    if (dcsutil::strisint(conf.key)){
-        key = stoi(conf.key);
+    if (dcsutil::strisint(conf.keypath)){
+        key = stoi(conf.keypath);
     }
     else {
-        key = ftok(conf.key.c_str(), prj_id[0]);
+        key = ftok(conf.keypath.c_str(), prj_id[0]);
     }
 	if (key == -1){
 		//error no
 		GLOG_ERR( "ftok error key:%s , prj_id:%d",
-			conf.key.c_str(), prj_id[0]);
+			conf.keypath.c_str(), prj_id[0]);
 		return nullptr;
 	}
 	int sender = _msgq_create(key, flag, conf.max_queue_buff_size);
@@ -80,9 +80,9 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 		return nullptr;
 	}
 	GLOG_TRA("create sender with key:%s(%d) , prj_id:%d",
-		conf.key.c_str(), key, prj_id[0]);
+		conf.keypath.c_str(), key, prj_id[0]);
 
-	key = ftok(conf.key.c_str(), prj_id[1]);
+	key = ftok(conf.keypath.c_str(), prj_id[1]);
 	int recver = _msgq_create(key, flag, conf.max_queue_buff_size);
 	if (recver < 0){
 		//errno
@@ -91,7 +91,7 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 		return nullptr;
 	}
 	GLOG_TRA("create recver with key:%s(%d) , prj_id:%d",
-		conf.key.c_str(), key, prj_id[1]);
+		conf.keypath.c_str(), key, prj_id[1]);
 
 	dcsmq_t * smq = new dcsmq_t();
 	if (!smq){
@@ -204,15 +204,15 @@ int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
 	return ret;
 }
 bool	dcsmq_server_mode(dcsmq_t * smq){
-	return smq->conf.server_mode;
+	return smq->conf.passive;
 }
 uint64_t	dcsmq_session(dcsmq_t * smq){
 	if (!smq) { return 0; }
-	if (smq->conf.server_mode){ return 0; }
+	if (smq->conf.passive){ return 0; }
 	return smq->session;
 }
 void	dcsmq_set_session(dcsmq_t * smq, uint64_t session){
-	if (!smq->conf.server_mode){
+	if (!smq->conf.passive){
 		smq->session = session;
 	}
 }

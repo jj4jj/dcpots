@@ -38,7 +38,7 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 static dcnode_t* _create(bool ping, const char* name, const char * key,
 	const char* listen_tcp , const char * conn_tcp ){
 	dcnode_config_t dcf;
-	dcf.addr.msgq_addr = key;
+	dcf.addr.msgq_sharekey = key;
 	dcf.addr.msgq_push = ping;
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = name;
@@ -48,7 +48,7 @@ static dcnode_t* _create(bool ping, const char* name, const char * key,
 	dcf.addr.tcp_listen_addr = listen_tcp;
 	if (!dcf.addr.tcp_parent_addr.empty()){
 		dcf.addr.msgq_push = false;
-		dcf.addr.msgq_addr = "";
+		dcf.addr.msgq_sharekey = "";
 	}
 	auto dc = dcnode_create(dcf);
 	if (!dc){

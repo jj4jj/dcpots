@@ -293,7 +293,7 @@ int     dagent_init(const dagent_config_t & conf){
 		dcf.addr.tcp_listen_addr = conf.listen;
 	}
 	if (!conf.localkey.empty()){
-		dcf.addr.msgq_addr = conf.localkey;
+		dcf.addr.msgq_sharekey = conf.localkey;
 	}
 	dcf.addr.msgq_push = true;
 	if (conf.routermode){
