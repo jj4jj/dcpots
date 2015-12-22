@@ -104,7 +104,9 @@ struct dcnode_t
         msg_queue_t() :msg_size(0){}
     };
     std::unordered_map<string, msg_queue_t>             send_queue;
-    //////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////
+    //misc
+    int                                                 connect_retry;
 	dcnode_t(){
 		init();
 	}
@@ -127,6 +129,7 @@ struct dcnode_t
         //////////////////////////////////
         send_buffer.destroy();
         processing_id.destruct();
+        connect_retry = 0;
 	}
 };
 
@@ -610,6 +613,10 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 		assert(dm.dst() == dc->conf.name);
 		if (dm.reg_name().ret() != 0) {
             GLOG_ERR("register name error :%s", dm.Debug());
+            if (dc->conf.durable && dc->connect_retry < dc->conf.max_connect_retry){
+                dc->connect_retry++;
+                return _fsm_register_name(dc);
+            }
 			return _fsm_abort(dc, dm.reg_name().ret());
 		}
 		else {
@@ -623,6 +630,8 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 				assert(sockfd != -1);
 				_update_tcpfd_name(dc, sockfd, dm.src(), true);
 			}
+            //retry
+            dc->connect_retry = 0;
 			return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
 		}
 	}

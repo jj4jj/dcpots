@@ -60,6 +60,7 @@ struct dcnode_config_t
     bool           durable;
     int            max_send_queue_size;
     string         dumpfile;
+    int            max_connect_retry;
 	dcnode_config_t()
 	{
 		name = "noname";
@@ -71,6 +72,7 @@ struct dcnode_config_t
         durable = false;
         max_send_queue_size = 128;
         dumpfile = "dcnode.dump";
+        max_connect_retry = 1000;
 	}
 };
 enum dcnode_error_type {
