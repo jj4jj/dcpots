@@ -59,6 +59,7 @@ struct dcnode_config_t
 	string	       name;
     bool           durable;
     int            max_send_queue_size;
+    string         dumpfile;
 	dcnode_config_t()
 	{
 		name = "noname";
@@ -69,12 +70,20 @@ struct dcnode_config_t
 		max_msg_expired_time = 60*30;	//half an hour
         durable = false;
         max_send_queue_size = 128;
+        dumpfile = "dcnode.dump";
 	}
 };
 enum dcnode_error_type {
     E_DCNODE_OK = 0,
     E_DCNODE_SEND_FULL = 1,
 };
+enum dcnode_dump_format_type {
+    DCNODE_DUMP_BIN = 0,
+    DCNODE_DUMP_TEXT = 1,
+    DCNODE_DUMP_JSON = 2,
+    DCNODE_DUMP_XML = 3,
+};
+
 
 typedef	std::function<void()>	dcnode_timer_callback_t;
 typedef int(*dcnode_dispatcher_t)(void * ud, const char * src, const msg_buffer_t & msg);
@@ -92,3 +101,4 @@ int       dcnode_reply(dcnode_t*, const char * buff, int sz); //reply current pr
 
 int		  dcnode_ready(dcnode_t *);
 void	  dcnode_abort(dcnode_t *);
+int       dcnode_dump(dcnode_t *, const char * fname = nullptr, dcnode_dump_format_type dtype = DCNODE_DUMP_BIN);

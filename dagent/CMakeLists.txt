@@ -17,7 +17,8 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
 /usr/include
 /usr/local/include
-/usr/local/include/libbson-1.0)
+/usr/local/include/libbson-1.0
+${PROJECT_SOURCE_DIR}/3rd)
 
 add_library(dagent STATIC ${cur_SRCS})
 

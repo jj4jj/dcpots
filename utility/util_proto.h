@@ -33,8 +33,17 @@ const google::protobuf::Descriptor *
 typedef void(*sax_event_cb_t)(const string & name, const google::protobuf::Message & msg, int idx, int level, void *ud, protobuf_sax_event_type evt);
 void			protobuf_msg_sax(const string & name, const google::protobuf::Message & msg, sax_event_cb_t fn, void *ud, int level = 0, bool default_init = true);
 
-int				protobuf_saveto_xml(const google::protobuf::Message & msg, const std::string & xmlfile);
-int				protobuf_readfrom_xml(google::protobuf::Message & msg, const std::string & xmlfile, std::string & error);
+int				protobuf_msg_to_xml_file(const google::protobuf::Message & msg, const std::string & xmlfile);
+int				protobuf_msg_from_xml_file(google::protobuf::Message & msg, const std::string & xmlfile, std::string & error);
+int				protobuf_msg_to_xml_string(const google::protobuf::Message & msg, std::string & sxml);
+int				protobuf_msg_from_xml_string(google::protobuf::Message & msg, const std::string & sxml, std::string & error);
+
+
+int             protobuf_msg_to_json_file(const google::protobuf::Message & msg, const std::string & jsonfile);
+int             protobuf_msg_from_json_file(google::protobuf::Message & msg, const std::string & jsonfile, std::string & error);
+int             protobuf_msg_to_json_string(const google::protobuf::Message & msg, std::string & json);
+int             protobuf_msg_from_json_string(google::protobuf::Message & msg, const std::string & json, std::string & error);
+
 
 std::string		protobuf_msg_field_get_value(const google::protobuf::Message & msg, const string & name, int idx);
 int				protobuf_msg_field_set_value(google::protobuf::Message & msg, const string & name, int idx, const string & value, string & error);

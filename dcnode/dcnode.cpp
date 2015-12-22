@@ -8,6 +8,7 @@
 #include "base/dcutils.hpp"
 #include "base/dcshm.h"
 #include "base/profile.h"
+#include "utility/util_proto.h"
 
 typedef msgproto_t<dcnode::MsgDCNode>	dcnode_msg_t;
 
@@ -68,8 +69,8 @@ struct dcnode_t
 	dcsmq_t	*		smq;	//mq
 
 	//as a client , fsm
-	int			fsm_state;
-	int			fsm_error;
+	int			    fsm_state;
+	int			    fsm_error;
 
 	//local name map addr[id]
 	dcnode_dispatcher_t		dispatcher;
@@ -102,15 +103,12 @@ struct dcnode_t
         dcsutil::object_queue< msg_buffer_t, DCNODE_MAX_LOCAL_NODES_NUM>      q;
         msg_queue_t() :msg_size(0){}
     };
-    //////////////////////////////////////////////////////
-    std::unordered_map<string, msg_queue_t>     send_queue;
-    
-	dcnode_t()
-	{
+    std::unordered_map<string, msg_queue_t>             send_queue;
+    //////////////////////////////////////////////////////////////////////////////////////
+	dcnode_t(){
 		init();
 	}
-	void init()
-	{
+	void init(){
 		smq = nullptr;
 		stcp = nullptr;
 		fsm_state = DCNODE_INIT;
@@ -126,7 +124,9 @@ struct dcnode_t
 		parent_hb_expire_time = 0;
 		parentfd = -1;
 		smq_name_mapping_shm = nullptr;
-        send_queue.clear();
+        //////////////////////////////////
+        send_buffer.destroy();
+        processing_id.destruct();
 	}
 };
 
@@ -475,7 +475,7 @@ static int	_fsm_check(dcnode_t * dc, bool checkforce){
 		return _fsm_connect_parent(dc);//connecting
 	case dcnode_t::DCNODE_CONNECTED:
 		return _fsm_register_name(dc);//registering
-	case dcnode_t::DCNODE_NAME_REG:
+	case dcnode_t::DCNODE_NAME_REG: //-> ready
 		if (dc->smq){ //register name succes , create the shm or attach		
 			if (_name_smq_maping_shm_create(dc, false)){
 				dc->fsm_state = dcnode_t::DCNODE_ABORT;
@@ -835,10 +835,12 @@ dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
 dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 	if (_check_conf(conf)){
 		//config error
+        GLOG_ERR("dcnode config check error !");
 		return nullptr;
 	}
 	dcnode_t * n = new dcnode_t();
 	if (!n) //memerror
+        GLOG_ERR("dcnode allocate memory !");
 		return nullptr;
 	n->conf = conf;
 	if (!_is_smq_leaf(n))
@@ -881,7 +883,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		dcsmq_msg_cb(n->smq, _smq_cb, n);
 		if (smc.server_mode){
 			if (_name_smq_maping_shm_create(n, true)){
-				GLOG_ERR("create shm error !");
+				GLOG_ERR("dcnode.smq create shm error !");
 				dcnode_destroy(n);
 				return nullptr;
 			}				
@@ -895,21 +897,32 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 	_fsm_start_heart_beat_timer(n);
 	return n;
 }
+static inline void _dcnode_clear_send_queue(dcnode_t * dc){
+    for (auto it : dc->send_queue){
+        while (!it.second.q.empty()){
+            auto buff = it.second.q.front();
+            buff->destroy();
+            it.second.q.pop();
+        }
+    }
+    dc->send_queue.clear();
+}
 void      dcnode_destroy(dcnode_t* dc){
-	if (dc->stcp)
-	{
+	if (dc->stcp){
 		dctcp_destroy(dc->stcp);
 		dc->stcp = nullptr;
 	}
-	if (dc->smq)
-	{
+	if (dc->smq){
 		dcsmq_destroy(dc->smq);
 		dc->smq = nullptr;
 	}
 	if (dc->smq_name_mapping_shm){
 		dcshm_destroy(dc->smq_name_mapping_shm);
 	}
-	dc->init();
+    //=================================
+    _dcnode_clear_send_queue(dc);
+
+    dc->init();
 	delete dc;
 }
 static	void _check_timer_callback(dcnode_t * dc){
@@ -959,8 +972,7 @@ static  bool _name_exists(dcnode_t * dc, const char * name){
     }
     return false;
 }
-static inline void
-_check_send_queue(dcnode_t *dc, const string & dst, dcnode_t::msg_queue_t & queue){
+static inline void _check_send_queue(dcnode_t *dc, const string & dst, dcnode_t::msg_queue_t & queue){
     if (dc->fsm_state != dcnode_t::DCNODE_READY &&
         !_name_exists(dc, dst.c_str())) {
         //error not ready (name not reg) 
@@ -979,18 +991,15 @@ _check_send_queue(dcnode_t *dc, const string & dst, dcnode_t::msg_queue_t & queu
         }
     }
 }
-static inline void
-_check_send_queue(dcnode_t *dc){
+static inline void _check_send_queue(dcnode_t *dc){
     for (auto & q : dc->send_queue){
         _check_send_queue(dc, q.first, q.second);
     }
 }
-static inline int
-_send_msg(dcnode_t *dc, const std::string & dst, const dcnode_msg_t & dm){
+static inline int _send_msg(dcnode_t *dc, const std::string & dst, const dcnode_msg_t & dm){
     //immediately send out
     if (dst.empty()){ //to parent immediately , no queue
         if (!dm.Pack(dc->send_buffer)){
-            //error
             GLOG_ERR("dcnode pack msg error !");
             return -1;
         }
@@ -1004,9 +1013,15 @@ _send_msg(dcnode_t *dc, const std::string & dst, const dcnode_msg_t & dm){
     //push msg
     auto & queue = dc->send_queue[dst];
     _check_send_queue(dc, dst, queue);
+    if ((int)queue.q.size() >= dc->conf.max_send_queue_size){
+        GLOG_ERR("reached queue max size dst:%s! queue size:%zu msg size:%zu",
+            dst.c_str(), queue.q.size(), queue.msg_size);
+        return E_DCNODE_SEND_FULL;
+    }
     auto pq = queue.q.push();
     if (queue.q.null() == pq){
-        GLOG_ERR("allocate queue error dst:%s! queue is full msg size:%zu", dst.c_str(), queue.msg_size);
+        GLOG_ERR("allocate queue error dst:%s! queue size:%zu msg size:%zu",
+            dst.c_str(), queue.q.size(), queue.msg_size);
         return E_DCNODE_SEND_FULL;
     }
     else { //push
@@ -1105,8 +1120,69 @@ int      dcnode_reply(dcnode_t* dc, const char * buff, int sz){
 		return dctcp_send(dc->stcp, nodeid->fd, dctcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
 }
+static inline void   _dcnode_dump_send_queue(dcnode_t * dc, dcnode::DCNodeDumpSendQueue * sendq){
+    auto dumpq = dc->send_queue;
+    for (auto it : dumpq){
+        auto q = sendq->add_send_queue();
+        q->set_dst(it.first);
+        while (!it.second.q.empty()){
+            auto buff = it.second.q.front();
+            /////////////////////////////////
+            q->add_queue((*buff).buffer, (*buff).valid_size);
+            /////////////////////////////////
+            it.second.q.pop();
+        }
+    }
+    dumpq.clear();
+}
+static inline const char * _dcnode_dump_format_type(dcnode_dump_format_type dtype){
+    static const char * s_type_name[] = { "bin", "text", "json", "xml" };
+    return s_type_name[dtype];
+}
+int       dcnode_dump(dcnode_t * dc, const char * fname, dcnode_dump_format_type dtype){
+    msgproto_t<dcnode::DCNodeDump> dump;
+    //file format protobuf
+    dump.set_name(dc->conf.name);
+    dump.set_format(_dcnode_dump_format_type(dtype));
+    dcsutil::strftime(*dump.mutable_time());//now
+    {//begin dump
+        _dcnode_dump_send_queue(dc, dump.mutable_send_queue());
+    }
+    msg_buffer_t filebuffer;
+    string writesbuffer;
+    if (dtype == DCNODE_DUMP_BIN){
+        filebuffer.create(dump.ByteSize());
+        if (dump.Pack(filebuffer)){
+            GLOG_ERR("dump file pack error !");
+            filebuffer.destroy();
+            return -1;
+        }
+    }
+    else if (dtype == DCNODE_DUMP_TEXT){
+        writesbuffer = dump.DebugString();
+        filebuffer.buffer = (char*)writesbuffer.data();
+        filebuffer.valid_size = writesbuffer.length();
+    }
+    else if (dtype == DCNODE_DUMP_JSON){
+        return dcsutil::protobuf_msg_to_json_file(dump, fname);
+    }
+    else if (dtype == DCNODE_DUMP_XML){
+        return dcsutil::protobuf_msg_to_xml_file(dump, fname);
+    }
+    int wsz = dcsutil::writefile(fname, filebuffer.buffer, filebuffer.valid_size);
+    if (wsz != filebuffer.valid_size){
+        GLOG_ERR("dump file error  ret: %d", wsz);
+        filebuffer.destroy();
+        return -2;
+    }
+    filebuffer.destroy();
+    return 0;
+}
+
+
 void	  dcnode_abort(dcnode_t * dc){
 	_fsm_abort(dc, 0);
+    dcnode_dump(dc, dc->conf.dumpfile.c_str(), DCNODE_DUMP_BIN);
 }
 //-1:stop ; 0:not ready;1:ready
 int		  dcnode_ready(dcnode_t *  dc){

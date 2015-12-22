@@ -46,3 +46,22 @@ message MsgDCNode
 	optional	MsgRegName		reg_name = 6;
 	optional	MsgDCNodeRPC	rpc = 7;
 };
+
+////////////////////////////////////////////////////////////////////////////////
+
+message DCNodeDumpSendQueue {
+	message DCNodeQueue {
+		required	string		dst = 1;//destination
+		repeated	bytes		queue = 2;
+	}
+	repeated	DCNodeQueue		send_queue = 1;
+}
+
+message DCNodeDump {
+	required	string					format = 1;
+	required	string					name = 2;
+	required	string					time = 3;
+
+	////////////////////////////////////////////////////
+	optional	DCNodeDumpSendQueue		send_queue = 60;
+}

@@ -39,13 +39,13 @@ NS_BEGIN(dcsutil)
 	time_t				from_strtime(const char * strtime = "1970-01-01T08:08:08");
 
 	//file
-	int					readfile(const char * file, char * buffer, size_t sz);
-	int					writefile(const char * file, const char * buffer, size_t sz = 0);
-
+    int					readfile(const std::string & file, char * buffer, size_t sz);
+    int					writefile(const std::string & file, const char * buffer, size_t sz = 0);
+    size_t              filesize(const std::string & file);
 	///////////process/////////////////////////////////////////////////////
 	int					daemonlize(int closestd = 1, int chrootdir = 0);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
-	int					lockpidfile(const char * pidfile, int kill_other_sig = 0, bool nb = true);
+    int					lockpidfile(const std::string & pidfile, int kill_other_sig = 0, bool nb = true);
 
 	///////////str////////////////////////////////////////////////////////////////////////////////
 	int					strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty = true, int maxsplit = 0, int beg = 0, int end = 0);
@@ -79,22 +79,33 @@ NS_BEGIN(dcsutil)
 
     ///============================================================
     //max size = 0 , unlimited
-    template<class T, size_t MAX_NUM = 1024>
+    template<class T, int MAX_NUM = 1024>
     class object_pool {
     public:
         typedef typename std::vector<T>::iterator    pointer;
     private:
         std::vector<T>                      pool;
         std::unordered_set<uint64_t>        free_pool;
+        int                                 num;
     public:
         object_pool(){
-            pool.reserve(MAX_NUM);
+            num = 0;
+            pool.resize(MAX_NUM);
         }
         pointer   null(){
             return pool.end();
         }
         bool      is_null(pointer p){
             return p == pool.end();
+        }
+        size_t    used(){
+            return num;
+        }
+        size_t    total(){
+            return MAX_NUM;
+        }
+        size_t    free(){
+            return free_pool.size();
         }
         size_t    alloc(std::mutex & lock){
             std::lock_guard<std::mutex> lock_gurad(lock);
@@ -113,6 +124,8 @@ NS_BEGIN(dcsutil)
             if (id > 0 &&
                     id <= pool.size() &&
                     free_pool.find(id) == free_pool.end()){
+                num--;
+                assert(num >= 0);
                 free_pool.insert(id);
                 return 0;
             }
@@ -138,8 +151,9 @@ NS_BEGIN(dcsutil)
     private:
         size_t    genid(){
             if (free_pool.empty()){
-                pool.push_back(T());                
-                return pool.size();
+                num++;
+                assert(num <= MAX_NUM);
+                return num;
             }
             else {
                 size_t id = *free_pool.begin();
@@ -164,6 +178,9 @@ NS_BEGIN(dcsutil)
         }
         pointer null(){
             return pool.null();
+        }
+        size_t  size(){
+            return pool.used();
         }
         pointer push(){
             if (rear_ + 1 == front_ || rear_ == front_ + MAX){//full 

@@ -2,53 +2,63 @@
 #include "logger.h"
 
 namespace dcsutil {
-	uint64_t	time_unixtime_us(){
-		timeval tv;
-		gettimeofday(&tv, NULL);
-		return tv.tv_sec * 1000000 + tv.tv_usec;
-	}
+    uint64_t	time_unixtime_us(){
+        timeval tv;
+        gettimeofday(&tv, NULL);
+        return tv.tv_sec * 1000000 + tv.tv_usec;
+    }
 
-	int			daemonlize(int closestd, int chrootdir){
+    int			daemonlize(int closestd, int chrootdir){
 #if _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
-		return daemon(!chrootdir, !closestd);
+        return daemon(!chrootdir, !closestd);
 #else
-		assert("not implement in this platform , using nohup & launch it ?")
-			return -404;//todo 
+        assert("not implement in this platform , using nohup & launch it ?")
+            return -404;//todo 
 #endif
-	}
-	int			readfile(const char * file, char * buffer, size_t sz){
-		FILE * fp = fopen(file, "r");
+    }
+    int			readfile(const std::string & file, char * buffer, size_t sz){
+        FILE * fp = fopen(file.c_str(), "r");
+        if (!fp){
+            GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
+            return -1;
+        }
+        int n;
+        size_t tsz = 0;
+        while ((n = fread(buffer + tsz, 1, sz - tsz, fp))){
+            if (n > 0){
+                tsz += n;
+            }
+            else if (errno != EINTR &&
+                errno != EAGAIN) {
+                GLOG_ERR("read file:%s ret:%d error :%d total sz:%zu", file.c_str(), n, errno, tsz);
+                break;
+            }
+        }
+        fclose(fp);
+        if (n >= 0){
+            if (tsz < sz){
+                buffer[tsz] = 0;
+            }
+            return tsz;
+        }
+        else {
+            return -2;
+        }
+    }
+    size_t      filesize(const std::string & file){
+        FILE * fp = fopen(file.c_str(), "r");
+        if (!fp){
+            return 0;//not exist 
+        }
+        fseek(fp, 0L, SEEK_END);
+        size_t sz = ftell(fp);
+        fclose(fp);
+        return sz;
+    }
+    int			writefile(const std::string & file, const char * buffer, size_t sz){
+        FILE * fp = fopen(file.c_str(), "w");
 		if (!fp){
-            GLOG_ERR("open file£º%s error:%d", file, errno);
-			return -1;
-		}
-		int n;
-		size_t tsz = 0;
-		while ((n = fread(buffer + tsz, 1, sz - tsz, fp))){
-			if (n > 0){
-				tsz += n;
-			}
-			else if (errno != EINTR &&
-				errno != EAGAIN) {
-                GLOG_ERR("read file:%s ret:%d error :%d total sz:%zu", file, n, errno, tsz);
-				break;
-			}
-		}
-		fclose(fp);
-		if (n >= 0){
-			if (tsz < sz){
-				buffer[tsz] = 0;
-			}
-			return tsz;
-		}
-		else {
-			return -2;
-		}
-	}
-	int			writefile(const char * file, const char * buffer, size_t sz){
-		FILE * fp = fopen(file, "w");
-		if (!fp){
-            GLOG_ERR("open file£º%s error:%d", file, errno);
+            GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
 			return -1;
 		}
 		if (sz == 0){
@@ -62,7 +72,7 @@ namespace dcsutil {
 			}
 			else  if (errno != EINTR &&
 				errno != EAGAIN) {
-				GLOG_ERR("write file:%s ret:%d error :%d writed sz:%zu total:%zu", file, n, errno, tsz, sz);
+                GLOG_ERR("write file:%s ret:%d error :%d writed sz:%zu total:%zu", file.c_str(), n, errno, tsz, sz);
 				break;
 			}
 		}
@@ -71,15 +81,15 @@ namespace dcsutil {
 			return tsz;
 		}
 		else {
-			GLOG_ERR("write file:%s writed:%zu error :%d total sz:%zu", file, tsz, errno, sz);
+            GLOG_ERR("write file:%s writed:%zu error :%d total sz:%zu", file.c_str(), tsz, errno, sz);
 			return -2;
 		}
 	}
 
-	int			lockpidfile(const char * pidfile, int kill_other_sig, bool nb){
-		int fd = open(pidfile, O_RDWR | O_CREAT, 0644);
+    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb){
+        int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
 		if (fd == -1) {
-			GLOG_ERR("open file:%s error ", pidfile);
+            GLOG_ERR("open file:%s error ", file.c_str());
 			return -1;
 		}
 		int flags = LOCK_EX;
@@ -90,13 +100,13 @@ namespace dcsutil {
 		int pid = 0;
 		while (flock(fd, flags) == -1) {
 			if (pid == 0){ //just read once
-				int n = readfile(pidfile, szpid, sizeof(szpid));
+                int n = readfile(file, szpid, sizeof(szpid));
 				if (n > 0){
 					pid = strtol(szpid, NULL, 10);
-                    GLOG_ERR("lock pidfile:%s fail , the file is held by pid %d", pidfile, pid);
+                    GLOG_ERR("lock pidfile:%s fail , the file is held by pid %d", file.c_str(), pid);
 				}
 				else {
-                    GLOG_ERR("lock pidfile:%s fail but read pid from file error !", pidfile);
+                    GLOG_ERR("lock pidfile:%s fail but read pid from file error !", file.c_str());
 				}
 			}
 			if (pid > 0 && kill_other_sig > 0){
@@ -111,7 +121,7 @@ namespace dcsutil {
 		}
 		pid = getpid();
 		snprintf(szpid, sizeof(szpid), "%d", pid);
-		writefile(pidfile, szpid);
+        writefile(file, szpid);
 
 		return pid;
 	}
@@ -152,7 +162,7 @@ namespace dcsutil {
 	}
 	const char*		strftime(std::string & str, time_t unixtime, const char * format){
 		str.reserve(32);
-		if (unixtime == 0){
+		if (unixtime == 0U){
 			unixtime = time(NULL);
 		}
 		struct tm _sftm;

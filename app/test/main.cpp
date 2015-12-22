@@ -536,7 +536,7 @@ static int pbxml_test(const char* arg){
 	mdn.set_src("src-----");
 	mdn.set_type(dcnode::MSG_HEART_BEAT);
 	mdn.mutable_ext()->set_unixtime(time(NULL));
-	dcsutil::protobuf_saveto_xml(mdn, "dcnode.xml");
+	dcsutil::protobuf_msg_to_xml_file(mdn, "dcnode.xml");
 	return 0;
 }
 

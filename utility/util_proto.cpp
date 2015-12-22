@@ -2,6 +2,8 @@
 #include "google/protobuf/message.h"
 #include "util_proto.h"
 #include "xml_doc.h"
+#include "json_doc.hpp"
+#include "3rd/pbjson/pbjson.hpp"
 
 NS_BEGIN(dcsutil)
 
@@ -365,11 +367,21 @@ int level, void * ud, protobuf_sax_event_type ev_type){
 	xml->append("\n");
 }
 int				
-protobuf_saveto_xml(const google::protobuf::Message & msg, const std::string & xmlfile){
-	string xml;
-	protobuf_msg_sax(msg.GetDescriptor()->name(), msg, convert_to_xml, &xml);
-	writefile(xmlfile.c_str(), xml.c_str(), xml.length());
-	return 0;
+protobuf_msg_to_xml_file(const google::protobuf::Message & msg, const std::string & xmlfile){
+    string xml;
+    protobuf_msg_to_xml_string(msg, xml);
+    int sz = writefile(xmlfile.c_str(), xml.c_str(), xml.length());
+    if (sz > 0)
+        return 0;
+    else {
+        GLOG_ERR("write file :%s error : %d", xmlfile.c_str(), sz);
+        return -1;
+    }
+}
+int			
+protobuf_msg_to_xml_string(const google::protobuf::Message & msg, std::string & sxml){
+    protobuf_msg_sax(msg.GetDescriptor()->name(), msg, convert_to_xml, &sxml);
+    return 0;
 }
 
 static void
@@ -432,9 +444,22 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
 		return;
 	}
 }
-
+int
+protobuf_msg_from_xml_string(google::protobuf::Message & msg, const std::string & sxml, std::string & error){
+    xml_doc_t xml;
+    string xmlstr = sxml;
+    int ret = xml.loads((char*)xmlstr.data());
+    if (ret){
+        error = "parse from buffer error !";
+        return ret;
+    }
+    std::stack<Message*>		msgstack;
+    msgstack.push(&msg);
+    xml.sax(convert_xml_to_pb, &msgstack, nullptr);
+    return 0;
+}
 int				
-protobuf_readfrom_xml(google::protobuf::Message & msg, const std::string & xmlfile, std::string & error){
+protobuf_msg_from_xml_file(google::protobuf::Message & msg, const std::string & xmlfile, std::string & error){
 	xml_doc_t xml;
 	int ret = xml.parse_file(xmlfile.c_str());
 	if (ret){
@@ -446,6 +471,48 @@ protobuf_readfrom_xml(google::protobuf::Message & msg, const std::string & xmlfi
 	xml.sax(convert_xml_to_pb, &msgstack, nullptr);
 	return 0;
 }
+
+
+int
+protobuf_msg_to_json_string(const google::protobuf::Message & msg, std::string & json){
+    pbjson::pb2json(&msg, json);
+    return 0;
+}
+int
+protobuf_msg_from_json_string(google::protobuf::Message & msg, const std::string & sjson, std::string & error){
+    int ret = pbjson::json2pb(sjson, &msg, error);
+    if (ret){
+        GLOG_ERR("json to pb error :%d error :%s", ret, error.c_str());
+        return ret;
+    }
+    return 0;
+}
+int 
+protobuf_msg_to_json_file(const google::protobuf::Message & msg, const std::string & jsonfile){
+    string msg_buffer;
+    protobuf_msg_to_json_string(msg, msg_buffer);
+    int sz = dcsutil::writefile(jsonfile, msg_buffer.data(), msg_buffer.length());
+    if (sz <= 0){
+        GLOG_ERR("write file :%s error :%d", jsonfile.c_str(), sz);
+        return -1;
+    }
+    return 0;
+}
+int 
+protobuf_msg_from_json_file(google::protobuf::Message & msg, const std::string & jsonfile, std::string & error){
+    string sfile;
+    int sz = dcsutil::filesize(jsonfile);
+    sfile.reserve(sz);
+    int n = dcsutil::readfile(jsonfile.c_str(), (char*)sfile.data(), sfile.capacity());
+    if (n <= 0){
+        GLOG_ERR("readfile :%s error ret :%d", jsonfile.c_str(), n);
+        return -1;
+    }
+    string sjson(sfile.data(), n);
+    return protobuf_msg_from_json_string(msg, sjson, error);
+}
+
+
 
 
 NS_END()

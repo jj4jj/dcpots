@@ -38,6 +38,9 @@ class MsgDCNodeRPC;
 class MsgRegName;
 class MsgExt;
 class MsgDCNode;
+class DCNodeDumpSendQueue;
+class DCNodeDumpSendQueue_DCNodeQueue;
+class DCNodeDump;
 
 enum MsgDCNodeType {
   MSG_REG_NAME = 1,
@@ -566,6 +569,317 @@ class MsgDCNode : public ::google::protobuf::Message {
 
   void InitAsDefaultInstance();
   static MsgDCNode* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DCNodeDumpSendQueue_DCNodeQueue : public ::google::protobuf::Message {
+ public:
+  DCNodeDumpSendQueue_DCNodeQueue();
+  virtual ~DCNodeDumpSendQueue_DCNodeQueue();
+
+  DCNodeDumpSendQueue_DCNodeQueue(const DCNodeDumpSendQueue_DCNodeQueue& from);
+
+  inline DCNodeDumpSendQueue_DCNodeQueue& operator=(const DCNodeDumpSendQueue_DCNodeQueue& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DCNodeDumpSendQueue_DCNodeQueue& default_instance();
+
+  void Swap(DCNodeDumpSendQueue_DCNodeQueue* other);
+
+  // implements Message ----------------------------------------------
+
+  DCNodeDumpSendQueue_DCNodeQueue* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DCNodeDumpSendQueue_DCNodeQueue& from);
+  void MergeFrom(const DCNodeDumpSendQueue_DCNodeQueue& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string dst = 1;
+  inline bool has_dst() const;
+  inline void clear_dst();
+  static const int kDstFieldNumber = 1;
+  inline const ::std::string& dst() const;
+  inline void set_dst(const ::std::string& value);
+  inline void set_dst(const char* value);
+  inline void set_dst(const char* value, size_t size);
+  inline ::std::string* mutable_dst();
+  inline ::std::string* release_dst();
+  inline void set_allocated_dst(::std::string* dst);
+
+  // repeated bytes queue = 2;
+  inline int queue_size() const;
+  inline void clear_queue();
+  static const int kQueueFieldNumber = 2;
+  inline const ::std::string& queue(int index) const;
+  inline ::std::string* mutable_queue(int index);
+  inline void set_queue(int index, const ::std::string& value);
+  inline void set_queue(int index, const char* value);
+  inline void set_queue(int index, const void* value, size_t size);
+  inline ::std::string* add_queue();
+  inline void add_queue(const ::std::string& value);
+  inline void add_queue(const char* value);
+  inline void add_queue(const void* value, size_t size);
+  inline const ::google::protobuf::RepeatedPtrField< ::std::string>& queue() const;
+  inline ::google::protobuf::RepeatedPtrField< ::std::string>* mutable_queue();
+
+  // @@protoc_insertion_point(class_scope:dcnode.DCNodeDumpSendQueue.DCNodeQueue)
+ private:
+  inline void set_has_dst();
+  inline void clear_has_dst();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::std::string* dst_;
+  ::google::protobuf::RepeatedPtrField< ::std::string> queue_;
+  friend void  protobuf_AddDesc_dcnode_2eproto();
+  friend void protobuf_AssignDesc_dcnode_2eproto();
+  friend void protobuf_ShutdownFile_dcnode_2eproto();
+
+  void InitAsDefaultInstance();
+  static DCNodeDumpSendQueue_DCNodeQueue* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DCNodeDumpSendQueue : public ::google::protobuf::Message {
+ public:
+  DCNodeDumpSendQueue();
+  virtual ~DCNodeDumpSendQueue();
+
+  DCNodeDumpSendQueue(const DCNodeDumpSendQueue& from);
+
+  inline DCNodeDumpSendQueue& operator=(const DCNodeDumpSendQueue& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DCNodeDumpSendQueue& default_instance();
+
+  void Swap(DCNodeDumpSendQueue* other);
+
+  // implements Message ----------------------------------------------
+
+  DCNodeDumpSendQueue* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DCNodeDumpSendQueue& from);
+  void MergeFrom(const DCNodeDumpSendQueue& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  typedef DCNodeDumpSendQueue_DCNodeQueue DCNodeQueue;
+
+  // accessors -------------------------------------------------------
+
+  // repeated .dcnode.DCNodeDumpSendQueue.DCNodeQueue send_queue = 1;
+  inline int send_queue_size() const;
+  inline void clear_send_queue();
+  static const int kSendQueueFieldNumber = 1;
+  inline const ::dcnode::DCNodeDumpSendQueue_DCNodeQueue& send_queue(int index) const;
+  inline ::dcnode::DCNodeDumpSendQueue_DCNodeQueue* mutable_send_queue(int index);
+  inline ::dcnode::DCNodeDumpSendQueue_DCNodeQueue* add_send_queue();
+  inline const ::google::protobuf::RepeatedPtrField< ::dcnode::DCNodeDumpSendQueue_DCNodeQueue >&
+      send_queue() const;
+  inline ::google::protobuf::RepeatedPtrField< ::dcnode::DCNodeDumpSendQueue_DCNodeQueue >*
+      mutable_send_queue();
+
+  // @@protoc_insertion_point(class_scope:dcnode.DCNodeDumpSendQueue)
+ private:
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::google::protobuf::RepeatedPtrField< ::dcnode::DCNodeDumpSendQueue_DCNodeQueue > send_queue_;
+  friend void  protobuf_AddDesc_dcnode_2eproto();
+  friend void protobuf_AssignDesc_dcnode_2eproto();
+  friend void protobuf_ShutdownFile_dcnode_2eproto();
+
+  void InitAsDefaultInstance();
+  static DCNodeDumpSendQueue* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class DCNodeDump : public ::google::protobuf::Message {
+ public:
+  DCNodeDump();
+  virtual ~DCNodeDump();
+
+  DCNodeDump(const DCNodeDump& from);
+
+  inline DCNodeDump& operator=(const DCNodeDump& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const DCNodeDump& default_instance();
+
+  void Swap(DCNodeDump* other);
+
+  // implements Message ----------------------------------------------
+
+  DCNodeDump* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const DCNodeDump& from);
+  void MergeFrom(const DCNodeDump& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required string format = 1;
+  inline bool has_format() const;
+  inline void clear_format();
+  static const int kFormatFieldNumber = 1;
+  inline const ::std::string& format() const;
+  inline void set_format(const ::std::string& value);
+  inline void set_format(const char* value);
+  inline void set_format(const char* value, size_t size);
+  inline ::std::string* mutable_format();
+  inline ::std::string* release_format();
+  inline void set_allocated_format(::std::string* format);
+
+  // required string name = 2;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 2;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // required string time = 3;
+  inline bool has_time() const;
+  inline void clear_time();
+  static const int kTimeFieldNumber = 3;
+  inline const ::std::string& time() const;
+  inline void set_time(const ::std::string& value);
+  inline void set_time(const char* value);
+  inline void set_time(const char* value, size_t size);
+  inline ::std::string* mutable_time();
+  inline ::std::string* release_time();
+  inline void set_allocated_time(::std::string* time);
+
+  // optional .dcnode.DCNodeDumpSendQueue send_queue = 60;
+  inline bool has_send_queue() const;
+  inline void clear_send_queue();
+  static const int kSendQueueFieldNumber = 60;
+  inline const ::dcnode::DCNodeDumpSendQueue& send_queue() const;
+  inline ::dcnode::DCNodeDumpSendQueue* mutable_send_queue();
+  inline ::dcnode::DCNodeDumpSendQueue* release_send_queue();
+  inline void set_allocated_send_queue(::dcnode::DCNodeDumpSendQueue* send_queue);
+
+  // @@protoc_insertion_point(class_scope:dcnode.DCNodeDump)
+ private:
+  inline void set_has_format();
+  inline void clear_has_format();
+  inline void set_has_name();
+  inline void clear_has_name();
+  inline void set_has_time();
+  inline void clear_has_time();
+  inline void set_has_send_queue();
+  inline void clear_has_send_queue();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::std::string* format_;
+  ::std::string* name_;
+  ::std::string* time_;
+  ::dcnode::DCNodeDumpSendQueue* send_queue_;
+  friend void  protobuf_AddDesc_dcnode_2eproto();
+  friend void protobuf_AssignDesc_dcnode_2eproto();
+  friend void protobuf_ShutdownFile_dcnode_2eproto();
+
+  void InitAsDefaultInstance();
+  static DCNodeDump* default_instance_;
 };
 // ===================================================================
 
@@ -1409,6 +1723,447 @@ inline void MsgDCNode::set_allocated_rpc(::dcnode::MsgDCNodeRPC* rpc) {
     clear_has_rpc();
   }
   // @@protoc_insertion_point(field_set_allocated:dcnode.MsgDCNode.rpc)
+}
+
+// -------------------------------------------------------------------
+
+// DCNodeDumpSendQueue_DCNodeQueue
+
+// required string dst = 1;
+inline bool DCNodeDumpSendQueue_DCNodeQueue::has_dst() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_has_dst() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::clear_has_dst() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::clear_dst() {
+  if (dst_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    dst_->clear();
+  }
+  clear_has_dst();
+}
+inline const ::std::string& DCNodeDumpSendQueue_DCNodeQueue::dst() const {
+  // @@protoc_insertion_point(field_get:dcnode.DCNodeDumpSendQueue.DCNodeQueue.dst)
+  return *dst_;
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_dst(const ::std::string& value) {
+  set_has_dst();
+  if (dst_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    dst_ = new ::std::string;
+  }
+  dst_->assign(value);
+  // @@protoc_insertion_point(field_set:dcnode.DCNodeDumpSendQueue.DCNodeQueue.dst)
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_dst(const char* value) {
+  set_has_dst();
+  if (dst_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    dst_ = new ::std::string;
+  }
+  dst_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcnode.DCNodeDumpSendQueue.DCNodeQueue.dst)
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_dst(const char* value, size_t size) {
+  set_has_dst();
+  if (dst_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    dst_ = new ::std::string;
+  }
+  dst_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcnode.DCNodeDumpSendQueue.DCNodeQueue.dst)
+}
+inline ::std::string* DCNodeDumpSendQueue_DCNodeQueue::mutable_dst() {
+  set_has_dst();
+  if (dst_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    dst_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcnode.DCNodeDumpSendQueue.DCNodeQueue.dst)
+  return dst_;
+}
+inline ::std::string* DCNodeDumpSendQueue_DCNodeQueue::release_dst() {
+  clear_has_dst();
+  if (dst_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = dst_;
+    dst_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_allocated_dst(::std::string* dst) {
+  if (dst_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete dst_;
+  }
+  if (dst) {
+    set_has_dst();
+    dst_ = dst;
+  } else {
+    clear_has_dst();
+    dst_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcnode.DCNodeDumpSendQueue.DCNodeQueue.dst)
+}
+
+// repeated bytes queue = 2;
+inline int DCNodeDumpSendQueue_DCNodeQueue::queue_size() const {
+  return queue_.size();
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::clear_queue() {
+  queue_.Clear();
+}
+inline const ::std::string& DCNodeDumpSendQueue_DCNodeQueue::queue(int index) const {
+  // @@protoc_insertion_point(field_get:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+  return queue_.Get(index);
+}
+inline ::std::string* DCNodeDumpSendQueue_DCNodeQueue::mutable_queue(int index) {
+  // @@protoc_insertion_point(field_mutable:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+  return queue_.Mutable(index);
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_queue(int index, const ::std::string& value) {
+  // @@protoc_insertion_point(field_set:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+  queue_.Mutable(index)->assign(value);
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_queue(int index, const char* value) {
+  queue_.Mutable(index)->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::set_queue(int index, const void* value, size_t size) {
+  queue_.Mutable(index)->assign(
+    reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+}
+inline ::std::string* DCNodeDumpSendQueue_DCNodeQueue::add_queue() {
+  return queue_.Add();
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::add_queue(const ::std::string& value) {
+  queue_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::add_queue(const char* value) {
+  queue_.Add()->assign(value);
+  // @@protoc_insertion_point(field_add_char:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+}
+inline void DCNodeDumpSendQueue_DCNodeQueue::add_queue(const void* value, size_t size) {
+  queue_.Add()->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_add_pointer:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+}
+inline const ::google::protobuf::RepeatedPtrField< ::std::string>&
+DCNodeDumpSendQueue_DCNodeQueue::queue() const {
+  // @@protoc_insertion_point(field_list:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+  return queue_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::std::string>*
+DCNodeDumpSendQueue_DCNodeQueue::mutable_queue() {
+  // @@protoc_insertion_point(field_mutable_list:dcnode.DCNodeDumpSendQueue.DCNodeQueue.queue)
+  return &queue_;
+}
+
+// -------------------------------------------------------------------
+
+// DCNodeDumpSendQueue
+
+// repeated .dcnode.DCNodeDumpSendQueue.DCNodeQueue send_queue = 1;
+inline int DCNodeDumpSendQueue::send_queue_size() const {
+  return send_queue_.size();
+}
+inline void DCNodeDumpSendQueue::clear_send_queue() {
+  send_queue_.Clear();
+}
+inline const ::dcnode::DCNodeDumpSendQueue_DCNodeQueue& DCNodeDumpSendQueue::send_queue(int index) const {
+  // @@protoc_insertion_point(field_get:dcnode.DCNodeDumpSendQueue.send_queue)
+  return send_queue_.Get(index);
+}
+inline ::dcnode::DCNodeDumpSendQueue_DCNodeQueue* DCNodeDumpSendQueue::mutable_send_queue(int index) {
+  // @@protoc_insertion_point(field_mutable:dcnode.DCNodeDumpSendQueue.send_queue)
+  return send_queue_.Mutable(index);
+}
+inline ::dcnode::DCNodeDumpSendQueue_DCNodeQueue* DCNodeDumpSendQueue::add_send_queue() {
+  // @@protoc_insertion_point(field_add:dcnode.DCNodeDumpSendQueue.send_queue)
+  return send_queue_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::dcnode::DCNodeDumpSendQueue_DCNodeQueue >&
+DCNodeDumpSendQueue::send_queue() const {
+  // @@protoc_insertion_point(field_list:dcnode.DCNodeDumpSendQueue.send_queue)
+  return send_queue_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::dcnode::DCNodeDumpSendQueue_DCNodeQueue >*
+DCNodeDumpSendQueue::mutable_send_queue() {
+  // @@protoc_insertion_point(field_mutable_list:dcnode.DCNodeDumpSendQueue.send_queue)
+  return &send_queue_;
+}
+
+// -------------------------------------------------------------------
+
+// DCNodeDump
+
+// required string format = 1;
+inline bool DCNodeDump::has_format() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void DCNodeDump::set_has_format() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void DCNodeDump::clear_has_format() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void DCNodeDump::clear_format() {
+  if (format_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    format_->clear();
+  }
+  clear_has_format();
+}
+inline const ::std::string& DCNodeDump::format() const {
+  // @@protoc_insertion_point(field_get:dcnode.DCNodeDump.format)
+  return *format_;
+}
+inline void DCNodeDump::set_format(const ::std::string& value) {
+  set_has_format();
+  if (format_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    format_ = new ::std::string;
+  }
+  format_->assign(value);
+  // @@protoc_insertion_point(field_set:dcnode.DCNodeDump.format)
+}
+inline void DCNodeDump::set_format(const char* value) {
+  set_has_format();
+  if (format_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    format_ = new ::std::string;
+  }
+  format_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcnode.DCNodeDump.format)
+}
+inline void DCNodeDump::set_format(const char* value, size_t size) {
+  set_has_format();
+  if (format_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    format_ = new ::std::string;
+  }
+  format_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcnode.DCNodeDump.format)
+}
+inline ::std::string* DCNodeDump::mutable_format() {
+  set_has_format();
+  if (format_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    format_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcnode.DCNodeDump.format)
+  return format_;
+}
+inline ::std::string* DCNodeDump::release_format() {
+  clear_has_format();
+  if (format_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = format_;
+    format_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void DCNodeDump::set_allocated_format(::std::string* format) {
+  if (format_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete format_;
+  }
+  if (format) {
+    set_has_format();
+    format_ = format;
+  } else {
+    clear_has_format();
+    format_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcnode.DCNodeDump.format)
+}
+
+// required string name = 2;
+inline bool DCNodeDump::has_name() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void DCNodeDump::set_has_name() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void DCNodeDump::clear_has_name() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void DCNodeDump::clear_name() {
+  if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& DCNodeDump::name() const {
+  // @@protoc_insertion_point(field_get:dcnode.DCNodeDump.name)
+  return *name_;
+}
+inline void DCNodeDump::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+  // @@protoc_insertion_point(field_set:dcnode.DCNodeDump.name)
+}
+inline void DCNodeDump::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcnode.DCNodeDump.name)
+}
+inline void DCNodeDump::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcnode.DCNodeDump.name)
+}
+inline ::std::string* DCNodeDump::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcnode.DCNodeDump.name)
+  return name_;
+}
+inline ::std::string* DCNodeDump::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void DCNodeDump::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcnode.DCNodeDump.name)
+}
+
+// required string time = 3;
+inline bool DCNodeDump::has_time() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void DCNodeDump::set_has_time() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void DCNodeDump::clear_has_time() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void DCNodeDump::clear_time() {
+  if (time_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    time_->clear();
+  }
+  clear_has_time();
+}
+inline const ::std::string& DCNodeDump::time() const {
+  // @@protoc_insertion_point(field_get:dcnode.DCNodeDump.time)
+  return *time_;
+}
+inline void DCNodeDump::set_time(const ::std::string& value) {
+  set_has_time();
+  if (time_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    time_ = new ::std::string;
+  }
+  time_->assign(value);
+  // @@protoc_insertion_point(field_set:dcnode.DCNodeDump.time)
+}
+inline void DCNodeDump::set_time(const char* value) {
+  set_has_time();
+  if (time_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    time_ = new ::std::string;
+  }
+  time_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcnode.DCNodeDump.time)
+}
+inline void DCNodeDump::set_time(const char* value, size_t size) {
+  set_has_time();
+  if (time_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    time_ = new ::std::string;
+  }
+  time_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcnode.DCNodeDump.time)
+}
+inline ::std::string* DCNodeDump::mutable_time() {
+  set_has_time();
+  if (time_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    time_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcnode.DCNodeDump.time)
+  return time_;
+}
+inline ::std::string* DCNodeDump::release_time() {
+  clear_has_time();
+  if (time_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = time_;
+    time_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void DCNodeDump::set_allocated_time(::std::string* time) {
+  if (time_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete time_;
+  }
+  if (time) {
+    set_has_time();
+    time_ = time;
+  } else {
+    clear_has_time();
+    time_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcnode.DCNodeDump.time)
+}
+
+// optional .dcnode.DCNodeDumpSendQueue send_queue = 60;
+inline bool DCNodeDump::has_send_queue() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void DCNodeDump::set_has_send_queue() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void DCNodeDump::clear_has_send_queue() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void DCNodeDump::clear_send_queue() {
+  if (send_queue_ != NULL) send_queue_->::dcnode::DCNodeDumpSendQueue::Clear();
+  clear_has_send_queue();
+}
+inline const ::dcnode::DCNodeDumpSendQueue& DCNodeDump::send_queue() const {
+  // @@protoc_insertion_point(field_get:dcnode.DCNodeDump.send_queue)
+  return send_queue_ != NULL ? *send_queue_ : *default_instance_->send_queue_;
+}
+inline ::dcnode::DCNodeDumpSendQueue* DCNodeDump::mutable_send_queue() {
+  set_has_send_queue();
+  if (send_queue_ == NULL) send_queue_ = new ::dcnode::DCNodeDumpSendQueue;
+  // @@protoc_insertion_point(field_mutable:dcnode.DCNodeDump.send_queue)
+  return send_queue_;
+}
+inline ::dcnode::DCNodeDumpSendQueue* DCNodeDump::release_send_queue() {
+  clear_has_send_queue();
+  ::dcnode::DCNodeDumpSendQueue* temp = send_queue_;
+  send_queue_ = NULL;
+  return temp;
+}
+inline void DCNodeDump::set_allocated_send_queue(::dcnode::DCNodeDumpSendQueue* send_queue) {
+  delete send_queue_;
+  send_queue_ = send_queue;
+  if (send_queue) {
+    set_has_send_queue();
+  } else {
+    clear_has_send_queue();
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcnode.DCNodeDump.send_queue)
 }
 
 
