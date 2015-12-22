@@ -85,4 +85,3 @@ int					dctcp_connect(dctcp_t *, const dctcp_addr_t & addr, int retry = 0);
 int					dctcp_send(dctcp_t *, int fd, const dctcp_msg_t & msg);
 void				dctcp_close(dctcp_t *, int fd);
 
-

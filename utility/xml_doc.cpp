@@ -38,7 +38,8 @@ int					xml_doc_t::parse_file(const char * file){
 	return loads(parse_file_buffer.buffer);
 }
 int					xml_doc_t::dump_file(const char * file, bool pretty ){
-	string s;
+    UNUSED(pretty);
+    string s;
 	return dcsutil::writefile(file, dumps(s));
 }
 const	char *		xml_doc_t::pretty(std::string & str){

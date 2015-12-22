@@ -79,8 +79,13 @@ struct dcnode_t
 	msg_buffer_t										send_buffer;
 	dcnode_id_t											processing_id;
     //send queue
-    size_t                                              send_queue_msg_total_size;
-    object_queue< dcnode_msgbuffer_t >                  send_queue;
+    struct msg_queue_t {
+        size_t                                                                msg_size;
+        dcsutil::object_queue< msg_buffer_t, DCNODE_MAX_LOCAL_NODES_NUM>      q;
+        msg_queue_t() :msg_size(0){}
+    };
+    //////////////////////////////////////////////////////
+    std::unordered_map<string, msg_queue_t>     send_queue;
     
 	dcnode_t()
 	{
@@ -103,7 +108,6 @@ struct dcnode_t
 		parent_hb_expire_time = 0;
 		parentfd = -1;
 		smq_name_mapping_shm = nullptr;
-        send_queue_msg_total_size = 0;
         send_queue.clear();
 	}
 };
@@ -898,6 +902,100 @@ static	void _check_timer_callback(dcnode_t * dc){
 		dc->expiring_callbacks.insert(pair);
 	}
 }
+static  bool _name_exists(dcnode_t * dc, const char * name){
+    if (!name || !name[0]){
+        return false;
+    }
+    if (dc->named_smqid.find(name) != dc->named_smqid.end()){
+        return true;
+    }
+    if (dc->named_tcpfd.find(name) != dc->named_tcpfd.end()){
+        return true;
+    }
+    return false;
+}
+static inline void
+_check_send_queue(dcnode_t *dc, const string & dst, dcnode_t::msg_queue_t & queue){
+    if (dc->fsm_state != dcnode_t::DCNODE_READY &&
+        !_name_exists(dc, dst.c_str())) {
+        //error not ready (name not reg) 
+        return;
+    }
+    while (!queue.q.empty()){
+        auto front = queue.q.front();
+        assert(front != queue.q.null());
+        int ret = _forward_msg(dc, -1, front->buffer, front->valid_size, dst);
+        if (ret == 0){
+            queue.msg_size -= front->valid_size;
+            queue.q.pop();
+        }
+        else {
+            break;
+        }
+    }
+}
+static inline void
+_check_send_queue(dcnode_t *dc){
+    for (auto & q : dc->send_queue){
+        _check_send_queue(dc, q.first, q.second);
+    }
+}
+static inline int
+_send_msg(dcnode_t *dc, const std::string & dst, const dcnode_msg_t & dm){
+    //immediately send out
+    if (dst.empty()){ //to parent immediately , no queue
+        if (!dm.Pack(dc->send_buffer)){
+            //error
+            GLOG_ERR("dcnode pack msg error !");
+            return -1;
+        }
+        return _forward_msg(dc, -1, dc->send_buffer.buffer, dc->send_buffer.valid_size, dst);
+    }
+    //
+    auto it = dc->send_queue.find(dst);
+    if (it == dc->send_queue.end()){ //create one 
+        dc->send_queue[dst] = dcnode_t::msg_queue_t();
+    }
+    //push msg
+    auto & queue = dc->send_queue[dst];
+    _check_send_queue(dc, dst, queue);
+    auto pq = queue.q.push();
+    if (queue.q.null() == pq){
+        GLOG_ERR("allocate queue error dst:%s!", dst.c_str());
+        return -2;
+    }
+    else { //push
+        pq->reserve(dm.ByteSize());
+        if (!dm.Pack(*pq)){
+            //error
+            GLOG_ERR("dcnode pack msg error dst:%s msg:%s!", dst.c_str(), dm.Debug());
+            queue.q.pop();
+            return -3;
+        }
+        dc->send_queue[dst].msg_size += dm.ByteSize();
+    }
+    _check_send_queue(dc);
+    return 0;
+}
+int      dcnode_send(dcnode_t* dc, const std::string & dst, const char * buff, int sz){
+    PROFILE_FUNC();
+    if (!dc->conf.durable){ //not durable
+        if (dc->fsm_state != dcnode_t::DCNODE_READY &&
+            !_name_exists(dc, dst.c_str())) {
+            //error not ready (name not reg) 
+            GLOG_ERR("dcnode state:%d not ready can't send msg(size:%d) and name not exist !",
+                dc->fsm_state, sz);
+            return -1;
+        }
+    }
+    dcnode_msg_t dm;
+    dm.set_src(dc->conf.name);
+    dm.set_dst(dst);
+    dm.set_type(dcnode::MSG_DATA);
+    dm.set_msg_data(buff, sz);
+    dm.mutable_ext()->set_unixtime(dcsutil::time_unixtime_s());
+    return _send_msg(dc, dst, dm);
+}
 int      dcnode_update(dcnode_t* dc, int timout_us) {
 	PROFILE_FUNC();
 	if (dc->fsm_state == dcnode_t::DCNODE_ABORT){
@@ -915,6 +1013,8 @@ int      dcnode_update(dcnode_t* dc, int timout_us) {
 		n += dctcp_poll(dc->stcp, timout_us);
 	}
 	_check_timer_callback(dc);
+    //check send queue
+    _check_send_queue(dc);
 	return n;
 }
 
@@ -928,18 +1028,6 @@ uint64_t  dcnode_timer_add(dcnode_t * dc, int delayms, dcnode_timer_callback_t c
 }
 void	  dcnode_timer_cancel(dcnode_t * dc, uint64_t cookie) {
 	_remove_timer_callback(dc, cookie);
-}
-static  bool _name_exists(dcnode_t * dc, const char * name){
-	if (!name || !name[0]){
-		return false;
-	}
-	if (dc->named_smqid.find(name) != dc->named_smqid.end()){
-		return true;
-	}
-	if (dc->named_tcpfd.find(name) != dc->named_tcpfd.end()){
-		return true;
-	}
-	return false;
 }
 int      dcnode_reply(dcnode_t* dc, const char * buff, int sz){
 	dcnode_id_t * nodeid = &dc->processing_id;
@@ -964,30 +1052,6 @@ int      dcnode_reply(dcnode_t* dc, const char * buff, int sz){
 		return dctcp_send(dc->stcp, nodeid->fd, dctcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
 }
-int      dcnode_send(dcnode_t* dc, const std::string & dst, const char * buff, int sz){
-	PROFILE_FUNC();
-	if (dc->fsm_state != dcnode_t::DCNODE_READY &&
-		!_name_exists(dc, dst.c_str())) {
-		//error not ready (name not reg) 
-		GLOG_ERR("dcnode state:%d not ready can't send msg(size:%d) and name not exist !",
-			dc->fsm_state, sz);
-		return -1;
-	}
-	dcnode_msg_t dm;
-	dm.set_src(dc->conf.name);
-	dm.set_dst(dst);
-	dm.set_type(dcnode::MSG_DATA);
-	dm.set_msg_data(buff, sz);	
-	dm.mutable_ext()->set_unixtime(dcsutil::time_unixtime_s());
-	if (!dm.Pack(dc->send_buffer)){
-		//error
-		GLOG_ERR("dcnode pack msg error !");
-		return -1;
-	}
-	//dc, tcp_src,sockfd, buff, buff_sz, dm.dst()
-	return _forward_msg(dc, -1, dc->send_buffer.buffer, dc->send_buffer.valid_size, dst);
-}
-
 void	  dcnode_abort(dcnode_t * dc){
 	_fsm_abort(dc, 0);
 }

@@ -55,16 +55,14 @@ NS_BEGIN(dcsutil)
 	void				strrepeat(std::string & str, const char * rep, int repcount);
     bool                strisint(const std::string & str, int base = 10);
     const char *		strrandom(std::string & randoms, int length = 8, char charbeg = 0x21, char charend = 0x7E);
-    const char *		strcharsetrandom(std::string & randoms, int length = 8, const char * charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ_!@#$%&*-+");
+    const char *		strcharsetrandom(std::string & randoms, int length = 8, const char * charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ_!@#$+-");
 
     template <typename StrItable>
     const char         *strjoin(std::string & val, const std::string & sep, StrItable it){
         size_t i = 0;
         val.clear();
         for (auto & v : it){
-            if (i != 0){
-                v.append(sep);
-            }
+            if (i != 0){v.append(sep);}
             v.append(v);
             ++i;
         }
@@ -91,6 +89,9 @@ NS_BEGIN(dcsutil)
     public:
         object_pool(){
             pool.reserve(MAX_NUM);
+        }
+        pointer   null(){
+            return pool.end();
         }
         bool      is_null(pointer p){
             return p == pool.end();
@@ -149,44 +150,51 @@ NS_BEGIN(dcsutil)
     };
     ///============================================================
     template <typename T, size_t MAX>
-    struct object_queue {
-        size_t                front, rear;
+    class object_queue {
+        size_t                front_, rear_;
         std::vector<size_t>   q;
         object_pool<T, MAX>   pool;
+    public:
         typedef typename object_pool<T, MAX>::pointer pointer;
         // [--- front xxxxx rear------]
         // [xxxx rear ---- front xxxxx]
         object_queue(){
             q.reserve(MAX);
-            front = rear = 0;
+            front_ = rear_ = 0;
+        }
+        pointer null(){
+            return pool.null();
         }
         pointer push(){
-            if (rear + 1 == front || rear == front + MAX){//full 
-                return nullptr;
+            if (rear_ + 1 == front_ || rear_ == front_ + MAX){//full 
+                return pool.null();
             }
             //allocate and push it
             size_t id = pool.alloc();
             if (id == 0){
-                return nullptr;
+                return pool.null();
             }
-            q[rear] = id;
-            rear = (rear + 1) % MAX;
+            q[rear_] = id;
+            rear_ = (rear_ + 1) % MAX;
             return pool.ptr(id);
         }
-        pointer take(){
-            if (front == rear){
-                return nullptr;
+        pointer front(){
+            if (front_ == rear_){
+                return pool.null();
             }
-            size_t id = q[front];
-            front = (front + 1) % MAX;
+            size_t id = q[front_];
             return pool.ptr(id);
         }
-        int free(pointer p){
-            size_t id = pool.id(p);
-            if (id > 0){
-                return pool.free(id);
+        bool empty(){
+            return front_ == rear_;
+        }
+        void pop(){
+            if (empty()){
+                return;
             }
-            return -1;
+            size_t id = q[front_];
+            front_ = (front_ + 1) % MAX;
+            pool.free(id);
         }
     };
     //////////////////////////////////////////////////////////////////////////////////////////////////////
