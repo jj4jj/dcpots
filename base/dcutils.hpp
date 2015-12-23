@@ -115,7 +115,7 @@ NS_BEGIN(dcsutil)
             return genid();
         }
         size_t    alloc(){
-            if (pool.size() >= MAX_NUM){
+            if (num >= MAX_NUM){
                 return 0; //error
             }
             return genid();

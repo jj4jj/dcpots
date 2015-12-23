@@ -34,12 +34,6 @@ struct dagent_t
 
 
 static dagent_t AGENT;
-static inline int	_error(const char * msg, int err = -1, logger_t * trace = nullptr){
-	//LOG_MSG(ERROR_LVL_DEBUG, AGENT.error_msg, trace, err, msg);
-	GLOG_TRA("%s",msg);
-	return err;
-}
-
 ////////////////////////////////////////////////////////////////////////////////////////////
 bool	_cb_exists(int type){
 	auto it = AGENT.cbs.find(type);
@@ -193,14 +187,12 @@ static  int _init_py_vm(script_vm_t * vm){
 static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 	assert(ud == &AGENT);
 	dagent_msg_t	dm;
-	if (!dm.Unpack(msg.buffer, msg.valid_size))
-	{
-		//error pack
-		return _error("msg unpack error !");
+	if (!dm.Unpack(msg.buffer, msg.valid_size)){
+		GLOG_ERR("msg unpack error !");
+        return -1;
 	}
 	auto it = AGENT.cbs.find(dm.type());
-	if (it != AGENT.cbs.end())
-	{
+	if (it != AGENT.cbs.end()){
 		return it->second(msg_buffer_t(dm.msg_data().data(),dm.msg_data().length()), src);
 	}
 	auto pyit = AGENT.py_cbs.find(dm.type());
@@ -211,7 +203,8 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 		Py_XDECREF(arglist);
 		if (result == NULL){
 			PyErr_Print();
-			GLOG_TRA("call python cb error !");
+            GLOG_ERR("call python cb error !");
+            return -1;
 		}
 		else{
 			int ret = 0;
@@ -219,17 +212,18 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 			Py_XDECREF(result);
 			return ret;
 		}
-		GLOG_TRA("call python cb error result !");
-		return -1;
+		GLOG_ERR("call python cb error result !");
+		return -2;
 	}
 	//not found
-	return _error("not found handler !");
+	GLOG_ERR("not found handler !");
+    return -3;
 }
 
 void dagent_export_python(bool for_ext){
 	script_vm_python_export_t & vmexport = AGENT.py_export;
 	if (!vmexport.entries.empty()){
-		GLOG_TRA("repeat export python ...");
+		GLOG_ERR("repeat export python ...");
 		return;
 	}
 
@@ -275,12 +269,15 @@ void dagent_export_python(bool for_ext){
 	script_vm_export(vmexport);
 }
 int     dagent_init(const dagent_config_t & conf){
-	if (AGENT.node)
-	{
-		return _error("node has been inited !");
-	}
-	if (AGENT.send_msgbuffer.create(conf.max_msg_size))
-		return _error("create send msgbuffer error !");
+    if (AGENT.node)
+    {
+        GLOG_ERR("node has been inited !");
+        return -1;
+    }
+    if (AGENT.send_msgbuffer.create(conf.max_msg_size)){
+        GLOG_ERR("create send msgbuffer error !");
+        return -2;
+    }
 	
 	dcnode_config_t	dcf;
 	dcf.name = conf.name;
@@ -301,7 +298,8 @@ int     dagent_init(const dagent_config_t & conf){
 	}
 	dcnode_t * node = dcnode_create(dcf);
 	if (!node){
-		return _error("create dcnode error !");
+		GLOG_ERR("create dcnode error !");
+        return -3;
 	}
 	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
@@ -343,17 +341,15 @@ int     dagent_send(const char * dst, int type, const msg_buffer_t & msg){
 	dagent_msg_t	dm;
 	dm.set_type(type);
 	dm.set_msg_data(msg.buffer,msg.valid_size);
-	if (!dm.Pack(AGENT.send_msgbuffer))
-	{
-		//serialize error
+	if (!dm.Pack(AGENT.send_msgbuffer)){
+        GLOG_ERR("pack agent msg error !");
 		return -1;
 	}
 	return dcnode_send(AGENT.node, dst, AGENT.send_msgbuffer.buffer, AGENT.send_msgbuffer.valid_size);
 }
 int     dagent_cb_push(int type, dagent_cb_t cb){
 	if (_cb_exists(type)){
-		//repeat
-		GLOG_TRA("repeat cb push type:%d ", type);
+		GLOG_ERR("repeat cb push type:%d ", type);
 		return -1;
 	}
 	AGENT.cbs[type] = cb;
@@ -361,12 +357,11 @@ int     dagent_cb_push(int type, dagent_cb_t cb){
 }
 int     dagent_cb_pop(int type){
 	auto it = AGENT.cbs.find(type);
-	if (it != AGENT.cbs.end())
-	{
+	if (it != AGENT.cbs.end()){
 		AGENT.cbs.erase(it);
 		return 0;
 	}
-	//not found
+    GLOG_ERR("pop a cb but not found the type:%d", type);
 	return -1;
 }
 int     dagent_load_plugin(const char * file){

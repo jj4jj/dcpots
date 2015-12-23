@@ -833,15 +833,15 @@ dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
 }
 
 dcnode_t* dcnode_create(const dcnode_config_t & conf) {
-	if (_check_conf(conf)){
-		//config error
+	if (_check_conf(conf)){ //config error
         GLOG_ERR("dcnode config check error !");
 		return nullptr;
 	}
 	dcnode_t * n = new dcnode_t();
-	if (!n) //memerror
+    if (!n){//memerror
         GLOG_ERR("dcnode allocate memory !");
-		return nullptr;
+        return nullptr;
+    }
 	n->conf = conf;
 	if (!_is_smq_leaf(n))
 	{
@@ -852,7 +852,8 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		sc.max_tcp_recv_buff_size = conf.max_channel_buff_size;
 		n->stcp = dctcp_create(sc);
 		if (!n->stcp) {
-			dcnode_destroy(n); return nullptr;
+			dcnode_destroy(n); 
+            return nullptr;
 		}
 		if (!conf.addr.tcp_listen_addr.empty())
 		{
@@ -862,7 +863,8 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 			saddr.port = strtol(listenaddr.substr(listenaddr.find(':') + 1).c_str(), nullptr, 10);
 			int fd = dctcp_listen(n->stcp, saddr);
 			if (fd < 0) {
-				dcnode_destroy(n); return nullptr;
+				dcnode_destroy(n); 
+                return nullptr;
 			}
 		}
 		dctcp_event_cb(n->stcp, _stcp_cb, n);
@@ -1020,7 +1022,7 @@ static inline int _send_msg(dcnode_t *dc, const std::string & dst, const dcnode_
     }
     auto pq = queue.q.push();
     if (queue.q.null() == pq){
-        GLOG_ERR("allocate queue error dst:%s! queue size:%zu msg size:%zu",
+        GLOG_ERR("allocate queue error dst:%s queue size:%zu msg size:%zu",
             dst.c_str(), queue.q.size(), queue.msg_size);
         return E_DCNODE_SEND_FULL;
     }
