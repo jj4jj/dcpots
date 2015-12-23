@@ -44,20 +44,18 @@ struct dcsmq_msg_t {
 };
 
 struct dcsmq_stat_t {
-	//global data
-	int					client_key;
-	int					server_key;
-	size_t				total_size;
-	struct msqid_ds		ds;
-	//-------------------------------
-	int					nchannel;
-	struct dcsmq_channel_t {
-		uint64_t	session;
-		size_t		req_num;
-		size_t		rsp_num;
-	}	*channels;
-	dcsmq_stat_t();
-	~dcsmq_stat_t();
+	int					sender_key;
+	int					receiver_key;
+	size_t				send_size;
+    size_t				recv_size;
+    size_t              send_num;
+    size_t              recv_num;
+    size_t              send_error;
+    size_t              recv_error;
+    uint64_t            send_last;
+    uint64_t            recv_last;
+    uint64_t            msg_stime;//time us
+    uint64_t            msg_rtime;//time us
 };
 
 typedef int (*dcsmq_msg_cb_t)(dcsmq_t * , uint64_t src, const dcsmq_msg_t & msg, void * ud);
@@ -70,6 +68,5 @@ int			dcsmq_push(dcsmq_t*, uint64_t dst, const dcsmq_msg_t & msg);//send to peer
 bool		dcsmq_server_mode(dcsmq_t *);
 void		dcsmq_set_session(dcsmq_t *, uint64_t session); //send or recv type
 uint64_t	dcsmq_session(dcsmq_t *);
-//status report for debug
-void		dcsmq_stat(const std::string & keypath, dcsmq_stat & stat);
+const dcsmq_stat_t *	dcsmq_stat(dcsmq_t *);
 

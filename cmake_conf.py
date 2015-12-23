@@ -49,7 +49,7 @@ LIBS = [
         {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
-            'includes':['/usr/local/include'],
+            'includes':['/usr/local/include','3rd'],
             'linkpaths':['/usr/local/lib'],
             'src_dirs': ['app/mongoproxy/proto'],
             'linklibs' : [
