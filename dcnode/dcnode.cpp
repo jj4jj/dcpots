@@ -100,7 +100,7 @@ struct dcnode_t
     //send queue
     struct msg_queue_t {
         size_t                                                                msg_size;
-        dcsutil::object_queue< msg_buffer_t, DCNODE_MAX_LOCAL_NODES_NUM>      q;
+        dcsutil::object_queue_t< msg_buffer_t, DCNODE_MAX_LOCAL_NODES_NUM>      q;
         msg_queue_t() :msg_size(0){}
     };
     std::unordered_map<string, msg_queue_t>             send_queue;
@@ -774,9 +774,16 @@ static int _check_conf(const dcnode_config_t & conf){
 	return 0;
 }
 
+static inline void _dcnode_addr_init(dcnode_addr_t * addr){
+	addr->msgq_push = true;
+	addr->msgq_sharekey = "";
+	addr->tcp_listen_addr = "";
+	addr->tcp_parent_addr = "";
+}
 //pattern
 //push|pull:tcp://ip:port
 dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
+	_dcnode_addr_init(this);
     if (!addrpatt){ return; }
     //proto
 #define PULL_MODE   "pull:"

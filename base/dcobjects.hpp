@@ -5,7 +5,7 @@ NS_BEGIN(dcsutil)
 //object pool
 
 template<class T, int MAX_NUM = 1024>
-class object_pool {
+class object_pool_t {
 public:
 	typedef	std::array<T, MAX_NUM>			pool_t;
 	typedef typename pool_t::pointer		pointer;
@@ -15,7 +15,7 @@ private:
 	pool_hash_t        free_pool;
 	int                num;
 public:
-	object_pool(){
+	object_pool_t(){
 		num = 0;
 		for (int i = 1; i < MAX_NUM; ++i){
 			free_pool.insert(i);
@@ -83,17 +83,17 @@ private:
 ///============================================================
 //object queue (cycle , ring)
 template <typename T, size_t MAX>
-class object_queue {
+class object_queue_t {
 public:
-	typedef typename object_pool<T, MAX>::pointer pointer;
+	typedef typename object_pool_t<T, MAX>::pointer pointer;
 private:
 	size_t                front_, rear_;
 	std::vector<pointer>   q;
-	object_pool<T, MAX>    pool;
+	object_pool_t<T, MAX>    pool;
 public:
 	// [--- front xxxxx rear------]
 	// [xxxx rear ---- front xxxxx]
-	object_queue(){
+	object_queue_t(){
 		q.resize(MAX, null());
 		front_ = rear_ = 0;
 	}

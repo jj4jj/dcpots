@@ -27,11 +27,12 @@ struct mongo_client_impl_t {
 	mongoc_client_t			*client;
 	//////////////////////////////////////////////////////
 	mongoc_client_pool_t	*pool;
-	blocking_queue<size_t>			        command_queue;
-    blocking_queue<size_t>		            result_queue;
+	blocking_queue_t<size_t>	  command_queue;
+	blocking_queue_t<size_t>	  result_queue;
 	std::atomic<int>						running;
 	std::thread								workers[MAX_MOGNO_THREAD_POOL_SIZE];
-    object_pool<mongo_transaction_t>        transactions_pool;
+	typedef	object_pool_t<mongo_transaction_t, MAX_QUEUE_REQUEST_SIZE>	transaction_pool_t;
+	transaction_pool_t				        transaction_pool;
 
     std::mutex                              lock;
 
@@ -174,7 +175,7 @@ _real_excute_command(mongoc_client_t * client, mongo_client_t::result_t & result
 }
 static inline void 
 process_one(mongoc_client_t *client, mongo_client_impl_t *mci, size_t transid){
-    mongo_transaction_t & trans = *(mci->transactions_pool.ptr(transid));
+    mongo_transaction_t & trans = *(mci->transaction_pool.ptr(transid));
     _real_excute_command(client, trans.result, trans.cmd);
     mci->result_queue.push(transid);
 }
@@ -265,11 +266,18 @@ int
 mongo_client_t::command(const string & db, const string & coll,
 					on_result_cb_t cb, void * ud, int op, const char * cmd_fmt, ...){
 	if (_THIS_HANDLE->command_queue.size() > MAX_QUEUE_REQUEST_SIZE){
+		GLOG_ERR("command queue has been reached max:%d ! please retry later ...",
+			MAX_QUEUE_REQUEST_SIZE);
 		return -1;
 	}
 
-	size_t	transid = _THIS_HANDLE->transactions_pool.alloc();
-    mongo_transaction_t & trans = *_THIS_HANDLE->transactions_pool.ptr(transid);
+	size_t	transid = _THIS_HANDLE->transaction_pool.alloc();
+	if (transid == 0){
+		GLOG_ERR("transaction pool has been reached max:%d ! please retry later ...",
+			_THIS_HANDLE->transaction_pool.total());
+		return -2;
+	}
+    mongo_transaction_t & trans = *_THIS_HANDLE->transaction_pool.ptr(transid);
     trans.cb = cb;
     trans.cb_ud = ud;
     trans.cmd.op = op;
@@ -346,10 +354,10 @@ mongo_client_t::poll(int max_proc, int timeout_ms){//same thread cb call back
     size_t transid = 0;
 	for (nproc = 0; nproc < max_proc && !_THIS_HANDLE->result_queue.empty(); ++nproc){
         if (!_THIS_HANDLE->result_queue.pop(transid, timeout_ms)){
-            mongo_transaction_t & trans = *_THIS_HANDLE->transactions_pool.ptr(transid);
+            mongo_transaction_t & trans = *_THIS_HANDLE->transaction_pool.ptr(transid);
             trans.cb(trans.cb_ud, trans.result, trans.cmd);
             //////////////////////////////////////////////////////////////////////
-            _THIS_HANDLE->transactions_pool.free(transid);
+            _THIS_HANDLE->transaction_pool.free(transid);
 		}
 	}
 	return nproc;

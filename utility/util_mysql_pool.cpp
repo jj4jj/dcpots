@@ -21,10 +21,11 @@ static struct {
     std::thread                         threads[MAX_MYSQL_CLIENT_THREAD_NUM];
     mysqlclient_t                       clients[MAX_MYSQL_CLIENT_THREAD_NUM];
     //----------------------------------------------------------------------
-    blocking_queue<size_t>              qrequests;
-    blocking_queue<size_t>              qresponse;
+    blocking_queue_t<size_t>              qrequests;
+    blocking_queue_t<size_t>              qresponse;
     ////////////////////////////////////////////////
-    object_pool<mysql_transaction_t>    transactions_pool;
+	typedef object_pool_t<mysql_transaction_t, MAX_QUEUE_REQUEST_SIZE>	tranaction_pool_t;
+	tranaction_pool_t					transaction_pool;
     std::atomic<int>                    running;
     bool                                stop;
     /////////////////////////////////////////////////
@@ -77,7 +78,7 @@ result_cb_func(void* ud, OUT bool & need_more, const mysqlclient_t::table_row_t 
 }
 static void inline 
 _process_one(mysqlclient_t & client, size_t transid){
-     mysql_transaction_t & trans = *g_ctx.transactions_pool.ptr(transid);
+     mysql_transaction_t & trans = *g_ctx.transaction_pool.ptr(transid);
 	 trans.result.init();
      trans.result.status = client.execute(trans.cmd.sql);
 	 if (trans.result.status){
@@ -158,9 +159,9 @@ mysqlclient_pool_t::poll(int timeout_ms, int maxproc){
     size_t transid = 0;
     for (nproc = 0; nproc < maxproc && !g_ctx.qresponse.empty(); ++nproc){
         if (!g_ctx.qresponse.pop(transid, timeout_ms)){
-            mysql_transaction_t & trans = *g_ctx.transactions_pool.ptr(transid);
+            mysql_transaction_t & trans = *g_ctx.transaction_pool.ptr(transid);
             trans.cb(trans.cb_ud, trans.result, trans.cmd);
-            g_ctx.transactions_pool.free(transid);
+            g_ctx.transaction_pool.free(transid);
         }
     }
     return nproc;
@@ -177,10 +178,17 @@ mysqlclient_pool_t::mysql(int i){
 int
 mysqlclient_pool_t::execute(const command_t & cmd, mysqlclient_pool_t::cb_func_t cb, void * ud){
     if (g_ctx.qrequests.size() > MAX_QUEUE_REQUEST_SIZE){
-        return -1;
+		GLOG_ERR("command queue has been reached max:%d ! please retry later ...",
+			MAX_QUEUE_REQUEST_SIZE);
+		return -1;
     }
-    size_t transid = g_ctx.transactions_pool.alloc();
-    mysql_transaction_t & trans = *g_ctx.transactions_pool.ptr(transid);
+    size_t transid = g_ctx.transaction_pool.alloc();
+	if (transid == 0){
+		GLOG_ERR("transaction pool has been reached max:%d ! please retry later ...",
+			g_ctx.transaction_pool.total());
+		return -2;
+	}
+    mysql_transaction_t & trans = *g_ctx.transaction_pool.ptr(transid);
     trans.cb = cb;
     trans.cb_ud = ud;
     trans.cmd = cmd;

@@ -4,7 +4,7 @@
 #include <mutex>
 #include <condition_variable>
 template <class T>
-class blocking_queue { //
+class blocking_queue_t { //
 	std::queue<T>				queue;
 	std::mutex					mtx;
 	std::condition_variable		cond;
