@@ -184,7 +184,7 @@ mysqlclient_pool_t::execute(const command_t & cmd, mysqlclient_pool_t::cb_func_t
     }
     size_t transid = g_ctx.transaction_pool.alloc();
 	if (transid == 0){
-		GLOG_ERR("transaction pool has been reached max:%d ! please retry later ...",
+		GLOG_ERR("transaction pool has been reached max:%zd ! please retry later ...",
 			g_ctx.transaction_pool.total());
 		return -2;
 	}

@@ -49,7 +49,7 @@ using std::make_shared;
 using std::unordered_map;
 using std::unordered_set;
 #include <random>
-
+#include <array>
 #include <bitset>
 using std::bitset;
 #include <sstream>

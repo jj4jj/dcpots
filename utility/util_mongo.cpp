@@ -273,7 +273,7 @@ mongo_client_t::command(const string & db, const string & coll,
 
 	size_t	transid = _THIS_HANDLE->transaction_pool.alloc();
 	if (transid == 0){
-		GLOG_ERR("transaction pool has been reached max:%d ! please retry later ...",
+		GLOG_ERR("transaction pool has been reached max:%zd ! please retry later ...",
 			_THIS_HANDLE->transaction_pool.total());
 		return -2;
 	}
