@@ -539,7 +539,40 @@ static int pbxml_test(const char* arg){
 	dcsutil::protobuf_msg_to_xml_file(mdn, "dcnode.xml");
 	return 0;
 }
+#include "base/dcdebug.h"
+struct test_st1 {
+    static void f(int n){
+        string str;
+        if (n <= 0){
+            std::cout << dcsutil::stacktrace(str) << std::endl;
+        }
+        else {
+            f(n - 1);
+        }
+    }
+    void  g(char c){
+        f(c);
+    }
+};
+struct test_st2 {
+    static void f(int n){
+        test_st1::f(n);
+    }
+    void  g(char c){
+        f(c);
+    }
+};
 
+static int stacktrace_test(const char * arg){
+    test_st2 ts;
+    if (arg){
+        ts.g(18);
+    }
+    else {
+        ts.g(6);
+    }
+    return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -554,6 +587,9 @@ int main(int argc, char* argv[])
 		if (strstr(argv[1], "pbxml")){
 			return pbxml_test(argv[2]);
 		}
+        if (strstr(argv[1], "bt")){
+            return stacktrace_test(argv[2]);
+        }
 
 		switch (argv[1][0])
 		{
