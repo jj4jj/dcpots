@@ -405,7 +405,10 @@ static int daemon_test(const char * arg){
 	GLOG_TRA("split test ret:%d [0]:%s", m, vss[0].c_str());
 	std::string str;
 	GLOG_TRA("strtime:%s", dcsutil::strftime(str));
-	GLOG_TRA("from_strtime:%lu", dcsutil::from_strtime());
+	GLOG_TRA("from_strtime:%lu", dcsutil::stdstrtime());
+    if(arg){
+        GLOG_TRA("format time:%s [%s]", arg, dcsutil::strftime(str, time(NULL), arg));
+    }
 	while (true){
 		//LOGP("test ....");
 		sleep(5);
