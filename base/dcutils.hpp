@@ -37,7 +37,8 @@ NS_BEGIN(dcsutil)
 	inline	time_t		time_unixtime_s(){ return time_unixtime_us() / 1000000L; }
 	inline	uint64_t	time_unixtime_ms(){ return time_unixtime_us() / 1000L;}
 	const char*			strftime(std::string & str, time_t unixtime = 0, const char * format = "%Y-%m-%dT%H:%M:%S");
-	time_t				from_strtime(const char * strtime = "1970-01-01T08:08:08");
+	const char*			strptime(time_t & unixtime, const std::string & str, const char * format = "%Y-%m-%dT%H:%M:%S");
+	time_t				stdstrtime(const char * strtime = "1970-01-01T08:08:08");
 
 	//file
     int					readfile(const std::string & file, char * buffer, size_t sz);

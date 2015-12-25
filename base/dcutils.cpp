@@ -170,7 +170,18 @@ namespace dcsutil {
 		strftime((char*)str.c_str(), str.capacity(), format, &_sftm);
 		return str.c_str();
 	}
-	time_t			from_strtime(const char * strtime){
+    const char*         strptime(time_t & unixtime ,const std::string & str, const char * format){
+        struct tm _tmptm;
+        unixtime = 0;
+        const char * p = strptime(str.c_str(), format, &_tmptm);
+        if(!p){
+            return nullptr;
+        }
+        unixtime = mktime(&_tmptm);
+        return p;
+    }
+	time_t			    stdstrtime(const char * strtime){
+#if 0
 		int Y = 0, M = 0, D = 0, h = 0, m = 0, s = 0;
 		sscanf(strtime, "%4d-%2d-%2dT%02d:%02d:%02d", &Y, &M, &D, &h, &m, &s);
 		struct tm stm;
@@ -182,6 +193,11 @@ namespace dcsutil {
 		stm.tm_sec = s;
 		stm.tm_isdst = 0;
 		return mktime(&stm);
+ #else
+        time_t _tmt;
+        strptime(_tmt, strtime, "%Y-%m-%dT%H:%M:%S");
+        return _tmt;
+ #endif
 	}
     bool            strisint(const std::string & str, int base){
         char * endptr;
