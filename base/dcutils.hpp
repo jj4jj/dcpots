@@ -40,10 +40,26 @@ NS_BEGIN(dcsutil)
 	const char*			strptime(time_t & unixtime, const std::string & str, const char * format = "%FT%X%z");
 	time_t				stdstrtime(const char * strtime = "1970-01-01T08:08:08+0800");
 
-	//file
-    int					readfile(const std::string & file, char * buffer, size_t sz);
+	//file releataed
+    //if sz = 0 , test file exist
+    int					readfile(const std::string & file, char * buffer = 0, size_t sz = 0);
     int					writefile(const std::string & file, const char * buffer, size_t sz = 0);
     size_t              filesize(const std::string & file);
+
+    //file://<path>
+    //tcp://<ip:port>
+    //udp://<ip:port>
+    int                 openfd(const std::string & uri, int timeout_ms = 30000);
+    //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
+    int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms = 10000);
+    //write size , return > 0 wirte size, <= 0 error
+    int                 writefd(int fd, const char * buffer, size_t sz, int timeout_ms = 2000);
+    int                 closefd(int fd);
+    int                 nonblockfd(int fd, bool nonblock = true);
+    //return 0: readable , other error occurs
+    int                 waitfd_readable(int fd, int timeout_ms);
+    int                 waitfd_writable(int fd, int timeout_ms);
+
 	///////////process/////////////////////////////////////////////////////
 	int					daemonlize(int closestd = 1, int chrootdir = 0);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
