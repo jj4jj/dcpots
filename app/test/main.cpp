@@ -576,6 +576,40 @@ static int stacktrace_test(const char * arg){
     }
     return 0;
 }
+using namespace dcsutil;
+static int http_test(const char * arg){
+    if (!arg){
+        arg = "baidu.com";
+    }
+    uint32_t ip[5];
+    int num = 5;
+    int ret = ipfromhostname(ip, num, arg);
+    if (ret){
+        GLOG_ERR("get host by name error arg:%s", arg);
+        return -1;
+    }
+    cout << "ip num:" << num << endl;
+    string sip = inet_ntoa(*(in_addr*)&(ip[0]));
+    string uri = "tcp://";
+    uri += sip;
+    uri += ":80";
+    cout << "open:" << uri << endl;
+    int fd = dcsutil::openfd(uri);
+    cout << "connect uri:" << uri << " fd:" << fd << endl;
+    if (fd < 0){
+        return -2;
+    }
+    string cmd = "GET /\r\n";
+    int n = dcsutil::writefd(fd, cmd.c_str(), cmd.length());
+    cout << "write size:" << n << endl;
+    static char buffer[102400];
+    n = dcsutil::readfd(fd, buffer, sizeof(buffer), "end");
+    //readfd(fd, buffer, sizeof(buffer), "token:\r\n");
+    cout << "read size:" << n << endl;
+    cout << buffer << endl;
+    return 0;
+}
+
 
 int main(int argc, char* argv[])
 {
@@ -592,6 +626,9 @@ int main(int argc, char* argv[])
 		}
         if (strstr(argv[1], "bt")){
             return stacktrace_test(argv[2]);
+        }
+        if (strstr(argv[1], "http")){
+            return http_test(argv[2]);
         }
 
 		switch (argv[1][0])

@@ -94,7 +94,11 @@ namespace dcsutil {
     //udp://<ip:port>
     int                 openfd(const std::string & uri, int timeout_ms){
         if (uri.find("file://") == 0){ //+7
-            return open(uri.substr(7).c_str(), O_CREAT | O_RDWR);
+            int fd = open(uri.substr(7).c_str(), O_CREAT | O_RDWR);
+            if (fd >= 0){
+                nonblockfd(fd, true);
+            }
+            return fd;
         }
         else if (uri.find("tcp://") == 0){//+6
             std::vector<string> vs;
@@ -120,7 +124,7 @@ namespace dcsutil {
                 if (errno == EINPROGRESS){
                     ret = waitfd_writable(fd, timeout_ms);
                 }
-                if (fd){
+                if (ret){
                     GLOG_ERR("connect addr:%s error !", connaddr);
                     close(fd);
                     return -3;
@@ -146,6 +150,7 @@ namespace dcsutil {
             iaddr.sin_addr.s_addr = inet_addr(vs[0].c_str());
             iaddr.sin_port = htons(stoi(vs[1]));
             socklen_t len = sizeof(sockaddr_in);
+            nonblockfd(fd, true);
             int ret = connect(fd, (struct sockaddr*)&iaddr, len);
             if (ret){
                 GLOG_ERR("connect addr:%s error !", connaddr);
@@ -160,10 +165,10 @@ namespace dcsutil {
         }
         return -2;
     }
-    static inline size_t _readfd(int fd, char * buffer, size_t sz, int timeout_ms){
-        int n;
+    static inline int _readfd(int fd, char * buffer, size_t sz, int timeout_ms){
+        int n = 0;
         size_t tsz = 0;
-        while (sz > tsz && (n = read(fd, buffer + tsz, sz - tsz))){
+        while ((sz > tsz) && (n = read(fd, buffer + tsz, sz - tsz))){
             if (n > 0){
                 tsz += n;
             }
@@ -216,8 +221,7 @@ namespace dcsutil {
                 GLOG_ERR("read fd:%d error mode:%s",fd, mode);
                 return -1;
             }
-
-            if (readfd(fd, (char *)&nrsz, szlen, "size") != szlen){
+            if (_readfd(fd, (char *)&nrsz, szlen, timeout_ms)!= szlen){
                 GLOG_ERR("read fd:%d size16 head error !", fd);
                 return -2;
             }
@@ -227,11 +231,11 @@ namespace dcsutil {
             else if (szlen == 32){
                 nrsz = ntohl(nrsz);
             }
-            if (sz < nrsz){
+            if ((int)sz < nrsz){
                 GLOG_ERR("read fd:%d buffer size:%d not enough %zd  ", fd, nrsz, sz);
                 return -3;
             }
-            if (readfd(fd, buffer, nrsz, "size") != nrsz){
+            if (_readfd(fd, buffer, nrsz, timeout_ms) != nrsz){
                 GLOG_ERR("read fd:%d buffer data erorr size:%d", fd, nrsz);
                 return -4;
             }
@@ -249,7 +253,7 @@ namespace dcsutil {
             int rdz = 0;
             int matchnum = 0;
             while (true){
-                rdz = readfd(fd, buffer + nrsz, blocksz, "end");
+                rdz = _readfd(fd, buffer + nrsz, blocksz, timeout_ms);
                 if (rdz < 0){
                     GLOG_ERR("read fd:%d ret:%d error !", fd, rdz);
                     return rdz;
@@ -328,11 +332,33 @@ namespace dcsutil {
         tv.tv_sec = timeout_ms / 1000;
         tv.tv_usec = (timeout_ms % 1000 ) * 1000;
         int ret = select(fd + 1, &fdset, NULL, NULL, &tv);
-        if (ret > 0 && FD_ISSET(fd, &fdset)){
+        if (ret > 0){
+            assert(FD_ISSET(fd, &fdset));
             return 0;
         }
-        return ret;
+        return -1;
     }
+    int         ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const char * hostname){
+        int nmaxip = ipnum;
+        ipnum = 0;
+        struct hostent hosts;
+        struct hostent * result;
+        int h_errnop;
+        char buffer[512];
+        int ret = gethostbyname_r(hostname,
+            &hosts, buffer, sizeof(buffer),
+            &result, &h_errnop);
+        if (ret){
+            GLOG_ERR("gethost by name error :%s ", hstrerror(h_errnop));
+            return -1;
+        }
+        while (ipnum < nmaxip && result->h_addr_list[ipnum]){
+            *ip = *(uint32_t*)result->h_addr_list[ipnum];
+            ++ipnum;
+        }
+        return 0;
+    }
+
     int         waitfd_writable(int fd, int timeout_ms){
         fd_set fdset;
         FD_ZERO(&fdset);
@@ -341,10 +367,11 @@ namespace dcsutil {
         tv.tv_sec = timeout_ms / 1000;
         tv.tv_usec = (timeout_ms % 1000) * 1000;
         int ret = select(fd + 1, NULL, &fdset, NULL, &tv);
-        if (ret > 0 && FD_ISSET(fd, &fdset)){
+        if (ret > 0){
+            assert(FD_ISSET(fd, &fdset));
             return 0;
         }
-        return ret;
+        return -1;
     }
     int			lockpidfile(const std::string & file, int kill_other_sig, bool nb){
         int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);

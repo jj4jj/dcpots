@@ -59,7 +59,7 @@ NS_BEGIN(dcsutil)
     //return 0: readable , other error occurs
     int                 waitfd_readable(int fd, int timeout_ms);
     int                 waitfd_writable(int fd, int timeout_ms);
-
+    int                 ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const char * hostname);
 	///////////process/////////////////////////////////////////////////////
 	int					daemonlize(int closestd = 1, int chrootdir = 0);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
