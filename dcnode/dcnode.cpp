@@ -260,10 +260,7 @@ static  int _fsm_connect_parent(dcnode_t * dc){
 		return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_CONNECTED);
 	}
 	dc->fsm_state = dcnode_t::DCNODE_CONNECTING;
-	dctcp_addr_t saddr;
-	saddr.ip = dc->conf.addr.tcp_parent_addr.substr(0, dc->conf.addr.tcp_parent_addr.find(':'));
-	saddr.port = strtol(dc->conf.addr.tcp_parent_addr.substr(dc->conf.addr.tcp_parent_addr.find(':')+1).c_str(),NULL,10);
-	return dctcp_connect(dc->stcp, saddr);
+    return dctcp_connect(dc->stcp, dc->conf.addr.tcp_parent_addr);
 }
 static dcnode_name_map_entry_t * _name_smq_entry_find(dcnode_t * dc, uint64_t session) {
 	struct dcnode_name_map_entry_t dnme;
@@ -862,13 +859,8 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 			dcnode_destroy(n); 
             return nullptr;
 		}
-		if (!conf.addr.tcp_listen_addr.empty())
-		{
-			dctcp_addr_t saddr;
-			const string & listenaddr = conf.addr.tcp_listen_addr;
-			saddr.ip = listenaddr.substr(0, listenaddr.find(':'));
-			saddr.port = strtol(listenaddr.substr(listenaddr.find(':') + 1).c_str(), nullptr, 10);
-			int fd = dctcp_listen(n->stcp, saddr);
+		if (!conf.addr.tcp_listen_addr.empty()){
+            int fd = dctcp_listen(n->stcp, conf.addr.tcp_listen_addr);
 			if (fd < 0) {
 				dcnode_destroy(n); 
                 return nullptr;
@@ -876,8 +868,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		}
 		dctcp_event_cb(n->stcp, _stcp_cb, n);
 	}
-	if (!conf.addr.msgq_sharekey.empty())
-	{
+	if (!conf.addr.msgq_sharekey.empty()){
 		dcsmq_config_t smc;
 		smc.keypath = conf.addr.msgq_sharekey;
 		smc.msg_buffsz = conf.max_channel_buff_size;

@@ -111,9 +111,7 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 int test_tcp(const char * ap)
 {
 	dctcp_config_t sc;
-	dctcp_addr_t listen_addr;
-	listen_addr.ip = "127.0.0.1";
-	listen_addr.port = 8888;
+	string listen_addr = "127.0.0.1:8888";
 	auto * p = dctcp_create(sc);
 	if (!p){
 		GLOG_TRA("create stcp error ! syserror:%s", strerror(errno));
@@ -581,17 +579,8 @@ static int http_test(const char * arg){
     if (!arg){
         arg = "baidu.com";
     }
-    uint32_t ip[5];
-    int num = 5;
-    int ret = ipfromhostname(ip, num, arg);
-    if (ret){
-        GLOG_ERR("get host by name error arg:%s", arg);
-        return -1;
-    }
-    cout << "ip num:" << num << endl;
-    string sip = inet_ntoa(*(in_addr*)&(ip[0]));
     string uri = "tcp://";
-    uri += sip;
+    uri += arg;
     uri += ":80";
     cout << "open:" << uri << endl;
     int fd = dcsutil::openfd(uri);
@@ -609,7 +598,22 @@ static int http_test(const char * arg){
     cout << buffer << endl;
     return 0;
 }
-
+static int uri_test(const char * arg){
+    if (!arg){
+        arg = "http://qq.com";
+    }    
+    int fd = dcsutil::openfd(arg);
+    cout << "connect uri:" << arg << " fd:" << fd << endl;
+    if (fd < 0){
+        return -2;
+    }
+    static char buffer[102400];
+    int n = dcsutil::readfd(fd, buffer, sizeof(buffer), "end");
+    //n = readfd(fd, buffer, sizeof(buffer), "token:\r\n");
+    cout << "read size:" << n << endl;
+    cout << buffer << endl;
+    return 0;
+}
 
 int main(int argc, char* argv[])
 {
@@ -629,6 +633,9 @@ int main(int argc, char* argv[])
         }
         if (strstr(argv[1], "http")){
             return http_test(argv[2]);
+        }
+        if (strstr(argv[1], "uri")){
+            return uri_test(argv[2]);
         }
 
 		switch (argv[1][0])

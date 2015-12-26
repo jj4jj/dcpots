@@ -479,15 +479,16 @@ int				dctcp_send(dctcp_t * stcp, int fd, const dctcp_msg_t & msg){
 	if (fd < 0) {return -1; }
 	return _write_tcp_socket(stcp, fd, msg.buff, msg.buff_sz);
 }
-int				dctcp_listen(dctcp_t * stcp, const dctcp_addr_t & addr){ //return a fd >= 0when success
-	int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
+int				dctcp_listen(dctcp_t * stcp, const string & addr){ //return a fd >= 0when success
+    sockaddr_in addrin;
+    int ret = dcsutil::socknetaddr(addrin, addr);
+    if (ret){
+        GLOG_ERR("listen addr :%s is invlaid !", addr.c_str());
+        return -1;
+    }
+    int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
 	if (fd < 0) { return -1; }
-	sockaddr_in addrin;
-	memset(&addrin, 0, sizeof(addrin));
-	addrin.sin_family = AF_INET;
-	addrin.sin_port = htons(addr.port);
-	addrin.sin_addr.s_addr = addr.u32ip();
-	int ret = bind(fd, (struct sockaddr *)&addrin, sizeof(struct sockaddr));
+	ret = bind(fd, (struct sockaddr *)&addrin, sizeof(struct sockaddr));
 	if (ret) { close(fd); return -2; }
 	ret = listen(fd, stcp->conf.max_backlog);
 	if (ret) { close(fd); return -3; }
@@ -502,18 +503,19 @@ int				dctcp_listen(dctcp_t * stcp, const dctcp_addr_t & addr){ //return a fd >=
 	return fd;
 }
 
-int             dctcp_connect(dctcp_t * stcp, const dctcp_addr_t & addr, int retry){
-	//allocate
-	int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
+int             dctcp_connect(dctcp_t * stcp, const string & addr, int retry){
+    sockaddr_in saddr;
+    int ret = dcsutil::socknetaddr(saddr, addr);
+    if (ret){
+        GLOG_ERR("connect sock addr error :%s", addr.c_str());
+        return -1;
+    }
+    //allocate
+    int fd = _create_tcpsocket(stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
 	if (fd < 0) return -1;//socket error
 	int on = 1;
 	_set_socket_opt(fd, SO_KEEPALIVE, &on, sizeof(on));
-
-	sockaddr_in saddr;
-	memset(&saddr, 0, sizeof(saddr));
 	saddr.sin_family = AF_INET;
-	saddr.sin_addr.s_addr = addr.u32ip();
-	saddr.sin_port = htons(addr.port);
 	dctcp_connecting_t cnx;
 	cnx.max_reconnect = retry;
 	cnx.reconnect = 0;

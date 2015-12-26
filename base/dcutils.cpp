@@ -101,10 +101,10 @@ namespace dcsutil {
             return fd;
         }
         else if (uri.find("tcp://") == 0){//+6
-            std::vector<string> vs;
             const char * connaddr = uri.substr(6).c_str();
-            strsplit(connaddr, ":", vs);
-            if (vs.size() != 2){
+            sockaddr_in iaddr;
+            int ret = socknetaddr(iaddr, connaddr);
+            if (ret){
                 GLOG_ERR("error tcp address:%s", connaddr);
                 return -1;
             }
@@ -113,13 +113,9 @@ namespace dcsutil {
                 GLOG_ERR("create sock stream error !");
                 return -2;
             }
-            sockaddr_in iaddr;
-            iaddr.sin_family = AF_INET;
-            iaddr.sin_addr.s_addr = inet_addr(vs[0].c_str());
-            iaddr.sin_port = htons(stoi(vs[1]));
             socklen_t len = sizeof(sockaddr_in);
             nonblockfd(fd, true);
-            int ret = connect(fd, (struct sockaddr*)&iaddr, len);
+            ret = connect(fd, (struct sockaddr*)&iaddr, len);
             if (ret){
                 if (errno == EINPROGRESS){
                     ret = waitfd_writable(fd, timeout_ms);
@@ -133,11 +129,11 @@ namespace dcsutil {
             return fd;
         }
         else if (uri.find("udp://") == 0){//+6
-            std::vector<string> vs;
             const char * connaddr = uri.substr(6).c_str();
-            strsplit(connaddr, ":", vs);
-            if (vs.size() != 2){
-                GLOG_ERR("error tcp address:%s", connaddr);
+            sockaddr_in iaddr;
+            int ret = socknetaddr(iaddr, connaddr);
+            if (ret){
+                GLOG_ERR("error net udp address:%s", connaddr);
                 return -1;
             }
             int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -145,16 +141,47 @@ namespace dcsutil {
                 GLOG_ERR("create sock stream error !");
                 return -2;
             }
-            sockaddr_in iaddr;
-            iaddr.sin_family = AF_INET;
-            iaddr.sin_addr.s_addr = inet_addr(vs[0].c_str());
-            iaddr.sin_port = htons(stoi(vs[1]));
             socklen_t len = sizeof(sockaddr_in);
             nonblockfd(fd, true);
-            int ret = connect(fd, (struct sockaddr*)&iaddr, len);
+            ret = connect(fd, (struct sockaddr*)&iaddr, len);
             if (ret){
                 GLOG_ERR("connect addr:%s error !", connaddr);
                 close(fd);
+                return -3;
+            }
+            return fd;
+        }
+        else if (uri.find("http://") == 0){//7
+            std::vector<string> vs;
+            strsplit(uri.substr(7), "/", vs, true, 2);           
+            if (vs.empty()){
+                GLOG_ERR("uri path is error :%s", uri.c_str());
+                return -1;
+            }
+            std::vector<string> tcpvs;
+            strsplit(vs[0], ":", tcpvs);
+            string tcpuri = "tcp://" + vs[0];
+            if (tcpvs.size() < 2){
+                tcpuri += ":80";//default
+            }
+            int fd = openfd(tcpuri, timeout_ms);
+            if (fd < 0){
+                GLOG_ERR("open tcp uri error:%s http uri:%s", tcpuri.c_str(), uri.c_str());
+                return -2;
+            }
+            string httpget = "GET /";
+            if (vs.size() == 2){
+                httpget += vs[1];
+            }
+            httpget += " HTTP/1.1\r\n";
+            httpget += "Connection: Close\r\n";
+            httpget += "Host: ";
+            httpget += tcpvs[0];
+            httpget += "\r\n\r\n";
+            int ret = writefd(fd, httpget.data(), httpget.length(), timeout_ms);
+            if (ret != (int)httpget.length()){
+                GLOG_ERR("write http get request:%s error ret:%d", httpget.c_str(), ret);
+                closefd(fd);
                 return -3;
             }
             return fd;
@@ -338,14 +365,41 @@ namespace dcsutil {
         }
         return -1;
     }
-    int         ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const char * hostname){
+    int         socknetaddr(sockaddr_in & addr, const std::string & saddr){
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_addr.s_addr = 0;        
+        addr.sin_family = AF_INET;
+        addr.sin_port = 0;
+        std::vector<string> vs;
+        strsplit(saddr, ":", vs);
+        if (strisint(vs[0])){
+            addr.sin_addr.s_addr = stol(vs[0]);
+        }
+        uint32_t a, b, c, d;
+        if (sscanf(vs[0].c_str(), "%u.%u.%u.%u", &a, &b, &c, &d) == 4){
+            //net order = big endia order 
+            addr.sin_addr.s_addr = a | (b << 8) | (c << 16) | (d << 24);
+        }
+        else { //must be a domainname
+            int num = 1;
+            if (ipfromhostname(&addr.sin_addr.s_addr, num, vs[0])){
+                GLOG_ERR("get host name error first name:%s hostname:%s", vs[0].c_str(), saddr.c_str());
+                return -1;
+            }
+        }
+        if (vs.size() == 2){
+            addr.sin_port = htons(stoi(vs[1]));
+        }
+        return 0;
+    }
+    int         ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const std::string & hostname){
         int nmaxip = ipnum;
         ipnum = 0;
         struct hostent hosts;
         struct hostent * result;
         int h_errnop;
         char buffer[512];
-        int ret = gethostbyname_r(hostname,
+        int ret = gethostbyname_r(hostname.c_str(),
             &hosts, buffer, sizeof(buffer),
             &result, &h_errnop);
         if (ret){
@@ -468,28 +522,18 @@ namespace dcsutil {
         return p;
     }
 	time_t			    stdstrtime(const char * strtime){
-#if 0
-		int Y = 0, M = 0, D = 0, h = 0, m = 0, s = 0;
-		sscanf(strtime, "%4d-%2d-%2dT%02d:%02d:%02d", &Y, &M, &D, &h, &m, &s);
-		struct tm stm;
-		stm.tm_year = Y - 1900;
-		stm.tm_mon = M - 1;
-		stm.tm_mday = D;
-		stm.tm_hour = h;
-		stm.tm_min = m;
-		stm.tm_sec = s;
-		stm.tm_isdst = 0;
-		return mktime(&stm);
- #else
         time_t _tmt;
-        strptime(_tmt, strtime, "%Y-%m-%dT%H:%M:%S");
+        strptime(_tmt, strtime);
         return _tmt;
- #endif
 	}
     bool            strisint(const std::string & str, int base){
         char * endptr;
+        if (str.empty()){
+            return false;
+        }
         auto v = strtoll(str.c_str(), &endptr, base);
-        if (endptr == str.c_str()){
+        //if *nptr is not '\0' but **endptr 
+        if (*endptr){//should be last char \0
             return false;
         }
         if (v == LLONG_MAX || v == LLONG_MIN){
