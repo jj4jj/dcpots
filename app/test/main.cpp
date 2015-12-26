@@ -599,12 +599,12 @@ static int http_test(const char * arg){
     if (fd < 0){
         return -2;
     }
-    string cmd = "GET /\r\n";
+    string cmd = "GET / HTTP/1.1\r\n\r\n";
     int n = dcsutil::writefd(fd, cmd.c_str(), cmd.length());
     cout << "write size:" << n << endl;
     static char buffer[102400];
-    n = dcsutil::readfd(fd, buffer, sizeof(buffer), "end");
-    //readfd(fd, buffer, sizeof(buffer), "token:\r\n");
+    //n = dcsutil::readfd(fd, buffer, sizeof(buffer), "end");
+    n = readfd(fd, buffer, sizeof(buffer), "token:\r\n");
     cout << "read size:" << n << endl;
     cout << buffer << endl;
     return 0;
