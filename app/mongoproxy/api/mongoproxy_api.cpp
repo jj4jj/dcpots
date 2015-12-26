@@ -119,8 +119,8 @@ on_proxy_rsp(void * ud, const char * src, const msg_buffer_t & msg_buffer ){
 int		
 mongoproxy_init(const char * proxyaddr){
 	dcnode_config_t dconf;
-	dconf.addr.msgq_sharekey = proxyaddr;
-	dconf.addr.msgq_push = true;
+    dconf.addr = "push:";
+    dconf.addr += proxyaddr;
 	dconf.parent_heart_beat_gap = 2;//2s
 	//randomname
 	dconf.name = "mgpapi";

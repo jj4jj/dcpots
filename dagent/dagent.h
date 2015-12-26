@@ -6,20 +6,13 @@ struct dagent_config_t
 {
 	string	name;
 	int		max_msg_size;//1MB	
-	bool	routermode; //just relay msg
-	string	localkey;
-	string	parent;	//parent tcp addr eg.127.0.0.1:8888
-	string	listen;	//listen 127.0.0.1:8888
+    string  addr;
 	int		heartbeat;//3*heartbeat timeout will set be dead
 	string	plugin_path;
 	bool	extmode;
-	dagent_config_t() :max_msg_size(1048576),routermode(false){
+	dagent_config_t() :max_msg_size(1048576){
 		name = "noname";
 		max_msg_size = 1048576;
-		routermode = false;
-		parent = "";
-		listen = "";
-		localkey = "";
 		heartbeat = 10;
 		plugin_path = "plugins";
 		extmode = false;

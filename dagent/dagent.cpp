@@ -135,23 +135,17 @@ static PyObject * _py_ready(PyObject *, PyObject *){
 
 static PyObject * _py_ext_init(PyObject *, PyObject * args, PyObject *keywds){
 	dagent_config_t dcf;
-	const char * localkey = "";
-	const char * parent = "";
-	const char * listen = "";
 	const char * name = "pynoname";
-	int routermode = 0;
+    const char * addr = "";
 	int heartbeat = dcf.heartbeat;
-	static const char *kwlist[] = {  "name", "routermode","localkey", "parent", "listen","heartbeat", NULL };
-	if (!PyArg_ParseTupleAndKeywords(args, keywds, "si|sssi", (char**)kwlist,
-		&name, &routermode, &localkey, &parent, &listen, &heartbeat)){
+	static const char *kwlist[] = {  "name", "addr","heartbeat", NULL };
+	if (!PyArg_ParseTupleAndKeywords(args, keywds, "ss|sss", (char**)kwlist,
+        &name, &addr, &heartbeat)){
 		PyErr_SetString(PyExc_TypeError, "param parse error !");
 		return NULL;
 	}
 	dcf.name = name;
-	dcf.routermode = routermode != 0;
-	dcf.localkey = localkey;
-	dcf.parent = parent;
-	dcf.listen = listen;
+    dcf.addr = addr;
 	dcf.heartbeat = heartbeat;
 	dcf.extmode = true;
 	int ret = dagent_init(dcf);
@@ -283,19 +277,7 @@ int     dagent_init(const dagent_config_t & conf){
 	dcf.name = conf.name;
 	dcf.parent_heart_beat_gap = conf.heartbeat;
 	dcf.max_children_heart_beat_expired = 3 * conf.heartbeat;
-	if (!conf.parent.empty()){
-		dcf.addr.tcp_parent_addr = conf.parent;
-	}
-	if (!conf.listen.empty()){
-		dcf.addr.tcp_listen_addr = conf.listen;
-	}
-	if (!conf.localkey.empty()){
-		dcf.addr.msgq_sharekey = conf.localkey;
-	}
-	dcf.addr.msgq_push = true;
-	if (conf.routermode){
-		dcf.addr.msgq_push = false;
-	}
+    dcf.addr = conf.addr;
 	dcnode_t * node = dcnode_create(dcf);
 	if (!node){
 		GLOG_ERR("create dcnode error !");

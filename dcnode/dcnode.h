@@ -35,33 +35,27 @@ NODE.is_not_ready => dcnode_send maybe error [if dst is knowned].
 
 struct dcnode_t;
 
-struct dcnode_addr_t
-{
-	string msgq_sharekey;  //file path for machine sharing , push:/xxxx
-	bool   msgq_push; //client push mode as a client , not server
-	string tcp_listen_addr; //listen ip:port
-	string tcp_parent_addr;  //parent ip:port
-    //pattern
-    //push:tcp://...
-    //pull:msgq://
-    dcnode_addr_t(const char * addrpatt = nullptr);
-};
-
 #define DCNODE_MAX_LOCAL_NODES_NUM	(1024)	//max local client in one parent
-struct dcnode_config_t
-{
-    dcnode_addr_t  addr; //parent tcp and msgq
+
+
+//dcnode address pattern
+//push:tcp://...
+//pull:msgq://
+//proxy:msgq://..->tcp://
+//proxy:tcp://->msgq://
+//proxy:tcp://->tcp://
+struct dcnode_config_t {
+    std::string  addr; //dcnode addr
     int max_channel_buff_size;//
     int parent_heart_beat_gap;//seconds
     int max_register_children;//max children
 	int max_msg_expired_time; //expired time s
 	int max_children_heart_beat_expired; //expire time for close -> 5*max_expire
-	string	       name;
+    std::string	   name;
     bool           durable;
     int            max_send_queue_size;
-    string         dumpfile;
-	dcnode_config_t()
-	{
+    std::string    dumpfile;
+	dcnode_config_t() {
 		name = "noname";
 		max_register_children = DCNODE_MAX_LOCAL_NODES_NUM;
 		parent_heart_beat_gap = 30;

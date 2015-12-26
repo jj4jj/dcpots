@@ -48,9 +48,101 @@ struct dcnode_id_t {
     }
 
 };
+struct dcnode_addr_t {
+    string msgq_sharekey;       //file path for machine sharing , push:/xxxx
+    bool   msgq_push;           //client push mode as a client , not server
+    string tcp_listen_addr;     //listen ip:port
+    string tcp_parent_addr;     //parent ip:port
+    void   init(){
+        this->msgq_push = true;
+        this->msgq_sharekey = "";
+        this->tcp_listen_addr = "";
+        this->tcp_parent_addr = "";
+    }
+    int    parse(const char * addrpatt){
+        init();
+        if (!addrpatt){ return -1; }
+        //mode
+#define PULL_MODE   "pull:"
+#define PUSH_MODE   "push:"
+#define PROXY_MODE  "proxy:"
+        //proto
+#define MSGQ_PROTO  "msgq://"
+#define TCP_PROTO   "tcp://"
+        enum dcnode_mode {
+            DCNODE_MODE_PUSH,
+            DCNODE_MODE_PULL,
+            DCNODE_MODE_PROXY
+        } mode = DCNODE_MODE_PUSH;
+        const char * s_addr = addrpatt;
+        if (strstr(addrpatt, PULL_MODE)){
+            mode = DCNODE_MODE_PULL;
+            msgq_push = false;
+            s_addr += strlen(PULL_MODE);
+        }
+        else if (strstr(addrpatt, PUSH_MODE)){
+            mode = DCNODE_MODE_PUSH;
+            msgq_push = true;
+            s_addr += strlen(PUSH_MODE);
+        }
+        else if (strstr(addrpatt, PROXY_MODE)){
+            mode = DCNODE_MODE_PROXY;
+            s_addr += strlen(PROXY_MODE);
+        }
+        else {
+            GLOG_ERR("proto mode error addr pattern:%s", addrpatt);
+            init();
+            return -2;
+        }
+        ///////////////////////////////////////////////////////////////	
+        std::vector<string> vs;
+        dcsutil::strsplit(s_addr, "->", vs);
+        if (vs[0].find(MSGQ_PROTO) == 0){
+            msgq_sharekey = vs[0].substr(strlen(MSGQ_PROTO));
+            if (mode == DCNODE_MODE_PROXY){
+                msgq_push = false;
+            }
+        }
+        else if (vs[0].find(TCP_PROTO) == 0){
+            if (mode == DCNODE_MODE_PULL ||
+                mode == DCNODE_MODE_PROXY){ //->a->b
+                tcp_listen_addr = vs[0].substr(strlen(TCP_PROTO));
+            }
+            else {
+                tcp_parent_addr = vs[0].substr(strlen(TCP_PROTO));
+            }
+        }
+        else {
+            GLOG_ERR("proto type error addr pattern:%s", addrpatt);
+            init();
+            return -3;
+        }
 
-struct dcnode_t
-{
+        if (mode == DCNODE_MODE_PROXY){
+            //should be a proxy
+            if (vs.size() != 2 || (vs[0].find(MSGQ_PROTO) == 0 && vs[1].find(MSGQ_PROTO) == 0)){
+                GLOG_ERR("dcnode not support 2msgq in proxy mode addr :%s vs size:%d !",
+                    addrpatt, (int)vs.size());
+                init();
+                return -4;
+            }
+            if (vs[1].find(MSGQ_PROTO) == 0){
+                msgq_sharekey = vs[0].substr(strlen(MSGQ_PROTO));
+                msgq_push = true;
+            }
+            else if (vs[0].find(TCP_PROTO) == 0){
+                tcp_parent_addr = vs[0].substr(strlen(TCP_PROTO));
+            }
+            else {
+                GLOG_ERR("proto type error addr pattern:%s", addrpatt);
+                init();
+                return -5;
+            }
+        }
+        return 0;
+    }
+};
+struct dcnode_t {
 	enum {
 		DCNODE_ERROR = -1,	//ERROR , ABORT
 		DCNODE_INIT = 0,
@@ -62,6 +154,7 @@ struct dcnode_t
 		DCNODE_ABORT = 42,	//ABORT
 	};
 	dcnode_config_t conf;
+    dcnode_addr_t   addr;
 	//tcp node
 	dctcp_t	*		stcp;
 	int				parentfd;
@@ -113,6 +206,7 @@ struct dcnode_t
 		stcp = nullptr;
 		fsm_state = DCNODE_INIT;
 		dispatcher = nullptr;
+        addr.init();
 		timer_callbacks.clear();
 		callback_periods.clear();
 		expiring_callbacks.clear();
@@ -185,10 +279,10 @@ static void	_remove_timer_callback(dcnode_t* dc, uint64_t cookie){
 
 //leaf: smq client but no any tcp info
 static bool _is_smq_leaf(dcnode_t* dc){
-	if (dc->conf.addr.tcp_listen_addr.empty() &&	//not tcp node
-		dc->conf.addr.tcp_parent_addr.empty()){
-		if (!dc->conf.addr.msgq_sharekey.empty() &&
-			!dc->conf.addr.msgq_push)	//but a smq server
+	if (dc->addr.tcp_listen_addr.empty() &&	//not tcp node
+		dc->addr.tcp_parent_addr.empty()){
+		if (!dc->addr.msgq_sharekey.empty() &&
+			!dc->addr.msgq_push)	//but a smq server
 		{
 			return false;
 		}
@@ -197,8 +291,8 @@ static bool _is_smq_leaf(dcnode_t* dc){
 	return false;
 }
 static bool _is_root(dcnode_t* dc){
-	return (dc->conf.addr.tcp_parent_addr.empty() &&
-			dc->conf.addr.msgq_push == false);
+	return (dc->addr.tcp_parent_addr.empty() &&
+			dc->addr.msgq_push == false);
 }
 
 static int	_fsm_check(dcnode_t * dc, bool checkforce);
@@ -227,7 +321,7 @@ static int _fsm_register_name(dcnode_t * dc){
 			dcsmq_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
 	else {
-		if (dc->conf.addr.tcp_parent_addr.empty()){
+		if (dc->addr.tcp_parent_addr.empty()){
 			//no need
 			return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_NAME_REG);
 		}
@@ -248,7 +342,7 @@ static int _send_to_parent(dcnode_t * dc, dcnode_msg_t & dm) {
 		//to agent
 		return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
-	else if (!dc->conf.addr.tcp_parent_addr.empty() && dc->parentfd != -1)
+	else if (!dc->addr.tcp_parent_addr.empty() && dc->parentfd != -1)
 	{
 		return dctcp_send(dc->stcp, dc->parentfd, dctcp_msg_t(dc->send_buffer.buffer, dc->send_buffer.valid_size));
 	}
@@ -256,11 +350,11 @@ static int _send_to_parent(dcnode_t * dc, dcnode_msg_t & dm) {
 }
 static  int _fsm_connect_parent(dcnode_t * dc){
 	GLOG_TRA("connect parent for name registering ...");
-	if (dc->conf.addr.tcp_parent_addr.empty()){
+	if (dc->addr.tcp_parent_addr.empty()){
 		return _switch_dcnode_fsm(dc, dcnode_t::DCNODE_CONNECTED);
 	}
 	dc->fsm_state = dcnode_t::DCNODE_CONNECTING;
-    return dctcp_connect(dc->stcp, dc->conf.addr.tcp_parent_addr);
+    return dctcp_connect(dc->stcp, dc->addr.tcp_parent_addr);
 }
 static dcnode_name_map_entry_t * _name_smq_entry_find(dcnode_t * dc, uint64_t session) {
 	struct dcnode_name_map_entry_t dnme;
@@ -344,7 +438,7 @@ static void _fsm_update_hearbeat_timer(dcnode_t * dc, int sockfd, uint64_t smqse
 		dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 	}
 	else if (smqsession > 0) {
-		if (dc->conf.addr.msgq_push){
+		if (dc->addr.msgq_push){
 			if (dcsmq_session(dc->smq) == smqsession){
 				dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 			}
@@ -389,8 +483,8 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 		_send_to_parent(dc, dm);		
 	};
 	if (dc->conf.parent_heart_beat_gap > 0 && 
-		(!dc->conf.addr.tcp_parent_addr.empty() ||	//tcp client
-		  (!dc->conf.addr.msgq_sharekey.empty() && dc->conf.addr.msgq_push )))		//mq client
+		(!dc->addr.tcp_parent_addr.empty() ||	//tcp client
+		  (!dc->addr.msgq_sharekey.empty() && dc->addr.msgq_push )))		//mq client
 	{
 		GLOG_TRA("add parent heart-beat timer checker with:%ds", dc->conf.parent_heart_beat_gap);
 		dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
@@ -449,7 +543,7 @@ static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
 	}
 	dcshm_config_t shm_conf;
 	shm_conf.attach = !owner;
-	shm_conf.shm_path = dc->conf.addr.msgq_sharekey;
+	shm_conf.shm_path = dc->addr.msgq_sharekey;
 	if (owner){
 		shm_conf.shm_size = sizeof(dcnode_name_map_t);
 	}
@@ -761,84 +855,11 @@ static int _stcp_cb(dctcp_t* stcp, const dctcp_event_t & ev, void * ud) {
 	}
 	return 0;
 }
-static int _check_conf(const dcnode_config_t & conf){
-	if (!conf.addr.tcp_parent_addr.empty() &&
-		!conf.addr.msgq_sharekey.empty() &&
-		conf.addr.msgq_push){	//tcp parent and smq using .
-		//invalid node
-		return -1;
-	}
-	return 0;
-}
-
-static inline void _dcnode_addr_init(dcnode_addr_t * addr){
-	addr->msgq_push = true;
-	addr->msgq_sharekey = "";
-	addr->tcp_listen_addr = "";
-	addr->tcp_parent_addr = "";
-}
-//pattern
-//push|pull:tcp://ip:port
-dcnode_addr_t::dcnode_addr_t(const char * addrpatt){
-	_dcnode_addr_init(this);
-    if (!addrpatt){ return; }
-    //proto
-#define PULL_MODE   "pull:"
-#define PUSH_MODE   "push:"
-#define MSGQ_PROTO  "msgq://"
-#define TCP_PROTO   "tcp://"
-
-	int  mode = 0; //0:push, 1:pull
-	const char * s_addr = strstr(addrpatt, PULL_MODE);
-	if (s_addr){
-		mode = 1;
-		s_addr += strlen(PULL_MODE);
-	}
-	else {
-		s_addr = strstr(addrpatt, PUSH_MODE);
-		if (!s_addr){
-			GLOG_ERR("proto mode error addr pattern:%s", addrpatt);
-			return;
-		}
-		mode = 0;
-		s_addr += strlen(PUSH_MODE);
-	}
-	///////////////////////////////////////////////////////////////	
-	int  type = -1; //0:msq, 1:tcp
-	s_addr = strstr(s_addr, MSGQ_PROTO);
-    if (s_addr){
-        type = 0;//msgq
-        s_addr += strlen(MSGQ_PROTO);
-    }
-    else {
-        s_addr = strstr(addrpatt, TCP_PROTO);
-        if (s_addr){
-            type = 1;
-            s_addr += strlen(TCP_PROTO);
-        }
-    }
-    if (type == -1){
-        GLOG_ERR("proto type error addr pattern:%s", addrpatt);
-        return;
-    }
-    //////////////////////////////////////////////////////////
-    if (type == 0){
-        msgq_push = (mode == 0);
-        msgq_sharekey = s_addr;
-    }
-    else if (type == 1){
-        if (mode == 0){
-            tcp_parent_addr = s_addr;
-        }
-        else {
-            tcp_listen_addr = s_addr;
-        }
-    }
-}
-
 dcnode_t* dcnode_create(const dcnode_config_t & conf) {
-	if (_check_conf(conf)){ //config error
-        GLOG_ERR("dcnode config check error !");
+    dcnode_addr_t addr;
+    int ret = addr.parse(conf.addr.c_str());
+    if (ret){ //address error
+        GLOG_ERR("dcnode addr check error :%d!", ret);
 		return nullptr;
 	}
 	dcnode_t * n = new dcnode_t();
@@ -847,6 +868,7 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
         return nullptr;
     }
 	n->conf = conf;
+    n->addr = addr;
 	if (!_is_smq_leaf(n))
 	{
 		dctcp_config_t sc;	//tcp node
@@ -859,8 +881,8 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 			dcnode_destroy(n); 
             return nullptr;
 		}
-		if (!conf.addr.tcp_listen_addr.empty()){
-            int fd = dctcp_listen(n->stcp, conf.addr.tcp_listen_addr);
+		if (!addr.tcp_listen_addr.empty()){
+            int fd = dctcp_listen(n->stcp, addr.tcp_listen_addr);
 			if (fd < 0) {
 				dcnode_destroy(n); 
                 return nullptr;
@@ -868,9 +890,9 @@ dcnode_t* dcnode_create(const dcnode_config_t & conf) {
 		}
 		dctcp_event_cb(n->stcp, _stcp_cb, n);
 	}
-	if (!conf.addr.msgq_sharekey.empty()){
+	if (!addr.msgq_sharekey.empty()){
 		dcsmq_config_t smc;
-		smc.keypath = conf.addr.msgq_sharekey;
+		smc.keypath = addr.msgq_sharekey;
 		smc.msg_buffsz = conf.max_channel_buff_size;
 		smc.passive = !_is_smq_leaf(n);
 

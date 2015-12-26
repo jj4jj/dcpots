@@ -15,11 +15,9 @@ int on_report_dec(const msg_buffer_t &  msg, const char * src){
 	return 0;
 }
 
-int collector_init(const char * keypath, const char * name){
+int collector_init(const char * addr, const char * name){
 	dagent_config_t conf;
-	conf.localkey = keypath;
-	conf.name = name;
-	conf.routermode = true;
+    conf.addr = addr;
 	if (dagent_init(conf)){
 		GLOG_TRA("dagent init error !");
 		return -1;
@@ -49,7 +47,7 @@ int main(int argc, char * argv[]){
 	if (global_logger_init(logger)){
 		return -1;
 	}
-	if (collector_init("/tmp/report-collector", "collector")){
+	if (collector_init("pull:msgq:///tmp/report-collector", "collector")){
 		return -2;
 	}
 	while (true){

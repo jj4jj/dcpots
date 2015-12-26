@@ -150,8 +150,8 @@ int main(int argc, char * argv[]){
 	dcnode_config_t dconf;
 	dconf.name = "mongoproxy";
 	//dconf.addr.listen_addr = listen;
-	dconf.addr.msgq_sharekey = listen;
-	dconf.addr.msgq_push = false;
+    dconf.addr = "pull:";
+    dconf.addr += listen;
 	dconf.max_children_heart_beat_expired = 5;
 	dconf.max_register_children = 64;
 	dcnode_t * dcn = dcnode_create(dconf);

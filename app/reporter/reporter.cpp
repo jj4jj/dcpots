@@ -2,11 +2,10 @@
 #include "base/logger.h"
 #include "../collector/report_colect.h"
 
-int reporter_init(const char * keypath, const char * name){
+int reporter_init(const string & parent, const char * name){
 	dagent_config_t conf;
-	conf.localkey = keypath;
+    conf.addr = "push://" + parent;
 	conf.name = name;
-	conf.routermode = false;
 	if (dagent_init(conf)){
 		GLOG_TRA("dagent init error !");
 		return -1;

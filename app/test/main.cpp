@@ -144,71 +144,18 @@ int dc_cb(void * ud, const char* src, const msg_buffer_t & msg)
 int test_node(const char * p)
 {
 	dcnode_config_t dcf;
-	dcf.addr.msgq_sharekey = "./gmon.out";
-	dcf.addr.msgq_push = true;
+	dcf.addr = "pull:msgq://./gmon.out";
 	dcf.max_channel_buff_size = 1024 * 1024;
 	dcf.name = "leaf";
 	dcf.parent_heart_beat_gap = 10;
 	dcf.max_children_heart_beat_expired = 20;
 	int ltest = 0;
 	logger_config_t loger_conf;
-	global_logger_init(loger_conf);
-	//test auto reconnection 
-	//l1->l2
-	if (p)
-	{
-		if (strcmp(p, "l1") == 0){
-			dcf.addr.msgq_sharekey = "./gmon.out";
-			dcf.addr.msgq_push = false;
-			dcf.addr.tcp_parent_addr = "127.0.0.1:8880";
-			dcf.name = "layer1";
-		}
-		else
-		if (strcmp(p, "l2") == 0){
-			dcf.addr.msgq_sharekey = "";
-			dcf.name = "layer2";
-			dcf.addr.tcp_listen_addr = "127.0.0.1:8880";
-		}
-		else 
-		if (strcmp(p, "l3") == 0){
-			dcf.addr.msgq_sharekey = "";
-			dcf.name = "test";
-			dcf.addr.tcp_listen_addr = "";
-			dcf.parent_heart_beat_gap = 0;
-			dcf.max_children_heart_beat_expired = 0;
-			ltest = 3;
-		}
-		else if (strcmp(p, "l4") == 0){
-			dcf.name = "leaf2";
-			ltest = 4;
-		}
-	}
+	global_logger_init(loger_conf);	
 	auto dc = dcnode_create(dcf);
 	CHECK(!dc)
 	dcnode_set_dispatcher(dc, dc_cb, dc);
 	int times = 0;
-	uint64_t t1, t2;
-	if (ltest == 3){
-		GLOG_TRA("add timer test in node....");
-		t1 = dcnode_timer_add(dc, 1000, [&times, &t1, &t2, dc](){
-			puts("test timer 1s");
-			times++;
-			if (times > 5 && t2 > 0){
-				puts("cancel t1");
-				dcnode_timer_cancel(dc, t2);
-				t2 = 0;
-			}
-			if (times > 10 && t1 > 0){
-				puts("cancel t1");
-				dcnode_timer_cancel(dc, t1);
-				t1 = 0;
-			}
-
-		}, true);
-		t2 = dcnode_timer_add(dc, 1000 * 3, [](){
-			puts("test timer 3s");
-		}, true);
-	}
 	time_t last_time = time(NULL);
 	while (true)
 	{
@@ -670,26 +617,5 @@ int main(int argc, char* argv[])
 			break;
 		}
 	}
-
-	dagent_config_t	conf;
-	conf.name = "libagent";
-	conf.localkey = "./dcagent";
-	conf.heartbeat = 10;
-	//an agent
-	if (agent_mode){
-		conf.name = "binagent";
-		conf.routermode = true;
-	}
-	int ret = dagent_init(conf);
-	if (ret)
-	{
-		return -1;
-	}
-	while (true)
-	{
-		dagent_update();
-		usleep(1000);//1ms
-	}
-	dagent_destroy();
 	return 0;
 }
