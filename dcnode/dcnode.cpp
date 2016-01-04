@@ -759,10 +759,10 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 		GLOG_TRA("foward msg to :[%s] with smq to parent", dst.c_str());
 		auto entry = _name_smq_entry_find(dc, dst);
 		if (!entry){ //to parent 
-			return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t(buff, buff_sz));
+			return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t((char*)buff, buff_sz));
 		}
 		else { //fast send to others
-			return dcsmq_push(dc->smq, entry->id, dcsmq_msg_t(buff, buff_sz));
+			return dcsmq_push(dc->smq, entry->id, dcsmq_msg_t((char*)buff, buff_sz));
 		}
 	}
 
@@ -771,7 +771,7 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 	if (it != dc->named_smqid.end())
 	{
 		GLOG_TRA("foward msg to :%s with smq [found dst]", dst.c_str());
-		return dcsmq_send(dc->smq, it->second, dcsmq_msg_t(buff, buff_sz));
+		return dcsmq_send(dc->smq, it->second, dcsmq_msg_t((char*)buff, buff_sz));
 	}
 	auto tit = dc->named_tcpfd.find(dst);
 	if (tit != dc->named_tcpfd.end())

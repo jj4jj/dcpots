@@ -167,39 +167,54 @@ void    dcsmq_msg_cb(dcsmq_t * smq, dcsmq_msg_cb_t cb, void * ud){
 	smq->msg_cb = cb;
 	smq->msg_cb_ud = ud;
 }
+static inline  uint64_t
+_dcsmq_recv_msg(dcsmq_t * smq, int msgid, uint64_t session, dcsmq_msg_t & msg){
+    ssize_t msg_sz = -1;
+RETRY_RECV:
+    msg_sz = msgrcv(msgid, msg.buffer, msg.sz, session, IPC_NOWAIT);
+    if (msg_sz <= 0){
+        if (errno == EINTR){
+            goto RETRY_RECV;
+        }
+        //error occur , must be break .
+        if (errno != ENOMSG){ //normal error 
+            STAT_ON_RECV_ERROR(); //current error
+            if (errno == E2BIG){
+                GLOG_ERR("msg recv a too big msg , has been ignore it !");
+                msg_sz = msgrcv(msgid, msg.buffer, msg.sz, session, IPC_NOWAIT | MSG_NOERROR);
+                goto RETRY_RECV;
+            }
+            else{
+                GLOG_ERR("msg recv error recever:%d! ", smq->recver);
+            }
+        }
+        return -1;
+    }
+    else {
+        msgbuf * buf = (msgbuf*)(msg.buffer);
+        STAT_ON_RECV(buf->mtype, msg_sz);
+        msg.buffer += sizeof(buf->mtype);
+        msg.sz = msg_sz;
+        GLOG_TRA("recv msgq msg from (type) :%lu size:%zd", buf->mtype, msg_sz);
+        return buf->mtype;
+    }
+}
 int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){	
 	PROFILE_FUNC();
 	int64_t past_us = 0, start_us, now_us;
 	start_us = dcsutil::time_unixtime_us();
-	ssize_t msg_sz = 0;
 	int nproc = 0, ntotal_proc = 0;
+    dcsmq_msg_t dcmsg;
+    uint64_t recvmsgid;
 	while (past_us < max_time_us){
-		msg_sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT);
-		if (msg_sz <= 0){
-			if (errno == EINTR){
-				continue;
-			}
-            //error occur , must be break .
-            if (errno != ENOMSG){ //normal error 
-                STAT_ON_RECV_ERROR(); //current error
-                if (errno == E2BIG){
-                    GLOG_ERR("msg recv a too big msg , has been ignore it !");
-                    msg_sz = msgrcv(smq->recver, smq->recvbuff, smq->conf.msg_buffsz, smq->session, IPC_NOWAIT | MSG_NOERROR);
-                    continue;
-                }
-                else{
-                    GLOG_ERR("msg recv error recever:%d! ", smq->recver);
-                }
-            }
+        dcmsg.buffer = (char*)smq->recvbuff;
+        dcmsg.sz = smq->conf.msg_buffsz;
+        recvmsgid = _dcsmq_recv_msg(smq, smq->recver, smq->session, dcmsg);
+        if (recvmsgid == (uint64_t)-1){
             break;
-		}
-		else {
-            msgbuf * buf = (msgbuf*)(smq->recvbuff);
-            STAT_ON_RECV(buf->mtype, msg_sz);
-			GLOG_TRA("recv msgq msg from (type) :%lu size:%zu", buf->mtype, msg_sz);
-			smq->msg_cb(smq, buf->mtype, dcsmq_msg_t(buf->mtext, msg_sz), smq->msg_cb_ud);
-		}
-		++nproc;
+        }
+        smq->msg_cb(smq, recvmsgid, dcmsg, smq->msg_cb_ud);
+        ++nproc;
 		++ntotal_proc;
 		if (nproc >= 16){
 			now_us = dcsutil::time_unixtime_us();
@@ -210,18 +225,27 @@ int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){
 	}
 	return ntotal_proc;
 }
-int		dcsmq_push(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
+uint64_t	 dcsmq_pop(dcsmq_t* smq, dcsmq_msg_t & msg) {//send to peer like himself
+    return _dcsmq_recv_msg(smq, smq->sender, smq->session, msg);
+}
+uint64_t     dcsmq_recv(dcsmq_t* smq, dcsmq_msg_t & msg){
+    return _dcsmq_recv_msg(smq, smq->recver, smq->session, msg);
+}
+static inline int
+_dcsmq_send_msg(dcsmq_t* smq, int msgid, uint64_t dst, const dcsmq_msg_t & msg){
     if (msg.sz > smq->conf.msg_buffsz){
+        GLOG_ERR("send msg error :%d max :%d", msg.sz, smq->conf.msg_buffsz);
         return -1;
     }
     if (dst == 0){
+        GLOG_ERR("send msg error dst must not 0!");
         return -2;
     }
     smq->sendbuff->mtype = dst;
     memcpy(smq->sendbuff->mtext, msg.buffer, msg.sz);
     int ret = 0;
-    do{
-        ret = msgsnd(smq->recver, smq->sendbuff, msg.sz, IPC_NOWAIT);
+    do {
+        ret = msgsnd(msgid, smq->sendbuff, msg.sz, IPC_NOWAIT);
     } while (ret == -1 && errno == EINTR);
     //============stat====================
     if (ret){
@@ -230,32 +254,13 @@ int		dcsmq_push(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
     else{
         STAT_ON_SEND(dst, msg.sz);
     }
-	return ret;
+    return ret;
+}
+int		dcsmq_push(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
+    return _dcsmq_send_msg(smq, smq->recver, dst, msg);
 }
 int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
-	if (msg.sz > smq->conf.msg_buffsz){
-		//size error
-		return -1;
-	}
-	if (dst == 0){
-		//dst error
-		return -2;
-	}
-	smq->sendbuff->mtype = dst;	
-	memcpy(smq->sendbuff->mtext, msg.buffer, msg.sz);
-	int ret = 0;
-	do {
-		ret = msgsnd(smq->sender, smq->sendbuff, msg.sz, IPC_NOWAIT);
-	} while (ret == -1 && errno == EINTR);
-    //============stat====================
-    if (ret){
-        STAT_ON_SEND_ERROR();
-    }
-    else{
-        STAT_ON_SEND(dst, msg.sz);
-    }
-
-	return ret;
+    return _dcsmq_send_msg(smq, smq->sender, dst, msg);
 }
 bool	dcsmq_server_mode(dcsmq_t * smq){
 	return smq->conf.passive;

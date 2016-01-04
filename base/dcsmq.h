@@ -38,9 +38,9 @@ struct dcsmq_config_t {
 };
 
 struct dcsmq_msg_t {
-    const char * buffer;
+    char *       buffer;
     int			 sz;
-	dcsmq_msg_t(const char * buf, int s) :buffer(buf), sz(s){}
+	dcsmq_msg_t(char * buf = nullptr, int s = 0) :buffer(buf), sz(s){}
 };
 
 struct dcsmq_stat_t {
@@ -65,6 +65,8 @@ void		dcsmq_msg_cb(dcsmq_t *, dcsmq_msg_cb_t cb, void * ud);
 int			dcsmq_poll(dcsmq_t*, int max_time_us );
 int			dcsmq_send(dcsmq_t*,uint64_t dst, const dcsmq_msg_t & msg);
 int			dcsmq_push(dcsmq_t*, uint64_t dst, const dcsmq_msg_t & msg);//send to peer like himself
+uint64_t    dcsmq_recv(dcsmq_t*, dcsmq_msg_t & msg);
+uint64_t	dcsmq_pop(dcsmq_t*, dcsmq_msg_t & msg);//send to peer like himself
 bool		dcsmq_server_mode(dcsmq_t *);
 void		dcsmq_set_session(dcsmq_t *, uint64_t session); //send or recv type
 uint64_t	dcsmq_session(dcsmq_t *);
