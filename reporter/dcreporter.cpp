@@ -9,7 +9,7 @@ int reporter_ready(){
 
 int reporter_init(const char * parent, const char * name){
     dagent_config_t conf;
-    conf.addr = "push://";
+    conf.addr = "push:";
     conf.addr += parent;
     conf.name = name;
     if (dagent_init(conf)){
