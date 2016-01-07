@@ -9,8 +9,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}
 ${PROJECT_SOURCE_DIR}
 /usr/include
 /usr/local/include
-${PROJECT_SOURCE_DIR}/3rd
-${PROJECT_SOURCE_DIR}/app/mongoproxy)
+${PROJECT_SOURCE_DIR}/3rd)
 
 add_library(mongoproxyapi STATIC ${cur_SRCS})
 
