@@ -23,7 +23,7 @@ ADD_EXECUTABLE(collector ${cur_SRCS})
 
 #assign custrom link lib
 target_link_libraries(collector
-dagent
+dcrepoter
 python2.7
 protobuf)
 

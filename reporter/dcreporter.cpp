@@ -36,7 +36,7 @@ int report_set(const char * k, const char * val){
     msg += val;
     return dagent_send("dccollector", REPORT_MSG_SET, msg_buffer_t(msg));
 }
-int	report_inc(const char * k, int inc = 1, const char * param = nullptr){
+int	report_inc(const char * k, int inc , const char * param){
     if (strchr(k, ':') || (param && strchr(param, ':'))){
         GLOG_TRA("error input param or k !");
         return -1;
@@ -50,14 +50,14 @@ int	report_inc(const char * k, int inc = 1, const char * param = nullptr){
     }
     return dagent_send("dccollector", REPORT_MSG_INC, msg_buffer_t(msg));
 }
-int report_dec(const char * k, int dec = 1, const char * param = nullptr){
+int report_dec(const char * k, int dec, const char * param){
     if (strchr(k, ':') || (param && strchr(param, ':'))){
         GLOG_TRA("error input param or k !");
         return -1;
     }
     std::string msg = k;
     msg += ":";
-    msg += std::to_string(inc);
+    msg += std::to_string(dec);
     if (param){
         msg += ":";
         msg += param;

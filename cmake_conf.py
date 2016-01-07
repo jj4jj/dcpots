@@ -60,6 +60,12 @@ LIBS = [
                 'bson-1.0'
             ]
         },
+        {
+            'name': 'dcrepoter',
+            'subdir': 'reporter',
+            'includes': ['base','dcnode','dcagent','/usr/local/include/libbson-1.0','3rd'],
+            'src_dirs': ['base', 'utility', 'dcnode', 'dcnode/proto', 'dagent', 'dagent/proto','3rd/pbjson']
+        }
 ]
 EXES = [
         {
@@ -110,7 +116,7 @@ EXES = [
             'subdir':'app/reporter',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linklibs' : [
-                'dagent',
+                'dcrepoter',
                 'python2.7',
                 'protobuf',
             ]
@@ -120,7 +126,7 @@ EXES = [
             'subdir':'app/collector',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linklibs' : [
-                'dagent',
+                'dcrepoter',
                 'python2.7',
                 'protobuf',
             ]

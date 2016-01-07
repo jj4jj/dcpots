@@ -1,7 +1,7 @@
 #pragma  once
 
 //create / destroy / poll
-int     reporter_init(const const char * parent, const char * name);
+int     reporter_init(const char * parent, const char * name);
 void    reporter_destroy();
 int     reporter_ready();//1:ok,0:connecting;-1:error
 void    reporter_update(int timeout_ms);
