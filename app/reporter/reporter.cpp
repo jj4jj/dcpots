@@ -1,70 +1,19 @@
-#include "dagent/dagent.h"
+#include "dcreporter.h"
 #include "base/logger.h"
-#include "../collector/report_colect.h"
-
-int reporter_init(const string & parent, const char * name){
-	dagent_config_t conf;
-    conf.addr = "push://" + parent;
-	conf.name = name;
-	if (dagent_init(conf)){
-		GLOG_TRA("dagent init error !");
-		return -1;
-	}
-	return 0;
-}
-void reporter_destroy(){
-	dagent_destroy();
-}
-
-void reporter_update(int timeout_ms){
-	return dagent_update(timeout_ms);
-}
-
-int report_set(const char * k, const char * val){
-	if (strchr(k, ':')){
-		GLOG_TRA("error input param or k !");
-		return -1;
-	}
-	std::ostringstream os;
-	os << k << ":" << val;
-	return dagent_send("collector", REPORT_MSG_SET, msg_buffer_t(os.str()));
-}
-int	report_inc(const char * k, int inc = 1, const char * param = nullptr){
-	if (strchr(k, ':') || (param && strchr(param, ':'))){
-		GLOG_TRA("error input param or k !");
-		return -1;
-	}
-	std::ostringstream os;
-	os << k << ":" << inc;
-	if (param){
-		os << ":" << param;
-	}
-	return dagent_send("collector", REPORT_MSG_INC, msg_buffer_t(os.str()));
-}
-int report_dec(const char * k, int dec = 1, const char * param = nullptr){
-	if (strchr(k, ':') || (param && strchr(param, ':'))){
-		GLOG_TRA("error input param or k !");
-		return -1;
-	}
-	std::ostringstream os;
-	os << k << ":" << dec;
-	if (param){
-		os << ":" << param;
-	}	
-	return dagent_send("collector", REPORT_MSG_DEC, msg_buffer_t(os.str()));
-}
 static bool seted = false;
+static int itimes = 0;
 int reporter_using(){
 	if (seted){
 		return -1;
 	}
-	else if(dagent_ready() == 1){
+	else if(reporter_ready() == 1){
 		GLOG_TRA("dagent is ready , so send msg ....");
 		report_set("online", "200");
 		report_inc("charge", 200);
 		report_inc("charge", 400);
 		report_inc("charge", 6700);
 		report_dec("charge", 600);
+        itimes += 5;
 		seted = true;
 	}
 	return 0;
@@ -77,15 +26,17 @@ int main(int argc, char * argv[]){
 	if (global_logger_init(logger)){
 		return -1;
 	}
-	if (reporter_init("/tmp/report-collector","reporter")){
+	if (reporter_init("msgq:///tmp","reporter")){
 		return -2;
 	}
 	while (true){
 		reporter_update(10);
 		reporter_using();
-		usleep(10 * 1000);
+        if (reporter_ready() < 0){
+            break;//ERROR
+        }
 	}
-	reporter_destroy();
 
+	reporter_destroy();
 	return 0;
 }
