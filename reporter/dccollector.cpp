@@ -9,15 +9,12 @@ struct {
     void                        *cb_ud;
 } CTX = { nullptr, nullptr };
 
-static int inline _proxy_forward_call(const char *src, report_collect_msg_type type, const collector_event_data * evd){
-    if (CTX.cb){
-        return CTX.cb(CTX.cb_ud, src, type, evd);
-    }
-    return 0;
-}
 
 int on_report_set(const msg_buffer_t &  msg, const char * src){
     GLOG_TRA("recv from :%s set msg:%s", src, msg.buffer);
+    if (!CTX.cb){
+        return 0;
+    }
     char * sep = strchr(msg.buffer, ':');
     if (!sep){
         return -1;
@@ -27,10 +24,13 @@ int on_report_set(const msg_buffer_t &  msg, const char * src){
     evd.key = msg.buffer;
     evd.change = 0;
     evd.param = sep + 1;
-    return _proxy_forward_call(src, REPORT_MSG_SET, &evd);
+    return CTX.cb(CTX.cb_ud, src, REPORT_MSG_SET, &evd);
 }
 int	on_report_inc(const msg_buffer_t &  msg, const char * src){
     GLOG_TRA("recv from :%s inc msg:%s", src, msg.buffer);
+    if (!CTX.cb){
+        return 0;
+    }
     char * sep = strchr(msg.buffer, ':');
     if (!sep){
         return -1;
@@ -45,10 +45,13 @@ int	on_report_inc(const msg_buffer_t &  msg, const char * src){
     else {
         evd.param = nullptr;
     }
-    return _proxy_forward_call(src, REPORT_MSG_INC, &evd);
+    return CTX.cb(CTX.cb_ud, src, REPORT_MSG_INC, &evd);
 }
 int on_report_dec(const msg_buffer_t &  msg, const char * src){
     GLOG_TRA("recv from :%s dec msg:%s", src, msg.buffer);
+    if (!CTX.cb){
+        return 0;
+    }
     char * sep = strchr(msg.buffer, ':');
     if (!sep){
         return -1;
@@ -63,7 +66,7 @@ int on_report_dec(const msg_buffer_t &  msg, const char * src){
     else {
         evd.param = nullptr;
     }
-    return _proxy_forward_call(src, REPORT_MSG_DEC, &evd);
+    return CTX.cb(CTX.cb_ud, src, REPORT_MSG_DEC, &evd);
 }
 
 int collector_init(const char * addr){

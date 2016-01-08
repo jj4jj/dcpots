@@ -12,6 +12,7 @@ int reporter_init(const char * parent, const char * name){
     conf.addr = "push:";
     conf.addr += parent;
     conf.name = name;
+    conf.extmode = false;
     if (dagent_init(conf)){
         GLOG_TRA("dagent init error !");
         return -1;

@@ -278,6 +278,7 @@ int     dagent_init(const dagent_config_t & conf){
 	dcf.parent_heart_beat_gap = conf.heartbeat;
 	dcf.max_children_heart_beat_expired = 3 * conf.heartbeat;
     dcf.addr = conf.addr;
+    dcf.durable = true;
 	dcnode_t * node = dcnode_create(dcf);
 	if (!node){
 		GLOG_ERR("create dcnode error !");

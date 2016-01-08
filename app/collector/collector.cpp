@@ -4,6 +4,7 @@
 int main(int argc, char * argv[]){
 	logger_config_t		logger;
 	logger.dir = "./";
+    logger.lv = LOG_LVL_DEBUG;
 	logger.pattern = "collector.log";
 	if (global_logger_init(logger)){
 		return -1;
@@ -13,7 +14,6 @@ int main(int argc, char * argv[]){
 	}
 	while (true){
 		collector_update(10);
-		usleep(10 * 1000);
 	}
 	collector_destroy();
 
