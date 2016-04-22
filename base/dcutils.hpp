@@ -49,6 +49,7 @@ NS_BEGIN(dcsutil)
     //file://<path>
     //tcp://<ip:port>
     //udp://<ip:port>
+    //?
     int                 openfd(const std::string & uri, int timeout_ms = 30000);
     //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
     int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms = 10000);
@@ -61,6 +62,11 @@ NS_BEGIN(dcsutil)
     int                 waitfd_writable(int fd, int timeout_ms);
     int                 ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const std::string & hostname);
     int                 socknetaddr(struct sockaddr_in & addr, const std::string & saddr);
+    uint32_t            localhost_getipv4(const char * nic="eth0");
+    string              stripfromu32v4(uint32_t ip);
+    uint32_t            u32fromstripv4(const string & ip);
+    string              host_getmac(const char * nic="eth0");
+
     ///////////process////////////////////////////////////////////////////////////////////////
 	int					daemonlize(int closestd = 1, int chrootdir = 0);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.

@@ -10,16 +10,26 @@ enum log_msg_level_type {
 	LOG_LVL_WARNING = 4,
 	LOG_LVL_ERROR = 5,
 	LOG_LVL_FATAL = 6,
+    LOG_LVL_NUM = 7,
 	LOG_LVL_INVALID = 255
 };
+static const char * s_msg_level_strlv[] = {
+    "PROF", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
+};
+
 static inline const char *	STR_LOG_LEVEL(int lv){
-	static const char * s_strlv[] = {
-		"PROF", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"
-	};
-	if (lv < 0 || lv >= (int)(sizeof(s_strlv) / sizeof(s_strlv[0]))){
+    if (lv < 0 || lv >= (int)(sizeof(s_msg_level_strlv) / sizeof(s_msg_level_strlv[0]))){
 		return "";
 	}
-	return s_strlv[lv];
+    return s_msg_level_strlv[lv];
+}
+static inline log_msg_level_type INT_LOG_LEVEL(const char * lv){
+    for (int i = 0; i < LOG_LVL_NUM; ++i){
+        if (strcasecmp(STR_LOG_LEVEL(i), lv) == 0){
+            return (log_msg_level_type)i;
+        }
+    }
+    return LOG_LVL_INVALID;
 }
 
 struct logger_config_t{

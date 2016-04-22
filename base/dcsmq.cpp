@@ -89,45 +89,66 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	if (!conf.attach){
 		flag |= IPC_CREAT;
     }
+    int sender = -1, recver = -1;
+    key_t receiver_key = -1;
     key_t sender_key = -1;
-    if (dcsutil::strisint(conf.keypath)){
-        sender_key = stoi(conf.keypath);
-    }
-    else {
-        sender_key = ftok(conf.keypath.c_str(), prj_id[0]);
-    }
-	if (sender_key == -1){
-		//error no
-		GLOG_ERR( "ftok error key:%s , prj_id:%d",
-			conf.keypath.c_str(), prj_id[0]);
-		return nullptr;
-	}
     int send_queue_buff_size = conf.max_queue_buff_size;
     int recv_queue_buff_size = conf.min_queue_buff_size;
     if (conf.passive){
         recv_queue_buff_size = conf.max_queue_buff_size;
         send_queue_buff_size = conf.min_queue_buff_size;
     }
-	int sender = _msgq_create(sender_key, flag, send_queue_buff_size);
-	if (sender < 0){
-		//errno
-		GLOG_ERR( "create msgq sender error flag :%d buff size:%u",
-            flag, send_queue_buff_size);
-		return nullptr;
-	}
-	GLOG_TRA("create sender with key:%s(%d) , prj_id:%d",
-		conf.keypath.c_str(), sender_key, prj_id[0]);
+    if (send_queue_buff_size > 0){
+        if (dcsutil::strisint(conf.keypath)){
+            sender_key = stoi(conf.keypath) + prj_id[0] - 1;
+        }
+        else {
+            sender_key = ftok(conf.keypath.c_str(), prj_id[0]);
+        }
+        if (sender_key == -1){
+            //error no
+            GLOG_ERR("ftok error key:%s , prj_id:%d",
+                conf.keypath.c_str(), prj_id[0]);
+            return nullptr;
+        }
 
-	key_t receiver_key = ftok(conf.keypath.c_str(), prj_id[1]);
-    int recver = _msgq_create(receiver_key, flag, recv_queue_buff_size);
-	if (recver < 0){
-		//errno
-		GLOG_ERR( "create msgq recver error flag :%d buff size:%u",
-            flag, recv_queue_buff_size);
-		return nullptr;
-	}
-	GLOG_TRA("create recver with key:%s(%d) , prj_id:%d",
-        conf.keypath.c_str(), receiver_key, prj_id[1]);
+        sender = _msgq_create(sender_key, flag, send_queue_buff_size);
+        if (sender < 0){
+            //errno
+            GLOG_ERR("create msgq sender error flag :%d buff size:%u",
+                flag, send_queue_buff_size);
+            return nullptr;
+        }
+        GLOG_TRA("create sender with key:%s(%d) , prj_id:%d",
+            conf.keypath.c_str(), sender_key, prj_id[0]);
+    }
+    if (recv_queue_buff_size > 0){
+        if (dcsutil::strisint(conf.keypath)){
+            receiver_key = stoi(conf.keypath) + prj_id[1] - 1;
+        }
+        else {
+            receiver_key = ftok(conf.keypath.c_str(), prj_id[1]);
+        }
+        if (receiver_key == -1){
+            //error no
+            GLOG_ERR("ftok error key:%s , prj_id:%d",
+                conf.keypath.c_str(), prj_id[1]);
+            return nullptr;
+        }
+        recver = _msgq_create(receiver_key, flag, recv_queue_buff_size);
+        if (recver < 0){
+            //errno
+            GLOG_ERR("create msgq recver error flag :%d buff size:%u",
+                flag, recv_queue_buff_size);
+            return nullptr;
+        }
+        GLOG_TRA("create recver with key:%s(%d) , prj_id:%d",
+            conf.keypath.c_str(), receiver_key, prj_id[1]);
+    }
+    if (recver == -1 && sender == -1){
+        GLOG_ERR("no create msgq from send and recver is inited state , pls checking the config ...");
+        return nullptr;
+    }
 
 	dcsmq_t * smq = new dcsmq_t();
 	if (!smq){

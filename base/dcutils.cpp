@@ -1,6 +1,12 @@
 #include "dcutils.hpp"
 #include "logger.h"
 
+#include<sys/ioctl.h>
+#include<sys/socket.h>
+#include<net/if.h>
+#include<arpa/inet.h>
+#include<netinet/in.h>
+
 namespace dcsutil {
     uint64_t	time_unixtime_us(){
         timeval tv;
@@ -411,6 +417,60 @@ namespace dcsutil {
             ++ipnum;
         }
         return 0;
+    }
+    uint32_t    localhost_getipv4(const char * nic){
+        struct ifreq _temp;
+        struct sockaddr_in *soaddr;
+        int fd = 0;
+        int ret = -1;
+        strcpy(_temp.ifr_name, nic);
+        if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+            return 0;
+        }
+        ret = ioctl(fd, SIOCGIFADDR, &_temp);
+        close(fd);
+        if (ret < 0){
+            return 0;
+        }
+        soaddr = (struct sockaddr_in *)&(_temp.ifr_addr);
+        return soaddr->sin_addr.s_addr;
+    }
+    string      stripfromu32v4(uint32_t ip){
+        char tmpbuff[64] = { 0 };
+        if (nullptr == inet_ntop(AF_INET, &ip, tmpbuff, sizeof(tmpbuff))){
+            return "";
+        }
+        return string(tmpbuff);
+    }
+    uint32_t    u32fromstripv4(const string & ip){
+        uint32_t uip;
+        if (1 == inet_pton(AF_INET, ip.c_str(), &uip)){
+            return uip;
+        }
+        return 0;
+    }
+    string      host_getmac(const char * nic){
+        struct ifreq _temp;
+        char mac_addr[64] = { 0 };
+        int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd < 0){
+            return "";
+        }
+        memset(&_temp, 0, sizeof(struct ifreq));
+        strncpy(_temp.ifr_name, nic, sizeof(_temp.ifr_name) - 1);
+        if ((ioctl(sockfd, SIOCGIFHWADDR, &_temp)) < 0){
+            close(sockfd);
+            return "";
+        }
+        close(sockfd);
+        snprintf(mac_addr,sizeof(mac_addr)-1, "%02x%02x%02x%02x%02x%02x",
+            (unsigned char)_temp.ifr_hwaddr.sa_data[0],
+            (unsigned char)_temp.ifr_hwaddr.sa_data[1],
+            (unsigned char)_temp.ifr_hwaddr.sa_data[2],
+            (unsigned char)_temp.ifr_hwaddr.sa_data[3],
+            (unsigned char)_temp.ifr_hwaddr.sa_data[4],
+            (unsigned char)_temp.ifr_hwaddr.sa_data[5]);
+        return mac_addr;
     }
 
     int         waitfd_writable(int fd, int timeout_ms){
