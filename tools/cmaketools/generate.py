@@ -35,7 +35,7 @@ def src_extra_files(path):
     return aux_source
 
 
-def generate(desc , path):
+def generate(desc , root_path):
     rootf = os.path.join(template_path,'root.txt')
     libf = os.path.join(template_path,'lib.txt')
     exef = os.path.join(template_path,'exe.txt')
@@ -53,7 +53,7 @@ def generate(desc , path):
     subdirs = subdirs + '\n';
     if len(desc.EXES) > 0 :
         subdirs = subdirs + '\n'.join(map(lambda l:'add_subdirectory('+l['subdir']+')', desc.EXES))
-    copy_replace_file(rootf, path+'/CMakeLists.txt',
+    copy_replace_file(rootf, root_path+'/CMakeLists.txt',
             {'<definations>': definations,
              '<debug_mode>': desc.DEBUG,
              '<project_name>': desc.PROJECT,
@@ -64,17 +64,8 @@ def generate(desc , path):
              '<add_subdirectory_area>': subdirs,
              '<project_version>': desc.VERSION})
 
-    """todo
-        VERBOSE = 0
-        EXTRA_C_FLAGS = ''
-        EXTRA_LD_FLAGS = ''
-        EXTRA_SRCS
-    """
-
-
     for lib in desc.LIBS:
-
-        subf=os.path.join(path,lib['subdir'],'CMakeLists.txt')
+        subf=os.path.join(root_path,lib['subdir'],'CMakeLists.txt')
 
         includes = ''
         if lib.has_key('includes') and len(lib['includes']) > 0:
@@ -109,7 +100,7 @@ def generate(desc , path):
              '<extra_srcs>': extra_srcs})
 
     for exe in desc.EXES:
-        subf=os.path.join(path,exe['subdir'],'CMakeLists.txt')
+        subf=os.path.join(root_path,exe['subdir'],'CMakeLists.txt')
 
         includes = ''
         if exe.has_key('includes') and len(exe['includes']) > 0:
@@ -140,12 +131,10 @@ def generate(desc , path):
              '<extra_srcs>': extra_srcs})
 
 def main(desc_file_path):
-    #import desc_file
-    path=os.path.dirname(desc_file_path)
-    name=os.path.basename(desc_file_path)
-    sys.path.append(path)
-    desc=__import__(name)
-    generate(desc, path)
+    if desc_file_path is not None:
+        sys.path.append(desc_file_path)
+    desc=__import__('cmake_conf')
+    generate(desc, desc_file_path or '.')
 
 def usage():
     print("./generate.py <description filepath>")
