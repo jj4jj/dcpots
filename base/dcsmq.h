@@ -28,10 +28,11 @@ struct dcsmq_config_t {
 	bool			passive;//if true, receive all type msg, else receive 
 	int				msg_buffsz;
 	int				max_queue_buff_size;
+    int             min_queue_buff_size;
 	bool			attach;
 	dcsmq_config_t(){
 		msg_buffsz = 1024 * 1024;
-		max_queue_buff_size = 10 * 1024 * 1024; //10MB
+        min_queue_buff_size = max_queue_buff_size = 10 * 1024 * 1024; //10MB
 		passive = false;
 		attach = false;
 	}

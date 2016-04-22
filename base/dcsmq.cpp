@@ -67,7 +67,7 @@ int		_msgq_create(key_t key, int flag, size_t max_size){
 		return -2;
 	}
 
-	if (mds.msg_qbytes != max_size){
+	if (mds.msg_qbytes < max_size){
 		mds.msg_qbytes = max_size;
 		ret = msgctl(id, IPC_SET, (struct msqid_ds *)&mds);
 		if (ret != 0){
@@ -102,22 +102,28 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 			conf.keypath.c_str(), prj_id[0]);
 		return nullptr;
 	}
-	int sender = _msgq_create(sender_key, flag, conf.max_queue_buff_size);
+    int send_queue_buff_size = conf.max_queue_buff_size;
+    int recv_queue_buff_size = conf.min_queue_buff_size;
+    if (conf.passive){
+        recv_queue_buff_size = conf.max_queue_buff_size;
+        send_queue_buff_size = conf.min_queue_buff_size;
+    }
+	int sender = _msgq_create(sender_key, flag, send_queue_buff_size);
 	if (sender < 0){
 		//errno
 		GLOG_ERR( "create msgq sender error flag :%d buff size:%u",
-			flag, conf.max_queue_buff_size);
+            flag, send_queue_buff_size);
 		return nullptr;
 	}
 	GLOG_TRA("create sender with key:%s(%d) , prj_id:%d",
 		conf.keypath.c_str(), sender_key, prj_id[0]);
 
 	key_t receiver_key = ftok(conf.keypath.c_str(), prj_id[1]);
-    int recver = _msgq_create(receiver_key, flag, conf.max_queue_buff_size);
+    int recver = _msgq_create(receiver_key, flag, recv_queue_buff_size);
 	if (recver < 0){
 		//errno
 		GLOG_ERR( "create msgq recver error flag :%d buff size:%u",
-			flag, conf.max_queue_buff_size);
+            flag, recv_queue_buff_size);
 		return nullptr;
 	}
 	GLOG_TRA("create recver with key:%s(%d) , prj_id:%d",
