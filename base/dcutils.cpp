@@ -561,6 +561,42 @@ namespace dcsutil {
 		} while (true);
 		return vs.size();
 	}
+    bool                time_same_hour(time_t t1, time_t t2){
+        return t1 / 3600 == t2 / 3600;
+    }
+    bool                time_same_week(time_t t1, time_t t2){
+        struct tm _sftm;
+        localtime_r(&t1, &_sftm);
+        int d1 = _sftm.tm_wday;//0-6
+        localtime_r(&t2, &_sftm);
+        int d2 = _sftm.tm_wday;//0-6
+        return d1 == d2 && time_same_year(t1, t2) && abs(t1-t2) < (7*86400);
+    }
+    bool                time_same_year(time_t t1, time_t t2){
+        struct tm _sftm;
+        localtime_r(&t1, &_sftm);
+        int d1 = _sftm.tm_year;//1-31
+        localtime_r(&t2, &_sftm);
+        int d2 = _sftm.tm_year;//1-31
+        return d1 == d2;
+    }
+    bool                time_same_day(time_t t1, time_t t2){
+        struct tm _sftm;
+        localtime_r(&t1, &_sftm);
+        int d1 = _sftm.tm_yday;//0-365
+        localtime_r(&t2, &_sftm);
+        int d2 = _sftm.tm_yday;//0-365
+        return d1 == d2 && time_same_year(t1, t2);
+    }
+    bool                time_same_month(time_t t1, time_t t2){
+        struct tm _sftm;
+        localtime_r(&t1, &_sftm);
+        int m1 = _sftm.tm_mon;//0-11
+        localtime_r(&t2, &_sftm);
+        int m2 = _sftm.tm_mon;//0-11
+        return m1 == m2 && time_same_year(t1, t2);
+    }
+
 	const char*		strftime(std::string & str, time_t unixtime, const char * format){
 		str.reserve(32);
 		if (unixtime == 0U){
@@ -651,6 +687,26 @@ namespace dcsutil {
 		}
 		return randoms.c_str();
 	}
+    string &            strreplace(string & str, const string & sub, const string & repl, bool global){
+        string::size_type found = str.find(sub);
+        if (global){
+            while (found != string::npos){
+                str.replace(found, sub.length(), repl);
+                found = str.find(sub);
+            }
+        }
+        else if (found != string::npos){
+            str.replace(found, sub.length(), repl);
+        }
+        return str;
+    }
+    string &            strrereplace(string & str, const string & repattern, const string & repl){
+        str = std::regex_replace(str, std::regex(repattern), repl);
+        return str;
+    }
+    bool                strrefind(string & str, const string & repattern, std::match_results<string::const_iterator>& m){
+        return std::regex_search(str, m, std::regex(repattern));
+    }
 
     int                 strsunpack(const std::string & str, const std::string & sep, const std::string & ks, ...){
         //{K=V,}

@@ -39,6 +39,11 @@ NS_BEGIN(dcsutil)
 	const char*			strftime(std::string & str, time_t unixtime = 0, const char * format = "%FT%X%z");
 	const char*			strptime(time_t & unixtime, const std::string & str, const char * format = "%FT%X%z");
 	time_t				stdstrtime(const char * strtime = "1970-01-01T08:08:08+0800");
+    bool                time_same_hour(time_t t1, time_t t2);
+    bool                time_same_day(time_t t1, time_t t2);
+    bool                time_same_month(time_t t1, time_t t2);
+    bool                time_same_week(time_t t1, time_t t2);
+    bool                time_same_year(time_t t1, time_t t2);
 
 	//file releataed
     //if sz = 0 , test file exist
@@ -81,7 +86,9 @@ NS_BEGIN(dcsutil)
     bool                strisint(const std::string & str, int base = 10);
     const char *		strrandom(std::string & randoms, int length = 8, char charbeg = 0x21, char charend = 0x7E);
     const char *		strcharsetrandom(std::string & randoms, int length = 8, const char * charset = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ_!@#$+-");
-
+    string &            strreplace(string & str, const string & sub, const string & repl, bool global = false);
+    string &            strrereplace(string & str, const string & repattern, const string & repl);
+    bool                strrefind(string & str, const string & repattern, std::match_results<string::const_iterator>& m);
     template <typename StrItable>
     const char         *strjoin(std::string & val, const std::string & sep, StrItable it){
         size_t i = 0;
