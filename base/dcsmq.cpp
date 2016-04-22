@@ -225,7 +225,7 @@ int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){
 	}
 	return ntotal_proc;
 }
-uint64_t	 dcsmq_pop(dcsmq_t* smq, dcsmq_msg_t & msg) {//send to peer like himself
+uint64_t	 dcsmq_take(dcsmq_t* smq, dcsmq_msg_t & msg) {//send to peer like himself
     return _dcsmq_recv_msg(smq, smq->sender, smq->session, msg);
 }
 uint64_t     dcsmq_recv(dcsmq_t* smq, dcsmq_msg_t & msg){
@@ -256,7 +256,7 @@ _dcsmq_send_msg(dcsmq_t* smq, int msgid, uint64_t dst, const dcsmq_msg_t & msg){
     }
     return ret;
 }
-int		dcsmq_push(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
+int		dcsmq_put(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
     return _dcsmq_send_msg(smq, smq->recver, dst, msg);
 }
 int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){

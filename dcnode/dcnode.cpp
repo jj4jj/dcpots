@@ -762,7 +762,7 @@ static int _forward_msg(dcnode_t * dc, int sockfd, const char * buff, int buff_s
 			return dcsmq_send(dc->smq, dcsmq_session(dc->smq), dcsmq_msg_t((char*)buff, buff_sz));
 		}
 		else { //fast send to others
-			return dcsmq_push(dc->smq, entry->id, dcsmq_msg_t((char*)buff, buff_sz));
+			return dcsmq_put(dc->smq, entry->id, dcsmq_msg_t((char*)buff, buff_sz));
 		}
 	}
 
