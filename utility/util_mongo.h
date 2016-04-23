@@ -1,5 +1,5 @@
 #pragma once
-#include "base/stdinc.h"
+#include "../base/stdinc.h"
 NS_BEGIN(dcsutil)
 //////////////////////////////////////////////////////////////////////
 struct mongo_client_config_t {

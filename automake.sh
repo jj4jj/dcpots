@@ -14,7 +14,7 @@ rebuild()
 {
     mkdir -p build
     cd tools/cmaketools/
-    python generate.py ../../cmake_conf
+    python generate.py ../..
     cd -
     make -C dcnode/proto/
     #cd -

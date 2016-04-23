@@ -102,14 +102,7 @@ NS_BEGIN(dcsutil)
     }
     const char          *strspack(std::string & str, const std::string & sep, const std::string & ks, ...);
     int                 strsunpack(const std::string & str, const std::string & sep, const std::string & k, ...);
-    //todo variadic  
-
-
-
-    ///////////uuid////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-    ///============================================================
+    //todo variadic  ?
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////
 
