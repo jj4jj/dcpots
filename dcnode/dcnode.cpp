@@ -1,6 +1,6 @@
 #include "dcnode.h"
 #include "../base/logger.h"
-#include "../proto/dcnode.pb.h"
+#include "proto/dcnode.pb.h"
 #include "../base/msg_proto.hpp"
 #include "../base/dcsmq.h"
 #include "../base/dctcp.h"
