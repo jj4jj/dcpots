@@ -1,6 +1,6 @@
 #include "util_mysql_pool.h"
-#include "base/logger.h"
-#include "base/blocking_queue.hpp"
+#include "../base/logger.h"
+#include "../base/blocking_queue.hpp"
 
 NS_BEGIN(dcsutil)
 

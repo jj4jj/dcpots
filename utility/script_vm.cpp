@@ -1,5 +1,5 @@
 #include "script_vm.h"
-#include "base/logger.h"
+#include "../base/logger.h"
 
 extern "C" {
 #include "python2.7/Python.h"

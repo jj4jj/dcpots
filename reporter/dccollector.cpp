@@ -1,8 +1,8 @@
 #include "dcreport_collect.h"
 #include "dccollector.h"
-#include "dagent/dagent.h"
-#include "base/logger.h"
-#include "base/dcutils.hpp"
+#include "../dagent/dagent.h"
+#include "../base/logger.h"
+#include "../base/dcutils.hpp"
 
 struct {
     collector_event_cb_t        cb;

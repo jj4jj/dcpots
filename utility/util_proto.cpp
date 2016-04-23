@@ -1,9 +1,9 @@
-#include "base/logger.h"
+#include "../base/logger.h"
 #include "google/protobuf/message.h"
 #include "util_proto.h"
 #include "xml_doc.h"
 #include "json_doc.hpp"
-#include "3rd/pbjson/pbjson.hpp"
+#include "../3rd/pbjson/pbjson.hpp"
 
 NS_BEGIN(dcsutil)
 

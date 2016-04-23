@@ -1,8 +1,8 @@
 #include "xml_doc.h"
-#include "base/logger.h"
-#include "base/dcutils.hpp"
-#include "3rd/rapidxml/rapidxml.hpp"
-#include "3rd/rapidxml/rapidxml_print.hpp"
+#include "../base/logger.h"
+#include "../base/dcutils.hpp"
+#include "../3rd/rapidxml/rapidxml.hpp"
+#include "../3rd/rapidxml/rapidxml_print.hpp"
 
 
 struct xml_node_t : public rapidxml::xml_node<>{};
