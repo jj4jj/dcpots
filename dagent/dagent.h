@@ -1,6 +1,6 @@
 #pragma once
-#include "base/stdinc.h"
-#include "base/msg_buffer.hpp"
+#include "../base/stdinc.h"
+#include "../base/msg_buffer.hpp"
 
 struct dagent_config_t
 {

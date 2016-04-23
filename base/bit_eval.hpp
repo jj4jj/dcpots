@@ -14,6 +14,7 @@ namespace dcsutil {
 			value = 1
 		};
 	};
+	template<>
 	struct bit_count1<0> {
 		enum {
 			value = 0

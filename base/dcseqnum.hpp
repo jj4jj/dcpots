@@ -12,8 +12,9 @@ namespace dcsutil {
 		static unsigned long long next(int id = 0){
 			assert(sizeof(unsigned long long) >= 8);
 			assert(id <= MAX_CLASS_ID);
-			static std::atomic<int>	s_circle_seq = 0;
-			s_circle_seq.compare_exchange_strong(MAX_HZ_SEQN, 0);
+			static std::atomic<int>	s_circle_seq(0);
+			int max_seq_value = MAX_HZ_SEQN;
+			s_circle_seq.compare_exchange_strong(max_seq_value, 0);
 			int seq = s_circle_seq.fetch_add(1);
 			unsigned long long nseq = dcsutil::time_unixtime_s();
 			nseq <<= max_class_2e;

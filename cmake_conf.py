@@ -65,7 +65,13 @@ LIBS = [
             'subdir': 'reporter',
             'includes': ['base','dcnode','dcagent','/usr/local/include/libbson-1.0','3rd'],
             'src_dirs': ['base', 'utility', 'dcnode', 'dcnode/proto', 'dagent', 'dagent/proto','3rd/pbjson']
+        },
+        {
+            'name': 'pbjson',
+            'subdir': './3rd/pbjson/',
+            'includes': ['3rd'],
         }
+
 ]
 EXES = [
         {

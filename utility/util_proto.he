@@ -1,5 +1,5 @@
 #pragma once
-#include "../base/stdinc.h"
+#include "base/stdinc.h"
 
 
 namespace google {

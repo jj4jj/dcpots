@@ -1,5 +1,5 @@
 #include "util_mysql.h"
-#include "../base/msg_buffer.hpp"
+#include "base/msg_buffer.hpp"
 
 NS_BEGIN(dcsutil)
 
