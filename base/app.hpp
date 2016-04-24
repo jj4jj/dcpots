@@ -1,38 +1,24 @@
 #pragma  once
 
 //a general app framwork
-//useage
-/*
-app_t	app;
-app.set_name();
-app.bind("tcp://xxx");
-app.run_every(func,10ms);
-app.event();
-
-//general 
-//log
-//random
-//io(net/file)
-//timer
-//debug
-//signal trap
-//console
-//status
-//control
-    //start,stop,reload,restart
-//vm
-
-
-
-
-
-
-*/
-
-
-
-
-
-
+namespace dcsutil {
+class App {
+public:
+	App(int argc, char * argv);
+	~App();
+public:
+	void on_init(int(*)(void * config));//once
+	void on_stop(int(*)());//once
+	void on_exit(void(*)());//once
+	void on_loop(int(*)());//tick
+	void on_idle(void(*)());
+	void on_reload(int(*)());
+	void on_recover(int(*)());
+	void shedule(int aft_ms, void(*)(void *), void * arg = nullptr, int times = 1);
+	void on_contrl(const char*(*)(const char * cmdline));
+private:
+	void * app;
+};
+}
 
 
