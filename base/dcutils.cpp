@@ -1,11 +1,12 @@
 #include "dcutils.hpp"
 #include "logger.h"
-
+////////////////////////
 #include<sys/ioctl.h>
 #include<sys/socket.h>
 #include<net/if.h>
 #include<arpa/inet.h>
 #include<netinet/in.h>
+//#include <libgen.h>
 
 namespace dcsutil {
     uint64_t	time_unixtime_us(){
@@ -22,6 +23,48 @@ namespace dcsutil {
             return -404;//todo 
 #endif
     }
+	typedef  std::unordered_map<int, std::stack<sah_handler> >	signalh_stacks_t;
+	static signalh_stacks_t	s_sigh_stacks;
+	int					signalh_ignore(int sig){
+		return signalh_push(sig, (sah_handler)SIG_DFL);
+	}
+	int					signalh_default(int sig){
+		return signalh_push(sig, (sah_handler)SIG_DFL);
+	}
+	void				signalh_clear(int sig){
+		if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
+			return;
+		}
+		while (!s_sigh_stacks[sig].empty()){
+			s_sigh_stacks[sig].pop();
+		}
+	}
+	////////////////////////////////////////////////////////////////////////
+	//typedef void(*sah_handler)(int sig, siginfo_t * sig_info, void * ucontex);
+	int					signalh_push(int sig, sah_handler sah, int sah_flags){
+		if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
+			s_sigh_stacks[sig] = std::stack<sah_handler>();
+		}
+		s_sigh_stacks[sig].push((sah_handler)SIG_IGN);
+		struct sigaction act;
+		memset(&act,0,sizeof(act));
+		act.sa_flags = sah_flags;
+		act.sa_sigaction = sah;
+		//act.sa_mask = sah_mask;
+		act.sa_flags = sah_flags | SA_SIGINFO;
+		return sigaction(sig, &act, NULL);
+	}
+	sah_handler			signalh_pop(int sig){
+		if (s_sigh_stacks.find(sig) == s_sigh_stacks.end() ||
+			s_sigh_stacks[sig].empty()){
+			return (sah_handler)SIG_DFL;
+			//s_sigh_stacks[sig] = std::stack<sah_handler>();
+		}
+		sah_handler sah = s_sigh_stacks[sig].top();
+		s_sigh_stacks[sig].pop();
+		return sah;
+	}
+
     int			readfile(const std::string & file, char * buffer, size_t sz){
         FILE * fp = fopen(file.c_str(), "r");
         if (!fp){
@@ -65,6 +108,27 @@ namespace dcsutil {
         fclose(fp);
         return sz;
     }
+	const char *		path_base(const char * path){
+		//#define MAX_PATH_LENGTH	 256
+		//char path_buff[MAX_PATH_LENGTH] = { 0 };
+		//strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
+		return basename(path);
+	}
+#if 0
+	//include by libgen
+	string		path_base(const string & path){
+		#define MAX_PATH_LENGTH	 256
+		char path_buff[MAX_PATH_LENGTH] = { 0 };
+		strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
+		return basename(path_buff);
+	}
+	string 				path_dir(const string & path){
+		#define MAX_PATH_LENGTH	 256
+		char path_buff[MAX_PATH_LENGTH] = { 0 };
+		strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
+		return dirname(path_buff);
+	}
+#endif
     int			writefile(const std::string & file, const char * buffer, size_t sz){
         FILE * fp = fopen(file.c_str(), "w");
 		if (!fp){
@@ -213,7 +277,7 @@ namespace dcsutil {
                     }
                 }
                 else {
-                    GLOG_ERR("read fd:%d ret:%d error :%d total sz:%zd", fd, n, errno, tsz);
+                    GLOG_ERR("read fd:%d ret:%d error :%d(%s) total sz:%zd", fd, n, errno, strerror(errno), tsz);
                     return -2;
                 }
             }
@@ -222,7 +286,7 @@ namespace dcsutil {
     }
     //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
     int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms){
-        if (sz == 0 || !buffer){
+        if (sz == 0 || !buffer || fd < 0){
             return 0;
         }
         if (strstr(mode, "size")){
@@ -313,6 +377,7 @@ namespace dcsutil {
     }
     //write size , return > 0 wirte size, <= 0 error
     int         writefd(int fd, const char * buffer, size_t sz, int timeout_ms){
+		if (fd < 0){ return -1; }
         if (sz == 0){
             sz = strlen(buffer);
         }
@@ -324,11 +389,15 @@ namespace dcsutil {
             }
             else  if (errno != EINTR){
                 if (errno == EAGAIN || errno == EWOULDBLOCK){
-                    if (waitfd_readable(fd, timeout_ms)){
+                    if (waitfd_writable(fd, timeout_ms)){
                         GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
                         return -1;
                     }
                 }
+				else {
+					GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
+					return -2;
+				}
             }
         }
         return tsz;

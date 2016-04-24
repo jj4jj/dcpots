@@ -50,7 +50,7 @@ NS_BEGIN(dcsutil)
     int					readfile(const std::string & file, char * buffer = 0, size_t sz = 0);
     int					writefile(const std::string & file, const char * buffer, size_t sz = 0);
     size_t              filesize(const std::string & file);
-
+	const char *		path_base(const char * path);
     //file://<path>
     //tcp://<ip:port>
     //udp://<ip:port>
@@ -59,7 +59,7 @@ NS_BEGIN(dcsutil)
     //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
     int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms = 10000);
     //write size , return > 0 wirte size, <= 0 error
-    int                 writefd(int fd, const char * buffer, size_t sz, int timeout_ms = 2000);
+    int                 writefd(int fd, const char * buffer, size_t sz = 0, int timeout_ms = 2000);
     int                 closefd(int fd);
     int                 nonblockfd(int fd, bool nonblock = true);
     //return 0: readable , other error occurs
@@ -74,6 +74,13 @@ NS_BEGIN(dcsutil)
 
     ///////////process////////////////////////////////////////////////////////////////////////
 	int					daemonlize(int closestd = 1, int chrootdir = 0);
+	//he signals SIGKILL and SIGSTOP cannot be caught or ignored
+	int					signalh_ignore(int sig);
+	int					signalh_default(int sig);
+	typedef void(*sah_handler)(int sig, siginfo_t * sig_info, void * ucontex);
+	int					signalh_push(int sig, sah_handler sah, int sah_flags = 0);
+	sah_handler			signalh_pop(int sig);
+	void				signalh_clear(int sig);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
     int					lockpidfile(const std::string & pidfile, int kill_other_sig = 0, bool nb = true);
 

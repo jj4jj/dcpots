@@ -76,13 +76,6 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
         logger_write((nullptr), (log_lv_), RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL((log_lv_))), ##__VA_ARGS__); \
     }\
-    else {\
-    /*
-        timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-        logger_lock(); \
-        fprintf(stderr, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL((log_lv_))), ##__VA_ARGS__); \
-        logger_unlock();\
-        */}\
 } while (0)
 #endif
 
@@ -117,13 +110,6 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
 		logger_write((logger_), (log_lv_), LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL(log_lv_)), ##__VA_ARGS__); \
     }\
-    else {\
-    /*
-        logger_lock(logger_); \
-        timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-        fprintf(stderr, LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL(log_lv_)), ##__VA_ARGS__); \
-        logger_unlock(logger_); \
-            */}\
 }while (0)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
