@@ -62,6 +62,7 @@ NS_BEGIN(dcsutil)
     int                 writefd(int fd, const char * buffer, size_t sz = 0, int timeout_ms = 2000);
     int                 closefd(int fd);
     int                 nonblockfd(int fd, bool nonblock = true);
+    bool                isnonblockfd(int fd);
     //return 0: readable , other error occurs
     int                 waitfd_readable(int fd, int timeout_ms);
     int                 waitfd_writable(int fd, int timeout_ms);

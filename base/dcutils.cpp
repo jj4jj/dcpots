@@ -435,6 +435,16 @@ namespace dcsutil {
         }
         return ret;
     }
+    bool        isnonblockfd(int fd){
+        int flags = fcntl(fd, F_GETFL, 0);
+        if (flags < 0){
+            return false;
+        }
+        if (flags & O_NONBLOCK){
+            return true;
+        }
+        return false;
+    }
     int         nonblockfd(int fd, bool nonblock){
         int flags = fcntl(fd, F_GETFL, 0);
         if (flags < 0){
