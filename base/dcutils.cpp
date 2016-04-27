@@ -15,13 +15,39 @@ namespace dcsutil {
         return tv.tv_sec * 1000000 + tv.tv_usec;
     }
 
-    int			daemonlize(int closestd, int chrootdir){
+    int			daemonlize(int closestd, int chrootdir, const char * pidfile){
+        //1.try lock file
+        int lockfd = -1;
+        if (pidfile){
+            lockfd = lockfile(pidfile);
+            if (lockfd == -1){
+                GLOG_ERR("try lock file:%s error ...", pidfile);
+                exit(-1);
+            }
+            else {
+                unlockfile(lockfd);
+            }
+        }
+        int ret = 0;
 #if _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
-        return daemon(!chrootdir, !closestd);
+        ret = daemon(!chrootdir, !closestd);
 #else
         assert("not implement in this platform , using nohup & launch it ?")
-            return -404;//todo 
+        ret = -404;//todo 
 #endif
+        if (pidfile){
+            int pidget = lockpidfile(pidfile);
+            if (pidget != getpid()){
+                GLOG_ERR("error daemonlization when lockpidfile:%s ret=%d ... errno:%d (%s)", 
+                    pidfile, pidget, errno, strerror(errno));
+                exit(-2);
+            }
+        }
+        if (ret){
+            GLOG_ERR("error daemonlization ... errno:%d (%s)", errno, strerror(errno));
+            exit(ret);
+        }
+        return 0;
     }
 	typedef  std::unordered_map<int, std::stack<sah_handler> >	signalh_stacks_t;
 	static signalh_stacks_t	s_sigh_stacks;
@@ -556,7 +582,28 @@ namespace dcsutil {
         }
         return -1;
     }
-    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb){
+    int                 lockfile(const std::string & file, bool nb){
+        int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
+        if (fd == -1) {
+            GLOG_ERR("open file:%s error ", file.c_str());
+            return -1;
+        }
+        int flags = LOCK_EX;
+        if (nb){
+            flags |= LOCK_NB;
+        }
+        if (flock(fd, flags)){
+            close(fd);
+            return -1;
+        }
+        return fd;
+    }
+    int                 unlockfile(int fd){
+        int ret = flock(fd, LOCK_UN);
+        close(fd);
+        return ret;
+    }
+    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd){
         int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
 		if (fd == -1) {
             GLOG_ERR("open file:%s error ", file.c_str());
@@ -585,14 +632,15 @@ namespace dcsutil {
 					break;
 				}
 			}
-			else {
+			else { //pid > 0 && not kill
+                close(fd);
 				return pid;
 			}
 		}
 		pid = getpid();
 		snprintf(szpid, sizeof(szpid), "%d", pid);
         writefile(file, szpid);
-
+        if (pfd){ *pfd = fd; }
 		return pid;
 	}
     int			strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs,

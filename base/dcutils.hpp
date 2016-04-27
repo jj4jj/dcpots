@@ -73,7 +73,7 @@ NS_BEGIN(dcsutil)
     string              host_getmac(const char * nic="eth0");
 
     ///////////process////////////////////////////////////////////////////////////////////////
-	int					daemonlize(int closestd = 1, int chrootdir = 0);
+	int					daemonlize(int closestdio = 1, int chrootdir = 0, const char * pidfile = nullptr);
 	//he signals SIGKILL and SIGSTOP cannot be caught or ignored
 	int					signalh_ignore(int sig);
 	int					signalh_default(int sig);
@@ -82,7 +82,10 @@ NS_BEGIN(dcsutil)
 	sah_handler			signalh_pop(int sig);
 	void				signalh_clear(int sig);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
-    int					lockpidfile(const std::string & pidfile, int kill_other_sig = 0, bool nb = true);
+    int					lockpidfile(const std::string & pidfile, int kill_other_sig = 0, bool nb = true, int * plockfd = nullptr);
+    //return fd
+    int                 lockfile(const std::string & file, bool nb = true);
+    int                 unlockfile(int fd);
 
 	///////////str////////////////////////////////////////////////////////////////////////////////
 	int					strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty = true, int maxsplit = 0, int beg = 0, int end = 0);
