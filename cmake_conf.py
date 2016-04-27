@@ -36,17 +36,6 @@ LIBS = [
             'src_dirs':['base','utility','dcnode','dcnode/proto','dagent/proto','3rd/pbjson'],
         },
         {
-            'name':'dagent_py',
-            'subdir':'dagent/python',
-            'type': 'SHARED',
-            'includes':['base','dcnode','dagent','/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
-            'linkpaths':[],
-            'src_dirs':['base','dcnode','dcnode/proto','dagent','dagent/proto','3rd/pbjson'],
-            'linklibs' : [
-                'protobuf','python2.7'
-            ]
-        },
-        {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
             'includes':['/usr/local/include','3rd'],
