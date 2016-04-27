@@ -32,6 +32,7 @@ int RpcClient::init(){
         RpcClientImpl * impl = (RpcClientImpl *)ud;
         switch (ev.type){
         case DCTCP_CONNECTED:
+            GLOG_DBG("connected :%d", ev.fd);
             impl->fd = ev.fd;
             break;
         case DCTCP_CLOSED:
@@ -45,7 +46,7 @@ int RpcClient::init(){
         default:
             return -1;
         }
-    }, this);
+    }, impl);
 
     return dctcp_connect(impl->cli, "127.0.0.1:8888", 3);
 }
@@ -70,7 +71,9 @@ int RpcClient::call(const string & svc){
     if (impl->fd == -1){
         return -1;
     }
-    dctcp_send(impl->cli, impl->fd, dctcp_msg_t(svc.data(), svc.length()));
+    int ret = dctcp_send(impl->cli, impl->fd, dctcp_msg_t(svc.data(), svc.length()));
+    GLOG_DBG("call ...%s ret:%d", svc.data(), ret);
+
     return 0;
 }
 

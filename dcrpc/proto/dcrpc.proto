@@ -1,0 +1,19 @@
+package dcrpc;
+
+
+message RpcMsg {
+    required string path=1;
+    optional bytes  request=2;
+    optional bytes  response=3;
+    optional bytes  notify=4;
+    optional Cookie cookie=5;
+    optional StatusCode status=6;
+    message Cookie {
+        optional uint64 transaction=1;
+        optional bytes cookie=2;
+    }
+    enum StatusCode {
+        RPC_STATUS_SUCCESS=1; //stat
+        RPC_STATUS_NOT_EXIST=2;//path not exist
+    }
+}

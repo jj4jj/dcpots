@@ -6,6 +6,7 @@ using namespace     dcsutil;
 
 int fire=0;
 static void sigh(int sig, siginfo_t * sig_info, void * ucontex){
+    GLOG_DBG("signal:%d", sig);
     fire = 1;
 }
 int main(){
@@ -17,7 +18,7 @@ int main(){
     //	typedef void(*sah_handler)(int sig, siginfo_t * sig_info, void * ucontex);
     signalh_push(SIGINT, sigh);
     while (true){
-        if (fire){
+        if (fire == 1 ){
             rpc.call("echo");
             fire = 0;
         }
