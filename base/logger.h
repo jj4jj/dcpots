@@ -61,7 +61,7 @@ const char*		logger_msg(logger_t * logger = nullptr);
 //last err
 int				logger_errno(logger_t * logger = nullptr);
 //set last
-int				logger_write(logger_t *, int loglv, const char* fmt, ...);
+int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -74,7 +74,7 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 #define LOGR(log_lv_, format,...)	do{\
     if ((log_lv_) >= logger_level((nullptr))){\
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-        logger_write((nullptr), (log_lv_), RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL((log_lv_))), ##__VA_ARGS__); \
+        logger_write((nullptr), (log_lv_), 0, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL((log_lv_))), ##__VA_ARGS__); \
     }\
 } while (0)
 #endif
@@ -105,21 +105,21 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 
 //global logge
 #ifndef LOG
-#define LOG(logger_, log_lv_, format_, ...)	do{\
+#define LOG(logger_, log_lv_, sys_err_, format_, ...)	do{\
     if ((log_lv_) >= logger_level((logger_))){\
         timeval err_tv_; gettimeofday(&err_tv_, NULL); std::string _str_alloc_; \
-		logger_write((logger_), (log_lv_), LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL(log_lv_)), ##__VA_ARGS__); \
+        logger_write((logger_), (log_lv_), (sys_err_), LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL(log_lv_)), ##__VA_ARGS__); \
     }\
 }while (0)
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define LOG_TRA(logger_, format_, ...)		LOG(logger_, LOG_LVL_TRACE, format_, ##__VA_ARGS__)
-#define LOG_DBG(logger_, format_, ...)		LOG(logger_, LOG_LVL_DEBUG, format_, ##__VA_ARGS__)
-#define LOG_IFO(logger_, format_, ...)		LOG(logger_, LOG_LVL_INFO, format_, ##__VA_ARGS__)
-#define LOG_WAR(logger_, format_, ...)		LOG(logger_, LOG_LVL_WARNING, format_, ##__VA_ARGS__)
-#define LOG_ERR(logger_, format_, ...)		LOG(logger_, LOG_LVL_ERROR, format_, ##__VA_ARGS__)
-#define LOG_FTL(logger_, format_, ...)		LOG(logger_, LOG_LVL_FATAL, format_, ##__VA_ARGS__)
+#define LOG_TRA(logger_, format_, ...)		LOG(logger_, LOG_LVL_TRACE, sys_err_, format_, ##__VA_ARGS__)
+#define LOG_DBG(logger_, format_, ...)		LOG(logger_, LOG_LVL_DEBUG, sys_err_, format_, ##__VA_ARGS__)
+#define LOG_IFO(logger_, format_, ...)		LOG(logger_, LOG_LVL_INFO, sys_err_, format_, ##__VA_ARGS__)
+#define LOG_WAR(logger_, format_, ...)		LOG(logger_, LOG_LVL_WARNING, sys_err_, format_, ##__VA_ARGS__)
+#define LOG_ERR(logger_, format_, ...)		LOG(logger_, LOG_LVL_ERROR, sys_err_, format_, ##__VA_ARGS__)
+#define LOG_FTL(logger_, format_, ...)		LOG(logger_, LOG_LVL_FATAL, sys_err_, format_, ##__VA_ARGS__)
 
 
 
@@ -129,15 +129,17 @@ int				logger_write(logger_t *, int loglv, const char* fmt, ...);
 
 //global logger
 #ifndef GLOG
-#define GLOG(log_lv_, format_, ...)	LOG(nullptr, log_lv_, format_, ##__VA_ARGS__)
+#define GLOG(log_lv_, sys_err_, format_, ...)	LOG(nullptr, log_lv_, sys_err_, format_, ##__VA_ARGS__)
 //////////////////////////////////////////////////////////////////////////////////
 
-#define GLOG_TRA(format_, ...)		GLOG(LOG_LVL_TRACE, format_, ##__VA_ARGS__)
-#define GLOG_DBG(format_, ...)		GLOG(LOG_LVL_DEBUG, format_, ##__VA_ARGS__)
-#define GLOG_IFO(format_, ...)		GLOG(LOG_LVL_INFO, format_, ##__VA_ARGS__)
-#define GLOG_WAR(format_, ...)		GLOG(LOG_LVL_WARNING, format_, ##__VA_ARGS__)
-#define GLOG_ERR(format_, ...)		GLOG(LOG_LVL_ERROR, format_, ##__VA_ARGS__)
-#define GLOG_FTL(format_, ...)		GLOG(LOG_LVL_FATAL, format_, ##__VA_ARGS__)
+#define GLOG_TRA(format_, ...)		GLOG(LOG_LVL_TRACE, 0, format_, ##__VA_ARGS__)
+#define GLOG_DBG(format_, ...)		GLOG(LOG_LVL_DEBUG, 0, format_, ##__VA_ARGS__)
+#define GLOG_IFO(format_, ...)		GLOG(LOG_LVL_INFO, 0, format_, ##__VA_ARGS__)
+#define GLOG_WAR(format_, ...)		GLOG(LOG_LVL_WARNING, 0, format_, ##__VA_ARGS__)
+#define GLOG_ERR(format_, ...)		GLOG(LOG_LVL_ERROR, 0, format_, ##__VA_ARGS__)
+#define GLOG_SER(format_, ...)		GLOG(LOG_LVL_ERROR, 1, format_, ##__VA_ARGS__)
+#define GLOG_FTL(format_, ...)		GLOG(LOG_LVL_FATAL, 0, format_, ##__VA_ARGS__)
+#define GLOG_SFT(format_, ...)		GLOG(LOG_LVL_FATAL, 1, format_, ##__VA_ARGS__)
 
 #endif
 

@@ -2,17 +2,21 @@
 #include "../../base/logger.h"
 #include "../../base/dcutils.hpp"
 #include "../../base/dctcp.h"
-
-
+#include "../../base/msg_buffer.hpp"
+#include "../../base/msg_proto.hpp"
+////////////////////////////////////////
+#include "../share/dcrpc.pb.h"
+#include "../share/dcrpc.h"
 #include "dcsrpc.h"
 
-NS_BEGIN(dcsutil)
+typedef msgproto_t<dcrpc::RpcMsg> dcrpc_msg_t;
 
+NS_BEGIN(dcrpc)
 struct RpcServerImpl{
     dctcp_t * svr { nullptr };
     std::unordered_map<string, RpcService *> dispatcher;
+    msg_buffer_t       send_buff;
 };
-
 
 RpcServer::RpcServer(){
     this->impl = nullptr;
@@ -20,7 +24,45 @@ RpcServer::RpcServer(){
 RpcServer::~RpcServer(){
     destroy();
 }
-int    RpcServer::init(){
+static inline int _send_msg(RpcServerImpl * impl, int id, const dcrpc_msg_t & rpc_msg ){
+    if (!rpc_msg.Pack(impl->send_buff)){
+        GLOG_ERR("pack rpc reply msg error ! buff length:%d", rpc_msg.ByteSize());
+        return -1;
+    }
+    int ret = dctcp_send(impl->svr, id, dctcp_msg_t(impl->send_buff.buffer, impl->send_buff.valid_size));
+    GLOG_TRA("send [%d] [%d] [%s] [%s]", ret, id, rpc_msg.path().c_str(), rpc_msg.Debug());
+    if (ret){
+        GLOG_ERR("rpc reply msg [%128s] error:%d !", rpc_msg.Debug(), ret);
+    }
+    return ret;
+}
+
+static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, const char * buff, int ibuff){
+    dcrpc_msg_t rpc_msg;
+    if (!rpc_msg.Unpack(buff, ibuff)){
+        GLOG_ERR("unpack rpc msg error ! buff length:%d", ibuff);
+        return;
+    }
+    GLOG_TRA("recv [%d] [%s] [%s]", fd, rpc_msg.path().c_str() , rpc_msg.Debug());
+    auto it = impl->dispatcher.find(rpc_msg.path());
+    if (it == impl->dispatcher.end()){//not found
+        rpc_msg.mutable_request()->Clear();
+        rpc_msg.set_status(RpcMsg_StatusCode_RPC_STATUS_NOT_EXIST);
+    }
+    else {
+        rpc_msg.set_status(RpcMsg_StatusCode_RPC_STATUS_SUCCESS);        
+        RpcValues result((RpcValuesImpl*)rpc_msg.mutable_response()->mutable_result());
+        RpcValues args((const RpcValuesImpl &)(rpc_msg.request().args()));
+        rpc_msg.mutable_response()->set_status(
+            it->second->call(result, args,
+                rpc_msg.mutable_response()->mutable_error()));
+        rpc_msg.mutable_request()->Clear();
+    }
+    if (rpc_msg.cookie().transaction() > 0){
+        _send_msg(impl, fd, rpc_msg);
+    }
+}
+int    RpcServer::init(const std::string & addr){
     if (this->impl){
         GLOG_ERR("error init server again £¡");
         return -1;
@@ -36,8 +78,9 @@ int    RpcServer::init(){
     if (!impl->svr){
         return -2;
     }
-    
+    impl->send_buff.create(dcrpc::MAX_RPC_MSG_BUFF_SIZE);
     dctcp_event_cb(impl->svr, [](dctcp_t* dc, const dctcp_event_t & ev, void * ud)->int {
+        RpcServerImpl * impl = (RpcServerImpl*)ud;
         GLOG_DBG("log event :%d ", ev.type);
         switch (ev.type){
         case DCTCP_CONNECTED:
@@ -48,11 +91,7 @@ int    RpcServer::init(){
         case DCTCP_CLOSED:
             break;
         case DCTCP_READ:
-            GLOG_IFO("dispatch svc:%s", ev.msg->buff);
-            [dc, &ev](const char * svc){
-                GLOG_IFO("call svc:%s", svc);
-                dctcp_send(dc, ev.fd, dctcp_msg_t("hello", 5));
-            }(ev.msg->buff);
+            _distpach_remote_service_cmsg(impl, ev.fd, ev.msg->buff, ev.msg->buff_sz);
             break;
         case DCTCP_WRITE:
             break;
@@ -61,9 +100,9 @@ int    RpcServer::init(){
             return -1;
         }
         return 0;
-    }, nullptr);
+    }, impl);
     
-    if (dctcp_listen(impl->svr, "127.0.0.1:8888") < 0){
+    if (dctcp_listen(impl->svr, addr) < 0){
         GLOG_ERR("bind address and start listening error !");
         return -3;
     }
@@ -78,6 +117,7 @@ void   RpcServer::destroy(){
             dctcp_destroy(impl->svr);
             impl->svr = nullptr;
         }
+        impl->send_buff.destroy();
         delete impl;
         impl = nullptr;
     }
@@ -85,11 +125,21 @@ void   RpcServer::destroy(){
 int    RpcServer::regis(RpcService * svc){
     impl->dispatcher[svc->name()] = svc;
 }
-
-
-
+int    RpcServer::push(const std::string & svc, int id, const RpcValues & vals){
+    dcrpc_msg_t rpc_msg;
+    rpc_msg.set_path(svc);
+    rpc_msg.set_status(RpcMsg_StatusCode_RPC_STATUS_SUCCESS);
+    auto result = rpc_msg.mutable_notify()->mutable_result();
+    result->CopyFrom(*(decltype(result))vals.data());
+    return _send_msg(impl, id, rpc_msg);
+}
+///////////////////////////////////////////////////////////////////////////////////////////////
 RpcService::RpcService(const std::string  & name_){
     this->name_ = name_;
+}
+int RpcService::call(dcrpc::RpcValues & result, const dcrpc::RpcValues & args, string * error){
+    result = args;
+    return 0;
 }
 
 

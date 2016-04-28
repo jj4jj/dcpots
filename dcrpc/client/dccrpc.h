@@ -1,19 +1,27 @@
 #pragma once
-
-namespace dcsutil {
+namespace google {
+    namespace protobuf {
+        class Message;
+    }
+}
+namespace dcrpc {
+struct RpcValues;
 struct RpcClientImpl;
 class RpcClient {
 public:
-    typedef std::function<void()> NotifyCallBack;
     RpcClient();
     ~RpcClient();
 public:
-    int init();
+    int init(const std::string & svraddrs);
     int update();
     int destroy();
-    int notify(NotifyCallBack cb);
+    typedef std::function<void(int ret, const dcrpc::RpcValues &)>   RpcCallNotify;
+    int notify(const string & svc, RpcCallNotify result_cb);//register callback
 public:
-    int call(const string & svc);
+    int call(const std::string & svc, const dcrpc::RpcValues & args, RpcCallNotify result_cb);
+    int push(const std::string & svc, const dcrpc::RpcValues & args);
+    //int call(const std::string & svc, const char * buff, int ibuff, callback_result_t result_cb);
+    //int call(const std::string & svc, const ::google::protobuf::Message & msg, callback_result_t result_cb);
 private:
     RpcClientImpl * impl { nullptr };
 };

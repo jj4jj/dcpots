@@ -36,14 +36,19 @@ void protobuf_ShutdownFile_dcrpc_2eproto();
 
 class RpcMsg;
 class RpcMsg_Cookie;
+class RpcMsg_ValueItem;
+class RpcMsg_Request;
+class RpcMsg_Response;
+class RpcMsg_Notify;
 
 enum RpcMsg_StatusCode {
   RpcMsg_StatusCode_RPC_STATUS_SUCCESS = 1,
-  RpcMsg_StatusCode_RPC_STATUS_NOT_EXIST = 2
+  RpcMsg_StatusCode_RPC_STATUS_NOT_EXIST = 2,
+  RpcMsg_StatusCode_RPC_STATUS_MATCH_FAIL = 3
 };
 bool RpcMsg_StatusCode_IsValid(int value);
 const RpcMsg_StatusCode RpcMsg_StatusCode_StatusCode_MIN = RpcMsg_StatusCode_RPC_STATUS_SUCCESS;
-const RpcMsg_StatusCode RpcMsg_StatusCode_StatusCode_MAX = RpcMsg_StatusCode_RPC_STATUS_NOT_EXIST;
+const RpcMsg_StatusCode RpcMsg_StatusCode_StatusCode_MAX = RpcMsg_StatusCode_RPC_STATUS_MATCH_FAIL;
 const int RpcMsg_StatusCode_StatusCode_ARRAYSIZE = RpcMsg_StatusCode_StatusCode_MAX + 1;
 
 const ::google::protobuf::EnumDescriptor* RpcMsg_StatusCode_descriptor();
@@ -152,6 +157,411 @@ class RpcMsg_Cookie : public ::google::protobuf::Message {
 };
 // -------------------------------------------------------------------
 
+class RpcMsg_ValueItem : public ::google::protobuf::Message {
+ public:
+  RpcMsg_ValueItem();
+  virtual ~RpcMsg_ValueItem();
+
+  RpcMsg_ValueItem(const RpcMsg_ValueItem& from);
+
+  inline RpcMsg_ValueItem& operator=(const RpcMsg_ValueItem& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const RpcMsg_ValueItem& default_instance();
+
+  void Swap(RpcMsg_ValueItem* other);
+
+  // implements Message ----------------------------------------------
+
+  RpcMsg_ValueItem* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const RpcMsg_ValueItem& from);
+  void MergeFrom(const RpcMsg_ValueItem& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // optional string name = 1;
+  inline bool has_name() const;
+  inline void clear_name();
+  static const int kNameFieldNumber = 1;
+  inline const ::std::string& name() const;
+  inline void set_name(const ::std::string& value);
+  inline void set_name(const char* value);
+  inline void set_name(const char* value, size_t size);
+  inline ::std::string* mutable_name();
+  inline ::std::string* release_name();
+  inline void set_allocated_name(::std::string* name);
+
+  // optional int64 i = 2;
+  inline bool has_i() const;
+  inline void clear_i();
+  static const int kIFieldNumber = 2;
+  inline ::google::protobuf::int64 i() const;
+  inline void set_i(::google::protobuf::int64 value);
+
+  // optional double f = 3;
+  inline bool has_f() const;
+  inline void clear_f();
+  static const int kFFieldNumber = 3;
+  inline double f() const;
+  inline void set_f(double value);
+
+  // optional string s = 4;
+  inline bool has_s() const;
+  inline void clear_s();
+  static const int kSFieldNumber = 4;
+  inline const ::std::string& s() const;
+  inline void set_s(const ::std::string& value);
+  inline void set_s(const char* value);
+  inline void set_s(const char* value, size_t size);
+  inline ::std::string* mutable_s();
+  inline ::std::string* release_s();
+  inline void set_allocated_s(::std::string* s);
+
+  // optional bytes b = 5;
+  inline bool has_b() const;
+  inline void clear_b();
+  static const int kBFieldNumber = 5;
+  inline const ::std::string& b() const;
+  inline void set_b(const ::std::string& value);
+  inline void set_b(const char* value);
+  inline void set_b(const void* value, size_t size);
+  inline ::std::string* mutable_b();
+  inline ::std::string* release_b();
+  inline void set_allocated_b(::std::string* b);
+
+  // @@protoc_insertion_point(class_scope:dcrpc.RpcMsg.ValueItem)
+ private:
+  inline void set_has_name();
+  inline void clear_has_name();
+  inline void set_has_i();
+  inline void clear_has_i();
+  inline void set_has_f();
+  inline void clear_has_f();
+  inline void set_has_s();
+  inline void clear_has_s();
+  inline void set_has_b();
+  inline void clear_has_b();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::std::string* name_;
+  ::google::protobuf::int64 i_;
+  double f_;
+  ::std::string* s_;
+  ::std::string* b_;
+  friend void  protobuf_AddDesc_dcrpc_2eproto();
+  friend void protobuf_AssignDesc_dcrpc_2eproto();
+  friend void protobuf_ShutdownFile_dcrpc_2eproto();
+
+  void InitAsDefaultInstance();
+  static RpcMsg_ValueItem* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class RpcMsg_Request : public ::google::protobuf::Message {
+ public:
+  RpcMsg_Request();
+  virtual ~RpcMsg_Request();
+
+  RpcMsg_Request(const RpcMsg_Request& from);
+
+  inline RpcMsg_Request& operator=(const RpcMsg_Request& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const RpcMsg_Request& default_instance();
+
+  void Swap(RpcMsg_Request* other);
+
+  // implements Message ----------------------------------------------
+
+  RpcMsg_Request* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const RpcMsg_Request& from);
+  void MergeFrom(const RpcMsg_Request& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated .dcrpc.RpcMsg.ValueItem args = 1;
+  inline int args_size() const;
+  inline void clear_args();
+  static const int kArgsFieldNumber = 1;
+  inline const ::dcrpc::RpcMsg_ValueItem& args(int index) const;
+  inline ::dcrpc::RpcMsg_ValueItem* mutable_args(int index);
+  inline ::dcrpc::RpcMsg_ValueItem* add_args();
+  inline const ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >&
+      args() const;
+  inline ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >*
+      mutable_args();
+
+  // @@protoc_insertion_point(class_scope:dcrpc.RpcMsg.Request)
+ private:
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem > args_;
+  friend void  protobuf_AddDesc_dcrpc_2eproto();
+  friend void protobuf_AssignDesc_dcrpc_2eproto();
+  friend void protobuf_ShutdownFile_dcrpc_2eproto();
+
+  void InitAsDefaultInstance();
+  static RpcMsg_Request* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class RpcMsg_Response : public ::google::protobuf::Message {
+ public:
+  RpcMsg_Response();
+  virtual ~RpcMsg_Response();
+
+  RpcMsg_Response(const RpcMsg_Response& from);
+
+  inline RpcMsg_Response& operator=(const RpcMsg_Response& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const RpcMsg_Response& default_instance();
+
+  void Swap(RpcMsg_Response* other);
+
+  // implements Message ----------------------------------------------
+
+  RpcMsg_Response* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const RpcMsg_Response& from);
+  void MergeFrom(const RpcMsg_Response& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // required int32 status = 1;
+  inline bool has_status() const;
+  inline void clear_status();
+  static const int kStatusFieldNumber = 1;
+  inline ::google::protobuf::int32 status() const;
+  inline void set_status(::google::protobuf::int32 value);
+
+  // repeated .dcrpc.RpcMsg.ValueItem result = 2;
+  inline int result_size() const;
+  inline void clear_result();
+  static const int kResultFieldNumber = 2;
+  inline const ::dcrpc::RpcMsg_ValueItem& result(int index) const;
+  inline ::dcrpc::RpcMsg_ValueItem* mutable_result(int index);
+  inline ::dcrpc::RpcMsg_ValueItem* add_result();
+  inline const ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >&
+      result() const;
+  inline ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >*
+      mutable_result();
+
+  // optional string error = 3;
+  inline bool has_error() const;
+  inline void clear_error();
+  static const int kErrorFieldNumber = 3;
+  inline const ::std::string& error() const;
+  inline void set_error(const ::std::string& value);
+  inline void set_error(const char* value);
+  inline void set_error(const char* value, size_t size);
+  inline ::std::string* mutable_error();
+  inline ::std::string* release_error();
+  inline void set_allocated_error(::std::string* error);
+
+  // @@protoc_insertion_point(class_scope:dcrpc.RpcMsg.Response)
+ private:
+  inline void set_has_status();
+  inline void clear_has_status();
+  inline void set_has_error();
+  inline void clear_has_error();
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem > result_;
+  ::std::string* error_;
+  ::google::protobuf::int32 status_;
+  friend void  protobuf_AddDesc_dcrpc_2eproto();
+  friend void protobuf_AssignDesc_dcrpc_2eproto();
+  friend void protobuf_ShutdownFile_dcrpc_2eproto();
+
+  void InitAsDefaultInstance();
+  static RpcMsg_Response* default_instance_;
+};
+// -------------------------------------------------------------------
+
+class RpcMsg_Notify : public ::google::protobuf::Message {
+ public:
+  RpcMsg_Notify();
+  virtual ~RpcMsg_Notify();
+
+  RpcMsg_Notify(const RpcMsg_Notify& from);
+
+  inline RpcMsg_Notify& operator=(const RpcMsg_Notify& from) {
+    CopyFrom(from);
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const {
+    return _unknown_fields_;
+  }
+
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields() {
+    return &_unknown_fields_;
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor();
+  static const RpcMsg_Notify& default_instance();
+
+  void Swap(RpcMsg_Notify* other);
+
+  // implements Message ----------------------------------------------
+
+  RpcMsg_Notify* New() const;
+  void CopyFrom(const ::google::protobuf::Message& from);
+  void MergeFrom(const ::google::protobuf::Message& from);
+  void CopyFrom(const RpcMsg_Notify& from);
+  void MergeFrom(const RpcMsg_Notify& from);
+  void Clear();
+  bool IsInitialized() const;
+
+  int ByteSize() const;
+  bool MergePartialFromCodedStream(
+      ::google::protobuf::io::CodedInputStream* input);
+  void SerializeWithCachedSizes(
+      ::google::protobuf::io::CodedOutputStream* output) const;
+  ::google::protobuf::uint8* SerializeWithCachedSizesToArray(::google::protobuf::uint8* output) const;
+  int GetCachedSize() const { return _cached_size_; }
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  public:
+  ::google::protobuf::Metadata GetMetadata() const;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  // repeated .dcrpc.RpcMsg.ValueItem result = 1;
+  inline int result_size() const;
+  inline void clear_result();
+  static const int kResultFieldNumber = 1;
+  inline const ::dcrpc::RpcMsg_ValueItem& result(int index) const;
+  inline ::dcrpc::RpcMsg_ValueItem* mutable_result(int index);
+  inline ::dcrpc::RpcMsg_ValueItem* add_result();
+  inline const ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >&
+      result() const;
+  inline ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >*
+      mutable_result();
+
+  // @@protoc_insertion_point(class_scope:dcrpc.RpcMsg.Notify)
+ private:
+
+  ::google::protobuf::UnknownFieldSet _unknown_fields_;
+
+  ::google::protobuf::uint32 _has_bits_[1];
+  mutable int _cached_size_;
+  ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem > result_;
+  friend void  protobuf_AddDesc_dcrpc_2eproto();
+  friend void protobuf_AssignDesc_dcrpc_2eproto();
+  friend void protobuf_ShutdownFile_dcrpc_2eproto();
+
+  void InitAsDefaultInstance();
+  static RpcMsg_Notify* default_instance_;
+};
+// -------------------------------------------------------------------
+
 class RpcMsg : public ::google::protobuf::Message {
  public:
   RpcMsg();
@@ -204,10 +614,15 @@ class RpcMsg : public ::google::protobuf::Message {
   // nested types ----------------------------------------------------
 
   typedef RpcMsg_Cookie Cookie;
+  typedef RpcMsg_ValueItem ValueItem;
+  typedef RpcMsg_Request Request;
+  typedef RpcMsg_Response Response;
+  typedef RpcMsg_Notify Notify;
 
   typedef RpcMsg_StatusCode StatusCode;
   static const StatusCode RPC_STATUS_SUCCESS = RpcMsg_StatusCode_RPC_STATUS_SUCCESS;
   static const StatusCode RPC_STATUS_NOT_EXIST = RpcMsg_StatusCode_RPC_STATUS_NOT_EXIST;
+  static const StatusCode RPC_STATUS_MATCH_FAIL = RpcMsg_StatusCode_RPC_STATUS_MATCH_FAIL;
   static inline bool StatusCode_IsValid(int value) {
     return RpcMsg_StatusCode_IsValid(value);
   }
@@ -243,41 +658,32 @@ class RpcMsg : public ::google::protobuf::Message {
   inline ::std::string* release_path();
   inline void set_allocated_path(::std::string* path);
 
-  // optional bytes request = 2;
+  // optional .dcrpc.RpcMsg.Request request = 2;
   inline bool has_request() const;
   inline void clear_request();
   static const int kRequestFieldNumber = 2;
-  inline const ::std::string& request() const;
-  inline void set_request(const ::std::string& value);
-  inline void set_request(const char* value);
-  inline void set_request(const void* value, size_t size);
-  inline ::std::string* mutable_request();
-  inline ::std::string* release_request();
-  inline void set_allocated_request(::std::string* request);
+  inline const ::dcrpc::RpcMsg_Request& request() const;
+  inline ::dcrpc::RpcMsg_Request* mutable_request();
+  inline ::dcrpc::RpcMsg_Request* release_request();
+  inline void set_allocated_request(::dcrpc::RpcMsg_Request* request);
 
-  // optional bytes response = 3;
+  // optional .dcrpc.RpcMsg.Response response = 3;
   inline bool has_response() const;
   inline void clear_response();
   static const int kResponseFieldNumber = 3;
-  inline const ::std::string& response() const;
-  inline void set_response(const ::std::string& value);
-  inline void set_response(const char* value);
-  inline void set_response(const void* value, size_t size);
-  inline ::std::string* mutable_response();
-  inline ::std::string* release_response();
-  inline void set_allocated_response(::std::string* response);
+  inline const ::dcrpc::RpcMsg_Response& response() const;
+  inline ::dcrpc::RpcMsg_Response* mutable_response();
+  inline ::dcrpc::RpcMsg_Response* release_response();
+  inline void set_allocated_response(::dcrpc::RpcMsg_Response* response);
 
-  // optional bytes notify = 4;
+  // optional .dcrpc.RpcMsg.Notify notify = 4;
   inline bool has_notify() const;
   inline void clear_notify();
   static const int kNotifyFieldNumber = 4;
-  inline const ::std::string& notify() const;
-  inline void set_notify(const ::std::string& value);
-  inline void set_notify(const char* value);
-  inline void set_notify(const void* value, size_t size);
-  inline ::std::string* mutable_notify();
-  inline ::std::string* release_notify();
-  inline void set_allocated_notify(::std::string* notify);
+  inline const ::dcrpc::RpcMsg_Notify& notify() const;
+  inline ::dcrpc::RpcMsg_Notify* mutable_notify();
+  inline ::dcrpc::RpcMsg_Notify* release_notify();
+  inline void set_allocated_notify(::dcrpc::RpcMsg_Notify* notify);
 
   // optional .dcrpc.RpcMsg.Cookie cookie = 5;
   inline bool has_cookie() const;
@@ -315,9 +721,9 @@ class RpcMsg : public ::google::protobuf::Message {
   ::google::protobuf::uint32 _has_bits_[1];
   mutable int _cached_size_;
   ::std::string* path_;
-  ::std::string* request_;
-  ::std::string* response_;
-  ::std::string* notify_;
+  ::dcrpc::RpcMsg_Request* request_;
+  ::dcrpc::RpcMsg_Response* response_;
+  ::dcrpc::RpcMsg_Notify* notify_;
   ::dcrpc::RpcMsg_Cookie* cookie_;
   int status_;
   friend void  protobuf_AddDesc_dcrpc_2eproto();
@@ -436,6 +842,488 @@ inline void RpcMsg_Cookie::set_allocated_cookie(::std::string* cookie) {
 
 // -------------------------------------------------------------------
 
+// RpcMsg_ValueItem
+
+// optional string name = 1;
+inline bool RpcMsg_ValueItem::has_name() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void RpcMsg_ValueItem::set_has_name() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void RpcMsg_ValueItem::clear_has_name() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void RpcMsg_ValueItem::clear_name() {
+  if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_->clear();
+  }
+  clear_has_name();
+}
+inline const ::std::string& RpcMsg_ValueItem::name() const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.ValueItem.name)
+  return *name_;
+}
+inline void RpcMsg_ValueItem::set_name(const ::std::string& value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.ValueItem.name)
+}
+inline void RpcMsg_ValueItem::set_name(const char* value) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcrpc.RpcMsg.ValueItem.name)
+}
+inline void RpcMsg_ValueItem::set_name(const char* value, size_t size) {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  name_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcrpc.RpcMsg.ValueItem.name)
+}
+inline ::std::string* RpcMsg_ValueItem::mutable_name() {
+  set_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    name_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.ValueItem.name)
+  return name_;
+}
+inline ::std::string* RpcMsg_ValueItem::release_name() {
+  clear_has_name();
+  if (name_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = name_;
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void RpcMsg_ValueItem::set_allocated_name(::std::string* name) {
+  if (name_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete name_;
+  }
+  if (name) {
+    set_has_name();
+    name_ = name;
+  } else {
+    clear_has_name();
+    name_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.ValueItem.name)
+}
+
+// optional int64 i = 2;
+inline bool RpcMsg_ValueItem::has_i() const {
+  return (_has_bits_[0] & 0x00000002u) != 0;
+}
+inline void RpcMsg_ValueItem::set_has_i() {
+  _has_bits_[0] |= 0x00000002u;
+}
+inline void RpcMsg_ValueItem::clear_has_i() {
+  _has_bits_[0] &= ~0x00000002u;
+}
+inline void RpcMsg_ValueItem::clear_i() {
+  i_ = GOOGLE_LONGLONG(0);
+  clear_has_i();
+}
+inline ::google::protobuf::int64 RpcMsg_ValueItem::i() const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.ValueItem.i)
+  return i_;
+}
+inline void RpcMsg_ValueItem::set_i(::google::protobuf::int64 value) {
+  set_has_i();
+  i_ = value;
+  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.ValueItem.i)
+}
+
+// optional double f = 3;
+inline bool RpcMsg_ValueItem::has_f() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void RpcMsg_ValueItem::set_has_f() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void RpcMsg_ValueItem::clear_has_f() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void RpcMsg_ValueItem::clear_f() {
+  f_ = 0;
+  clear_has_f();
+}
+inline double RpcMsg_ValueItem::f() const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.ValueItem.f)
+  return f_;
+}
+inline void RpcMsg_ValueItem::set_f(double value) {
+  set_has_f();
+  f_ = value;
+  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.ValueItem.f)
+}
+
+// optional string s = 4;
+inline bool RpcMsg_ValueItem::has_s() const {
+  return (_has_bits_[0] & 0x00000008u) != 0;
+}
+inline void RpcMsg_ValueItem::set_has_s() {
+  _has_bits_[0] |= 0x00000008u;
+}
+inline void RpcMsg_ValueItem::clear_has_s() {
+  _has_bits_[0] &= ~0x00000008u;
+}
+inline void RpcMsg_ValueItem::clear_s() {
+  if (s_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    s_->clear();
+  }
+  clear_has_s();
+}
+inline const ::std::string& RpcMsg_ValueItem::s() const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.ValueItem.s)
+  return *s_;
+}
+inline void RpcMsg_ValueItem::set_s(const ::std::string& value) {
+  set_has_s();
+  if (s_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    s_ = new ::std::string;
+  }
+  s_->assign(value);
+  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.ValueItem.s)
+}
+inline void RpcMsg_ValueItem::set_s(const char* value) {
+  set_has_s();
+  if (s_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    s_ = new ::std::string;
+  }
+  s_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcrpc.RpcMsg.ValueItem.s)
+}
+inline void RpcMsg_ValueItem::set_s(const char* value, size_t size) {
+  set_has_s();
+  if (s_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    s_ = new ::std::string;
+  }
+  s_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcrpc.RpcMsg.ValueItem.s)
+}
+inline ::std::string* RpcMsg_ValueItem::mutable_s() {
+  set_has_s();
+  if (s_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    s_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.ValueItem.s)
+  return s_;
+}
+inline ::std::string* RpcMsg_ValueItem::release_s() {
+  clear_has_s();
+  if (s_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = s_;
+    s_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void RpcMsg_ValueItem::set_allocated_s(::std::string* s) {
+  if (s_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete s_;
+  }
+  if (s) {
+    set_has_s();
+    s_ = s;
+  } else {
+    clear_has_s();
+    s_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.ValueItem.s)
+}
+
+// optional bytes b = 5;
+inline bool RpcMsg_ValueItem::has_b() const {
+  return (_has_bits_[0] & 0x00000010u) != 0;
+}
+inline void RpcMsg_ValueItem::set_has_b() {
+  _has_bits_[0] |= 0x00000010u;
+}
+inline void RpcMsg_ValueItem::clear_has_b() {
+  _has_bits_[0] &= ~0x00000010u;
+}
+inline void RpcMsg_ValueItem::clear_b() {
+  if (b_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    b_->clear();
+  }
+  clear_has_b();
+}
+inline const ::std::string& RpcMsg_ValueItem::b() const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.ValueItem.b)
+  return *b_;
+}
+inline void RpcMsg_ValueItem::set_b(const ::std::string& value) {
+  set_has_b();
+  if (b_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    b_ = new ::std::string;
+  }
+  b_->assign(value);
+  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.ValueItem.b)
+}
+inline void RpcMsg_ValueItem::set_b(const char* value) {
+  set_has_b();
+  if (b_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    b_ = new ::std::string;
+  }
+  b_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcrpc.RpcMsg.ValueItem.b)
+}
+inline void RpcMsg_ValueItem::set_b(const void* value, size_t size) {
+  set_has_b();
+  if (b_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    b_ = new ::std::string;
+  }
+  b_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcrpc.RpcMsg.ValueItem.b)
+}
+inline ::std::string* RpcMsg_ValueItem::mutable_b() {
+  set_has_b();
+  if (b_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    b_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.ValueItem.b)
+  return b_;
+}
+inline ::std::string* RpcMsg_ValueItem::release_b() {
+  clear_has_b();
+  if (b_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = b_;
+    b_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void RpcMsg_ValueItem::set_allocated_b(::std::string* b) {
+  if (b_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete b_;
+  }
+  if (b) {
+    set_has_b();
+    b_ = b;
+  } else {
+    clear_has_b();
+    b_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.ValueItem.b)
+}
+
+// -------------------------------------------------------------------
+
+// RpcMsg_Request
+
+// repeated .dcrpc.RpcMsg.ValueItem args = 1;
+inline int RpcMsg_Request::args_size() const {
+  return args_.size();
+}
+inline void RpcMsg_Request::clear_args() {
+  args_.Clear();
+}
+inline const ::dcrpc::RpcMsg_ValueItem& RpcMsg_Request::args(int index) const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.Request.args)
+  return args_.Get(index);
+}
+inline ::dcrpc::RpcMsg_ValueItem* RpcMsg_Request::mutable_args(int index) {
+  // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.Request.args)
+  return args_.Mutable(index);
+}
+inline ::dcrpc::RpcMsg_ValueItem* RpcMsg_Request::add_args() {
+  // @@protoc_insertion_point(field_add:dcrpc.RpcMsg.Request.args)
+  return args_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >&
+RpcMsg_Request::args() const {
+  // @@protoc_insertion_point(field_list:dcrpc.RpcMsg.Request.args)
+  return args_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >*
+RpcMsg_Request::mutable_args() {
+  // @@protoc_insertion_point(field_mutable_list:dcrpc.RpcMsg.Request.args)
+  return &args_;
+}
+
+// -------------------------------------------------------------------
+
+// RpcMsg_Response
+
+// required int32 status = 1;
+inline bool RpcMsg_Response::has_status() const {
+  return (_has_bits_[0] & 0x00000001u) != 0;
+}
+inline void RpcMsg_Response::set_has_status() {
+  _has_bits_[0] |= 0x00000001u;
+}
+inline void RpcMsg_Response::clear_has_status() {
+  _has_bits_[0] &= ~0x00000001u;
+}
+inline void RpcMsg_Response::clear_status() {
+  status_ = 0;
+  clear_has_status();
+}
+inline ::google::protobuf::int32 RpcMsg_Response::status() const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.Response.status)
+  return status_;
+}
+inline void RpcMsg_Response::set_status(::google::protobuf::int32 value) {
+  set_has_status();
+  status_ = value;
+  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.Response.status)
+}
+
+// repeated .dcrpc.RpcMsg.ValueItem result = 2;
+inline int RpcMsg_Response::result_size() const {
+  return result_.size();
+}
+inline void RpcMsg_Response::clear_result() {
+  result_.Clear();
+}
+inline const ::dcrpc::RpcMsg_ValueItem& RpcMsg_Response::result(int index) const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.Response.result)
+  return result_.Get(index);
+}
+inline ::dcrpc::RpcMsg_ValueItem* RpcMsg_Response::mutable_result(int index) {
+  // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.Response.result)
+  return result_.Mutable(index);
+}
+inline ::dcrpc::RpcMsg_ValueItem* RpcMsg_Response::add_result() {
+  // @@protoc_insertion_point(field_add:dcrpc.RpcMsg.Response.result)
+  return result_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >&
+RpcMsg_Response::result() const {
+  // @@protoc_insertion_point(field_list:dcrpc.RpcMsg.Response.result)
+  return result_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >*
+RpcMsg_Response::mutable_result() {
+  // @@protoc_insertion_point(field_mutable_list:dcrpc.RpcMsg.Response.result)
+  return &result_;
+}
+
+// optional string error = 3;
+inline bool RpcMsg_Response::has_error() const {
+  return (_has_bits_[0] & 0x00000004u) != 0;
+}
+inline void RpcMsg_Response::set_has_error() {
+  _has_bits_[0] |= 0x00000004u;
+}
+inline void RpcMsg_Response::clear_has_error() {
+  _has_bits_[0] &= ~0x00000004u;
+}
+inline void RpcMsg_Response::clear_error() {
+  if (error_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_->clear();
+  }
+  clear_has_error();
+}
+inline const ::std::string& RpcMsg_Response::error() const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.Response.error)
+  return *error_;
+}
+inline void RpcMsg_Response::set_error(const ::std::string& value) {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  error_->assign(value);
+  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.Response.error)
+}
+inline void RpcMsg_Response::set_error(const char* value) {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  error_->assign(value);
+  // @@protoc_insertion_point(field_set_char:dcrpc.RpcMsg.Response.error)
+}
+inline void RpcMsg_Response::set_error(const char* value, size_t size) {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  error_->assign(reinterpret_cast<const char*>(value), size);
+  // @@protoc_insertion_point(field_set_pointer:dcrpc.RpcMsg.Response.error)
+}
+inline ::std::string* RpcMsg_Response::mutable_error() {
+  set_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    error_ = new ::std::string;
+  }
+  // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.Response.error)
+  return error_;
+}
+inline ::std::string* RpcMsg_Response::release_error() {
+  clear_has_error();
+  if (error_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    return NULL;
+  } else {
+    ::std::string* temp = error_;
+    error_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+    return temp;
+  }
+}
+inline void RpcMsg_Response::set_allocated_error(::std::string* error) {
+  if (error_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
+    delete error_;
+  }
+  if (error) {
+    set_has_error();
+    error_ = error;
+  } else {
+    clear_has_error();
+    error_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
+  }
+  // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.Response.error)
+}
+
+// -------------------------------------------------------------------
+
+// RpcMsg_Notify
+
+// repeated .dcrpc.RpcMsg.ValueItem result = 1;
+inline int RpcMsg_Notify::result_size() const {
+  return result_.size();
+}
+inline void RpcMsg_Notify::clear_result() {
+  result_.Clear();
+}
+inline const ::dcrpc::RpcMsg_ValueItem& RpcMsg_Notify::result(int index) const {
+  // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.Notify.result)
+  return result_.Get(index);
+}
+inline ::dcrpc::RpcMsg_ValueItem* RpcMsg_Notify::mutable_result(int index) {
+  // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.Notify.result)
+  return result_.Mutable(index);
+}
+inline ::dcrpc::RpcMsg_ValueItem* RpcMsg_Notify::add_result() {
+  // @@protoc_insertion_point(field_add:dcrpc.RpcMsg.Notify.result)
+  return result_.Add();
+}
+inline const ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >&
+RpcMsg_Notify::result() const {
+  // @@protoc_insertion_point(field_list:dcrpc.RpcMsg.Notify.result)
+  return result_;
+}
+inline ::google::protobuf::RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem >*
+RpcMsg_Notify::mutable_result() {
+  // @@protoc_insertion_point(field_mutable_list:dcrpc.RpcMsg.Notify.result)
+  return &result_;
+}
+
+// -------------------------------------------------------------------
+
 // RpcMsg
 
 // required string path = 1;
@@ -514,7 +1402,7 @@ inline void RpcMsg::set_allocated_path(::std::string* path) {
   // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.path)
 }
 
-// optional bytes request = 2;
+// optional .dcrpc.RpcMsg.Request request = 2;
 inline bool RpcMsg::has_request() const {
   return (_has_bits_[0] & 0x00000002u) != 0;
 }
@@ -525,72 +1413,37 @@ inline void RpcMsg::clear_has_request() {
   _has_bits_[0] &= ~0x00000002u;
 }
 inline void RpcMsg::clear_request() {
-  if (request_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    request_->clear();
-  }
+  if (request_ != NULL) request_->::dcrpc::RpcMsg_Request::Clear();
   clear_has_request();
 }
-inline const ::std::string& RpcMsg::request() const {
+inline const ::dcrpc::RpcMsg_Request& RpcMsg::request() const {
   // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.request)
-  return *request_;
+  return request_ != NULL ? *request_ : *default_instance_->request_;
 }
-inline void RpcMsg::set_request(const ::std::string& value) {
+inline ::dcrpc::RpcMsg_Request* RpcMsg::mutable_request() {
   set_has_request();
-  if (request_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    request_ = new ::std::string;
-  }
-  request_->assign(value);
-  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.request)
-}
-inline void RpcMsg::set_request(const char* value) {
-  set_has_request();
-  if (request_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    request_ = new ::std::string;
-  }
-  request_->assign(value);
-  // @@protoc_insertion_point(field_set_char:dcrpc.RpcMsg.request)
-}
-inline void RpcMsg::set_request(const void* value, size_t size) {
-  set_has_request();
-  if (request_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    request_ = new ::std::string;
-  }
-  request_->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:dcrpc.RpcMsg.request)
-}
-inline ::std::string* RpcMsg::mutable_request() {
-  set_has_request();
-  if (request_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    request_ = new ::std::string;
-  }
+  if (request_ == NULL) request_ = new ::dcrpc::RpcMsg_Request;
   // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.request)
   return request_;
 }
-inline ::std::string* RpcMsg::release_request() {
+inline ::dcrpc::RpcMsg_Request* RpcMsg::release_request() {
   clear_has_request();
-  if (request_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    return NULL;
-  } else {
-    ::std::string* temp = request_;
-    request_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-    return temp;
-  }
+  ::dcrpc::RpcMsg_Request* temp = request_;
+  request_ = NULL;
+  return temp;
 }
-inline void RpcMsg::set_allocated_request(::std::string* request) {
-  if (request_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    delete request_;
-  }
+inline void RpcMsg::set_allocated_request(::dcrpc::RpcMsg_Request* request) {
+  delete request_;
+  request_ = request;
   if (request) {
     set_has_request();
-    request_ = request;
   } else {
     clear_has_request();
-    request_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
   // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.request)
 }
 
-// optional bytes response = 3;
+// optional .dcrpc.RpcMsg.Response response = 3;
 inline bool RpcMsg::has_response() const {
   return (_has_bits_[0] & 0x00000004u) != 0;
 }
@@ -601,72 +1454,37 @@ inline void RpcMsg::clear_has_response() {
   _has_bits_[0] &= ~0x00000004u;
 }
 inline void RpcMsg::clear_response() {
-  if (response_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    response_->clear();
-  }
+  if (response_ != NULL) response_->::dcrpc::RpcMsg_Response::Clear();
   clear_has_response();
 }
-inline const ::std::string& RpcMsg::response() const {
+inline const ::dcrpc::RpcMsg_Response& RpcMsg::response() const {
   // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.response)
-  return *response_;
+  return response_ != NULL ? *response_ : *default_instance_->response_;
 }
-inline void RpcMsg::set_response(const ::std::string& value) {
+inline ::dcrpc::RpcMsg_Response* RpcMsg::mutable_response() {
   set_has_response();
-  if (response_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    response_ = new ::std::string;
-  }
-  response_->assign(value);
-  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.response)
-}
-inline void RpcMsg::set_response(const char* value) {
-  set_has_response();
-  if (response_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    response_ = new ::std::string;
-  }
-  response_->assign(value);
-  // @@protoc_insertion_point(field_set_char:dcrpc.RpcMsg.response)
-}
-inline void RpcMsg::set_response(const void* value, size_t size) {
-  set_has_response();
-  if (response_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    response_ = new ::std::string;
-  }
-  response_->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:dcrpc.RpcMsg.response)
-}
-inline ::std::string* RpcMsg::mutable_response() {
-  set_has_response();
-  if (response_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    response_ = new ::std::string;
-  }
+  if (response_ == NULL) response_ = new ::dcrpc::RpcMsg_Response;
   // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.response)
   return response_;
 }
-inline ::std::string* RpcMsg::release_response() {
+inline ::dcrpc::RpcMsg_Response* RpcMsg::release_response() {
   clear_has_response();
-  if (response_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    return NULL;
-  } else {
-    ::std::string* temp = response_;
-    response_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-    return temp;
-  }
+  ::dcrpc::RpcMsg_Response* temp = response_;
+  response_ = NULL;
+  return temp;
 }
-inline void RpcMsg::set_allocated_response(::std::string* response) {
-  if (response_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    delete response_;
-  }
+inline void RpcMsg::set_allocated_response(::dcrpc::RpcMsg_Response* response) {
+  delete response_;
+  response_ = response;
   if (response) {
     set_has_response();
-    response_ = response;
   } else {
     clear_has_response();
-    response_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
   // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.response)
 }
 
-// optional bytes notify = 4;
+// optional .dcrpc.RpcMsg.Notify notify = 4;
 inline bool RpcMsg::has_notify() const {
   return (_has_bits_[0] & 0x00000008u) != 0;
 }
@@ -677,67 +1495,32 @@ inline void RpcMsg::clear_has_notify() {
   _has_bits_[0] &= ~0x00000008u;
 }
 inline void RpcMsg::clear_notify() {
-  if (notify_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    notify_->clear();
-  }
+  if (notify_ != NULL) notify_->::dcrpc::RpcMsg_Notify::Clear();
   clear_has_notify();
 }
-inline const ::std::string& RpcMsg::notify() const {
+inline const ::dcrpc::RpcMsg_Notify& RpcMsg::notify() const {
   // @@protoc_insertion_point(field_get:dcrpc.RpcMsg.notify)
-  return *notify_;
+  return notify_ != NULL ? *notify_ : *default_instance_->notify_;
 }
-inline void RpcMsg::set_notify(const ::std::string& value) {
+inline ::dcrpc::RpcMsg_Notify* RpcMsg::mutable_notify() {
   set_has_notify();
-  if (notify_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    notify_ = new ::std::string;
-  }
-  notify_->assign(value);
-  // @@protoc_insertion_point(field_set:dcrpc.RpcMsg.notify)
-}
-inline void RpcMsg::set_notify(const char* value) {
-  set_has_notify();
-  if (notify_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    notify_ = new ::std::string;
-  }
-  notify_->assign(value);
-  // @@protoc_insertion_point(field_set_char:dcrpc.RpcMsg.notify)
-}
-inline void RpcMsg::set_notify(const void* value, size_t size) {
-  set_has_notify();
-  if (notify_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    notify_ = new ::std::string;
-  }
-  notify_->assign(reinterpret_cast<const char*>(value), size);
-  // @@protoc_insertion_point(field_set_pointer:dcrpc.RpcMsg.notify)
-}
-inline ::std::string* RpcMsg::mutable_notify() {
-  set_has_notify();
-  if (notify_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    notify_ = new ::std::string;
-  }
+  if (notify_ == NULL) notify_ = new ::dcrpc::RpcMsg_Notify;
   // @@protoc_insertion_point(field_mutable:dcrpc.RpcMsg.notify)
   return notify_;
 }
-inline ::std::string* RpcMsg::release_notify() {
+inline ::dcrpc::RpcMsg_Notify* RpcMsg::release_notify() {
   clear_has_notify();
-  if (notify_ == &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    return NULL;
-  } else {
-    ::std::string* temp = notify_;
-    notify_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
-    return temp;
-  }
+  ::dcrpc::RpcMsg_Notify* temp = notify_;
+  notify_ = NULL;
+  return temp;
 }
-inline void RpcMsg::set_allocated_notify(::std::string* notify) {
-  if (notify_ != &::google::protobuf::internal::GetEmptyStringAlreadyInited()) {
-    delete notify_;
-  }
+inline void RpcMsg::set_allocated_notify(::dcrpc::RpcMsg_Notify* notify) {
+  delete notify_;
+  notify_ = notify;
   if (notify) {
     set_has_notify();
-    notify_ = notify;
   } else {
     clear_has_notify();
-    notify_ = const_cast< ::std::string*>(&::google::protobuf::internal::GetEmptyStringAlreadyInited());
   }
   // @@protoc_insertion_point(field_set_allocated:dcrpc.RpcMsg.notify)
 }

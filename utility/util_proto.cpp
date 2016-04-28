@@ -26,7 +26,7 @@ _protobuf_global_logger_printer(google::protobuf::LogLevel level,
 	default:
 		loglv = LOG_LVL_DEBUG;
 	}
-	LOG(g_debug_logger, loglv, "protobuf log info (lv:%d filename:%s:%d msg:%s)",
+	LOG(g_debug_logger, loglv, 0, "protobuf log info (lv:%d filename:%s:%d msg:%s)",
 		level, filename, line, message.c_str());
 }
 void

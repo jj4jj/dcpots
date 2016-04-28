@@ -143,7 +143,7 @@ int				logger_errno(logger_t * logger){
 }
 
 //set last
-int				logger_write(logger_t * logger, int loglv, const char* fmt, ...){
+int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt, ...){
 	if (logger == nullptr){
 		logger = global_logger();
 	}
@@ -160,7 +160,7 @@ int				logger_write(logger_t * logger, int loglv, const char* fmt, ...){
 	va_end(ap);
 	int available_size = logger->last_msg.capacity() - (n + 2);
 	char errorno_msg_buff[128];
-	if (loglv >= LOG_LVL_WARNING && available_size > 16){
+    if (sys_err_ != 0 && available_size > 64 && errno != 0){
 		if (msg_start[n-1] == '\n'){
 			--n;
 		}

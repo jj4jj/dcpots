@@ -213,7 +213,7 @@ int log_test(){
 	}
 	int n = 3 * 1000;
 	while (n--){
-		GLOG(LOG_LVL_ERROR, "test logger msg just for size , this is dummy");
+		GLOG_IFO("test logger msg just for size , this is dummy");
 	}
 	return 0;
 }
