@@ -6,7 +6,6 @@
 using namespace dcsutil;
 using namespace dcrpc;
 int main(int argc, char ** argv){
-
     RpcServer server;
     //global_logger_init(logger_config_t());
     //logger_set_level(global_logger(), LOG_LVL_PROF);
@@ -16,6 +15,7 @@ int main(int argc, char ** argv){
     }
     RpcService echo("echo");
     server.regis(&echo);
+    logger_set_level(global_logger(), LOG_LVL_TRACE);
     while (true){
         server.update();
     }

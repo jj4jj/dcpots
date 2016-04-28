@@ -134,7 +134,7 @@ int RpcClient::init(const std::string & svraddrs){
     return dctcp_connect(impl->cli, impl->select_server(), impl->connect_server_retry);
 }
 int RpcClient::update(){
-    return    dctcp_poll(impl->cli, 1000 * 10);
+    return    dctcp_poll(impl->cli, 1000);
 }
 int RpcClient::destroy(){
     if (impl){
@@ -146,6 +146,10 @@ int RpcClient::destroy(){
         impl = nullptr;
     }
 }
+bool RpcClient::ready() const {
+    return impl->fd != -1;
+}
+
 int RpcClient::notify(const string & svc, RpcCallNotify cb){
     impl->notify_cbs[svc]=cb;
     return 0;
@@ -162,7 +166,7 @@ static inline int _send_msg(RpcClientImpl * impl, const dcrpc_msg_t & rpc_msg){
     int ret = dctcp_send(impl->cli, impl->fd, dctcp_msg_t(impl->send_msg_buff.buffer, impl->send_msg_buff.valid_size));
     GLOG_TRA("send [%d] [%s] [%s]", ret, rpc_msg.path().c_str(), rpc_msg.Debug());
     if (ret){
-        GLOG_ERR("tcp send error when send msg to svc:%s", rpc_msg.path().c_str());
+        GLOG_SER("tcp send error = %d when send msg to svc:%s", ret, rpc_msg.path().c_str());
         return -3;
     }
     return 0;

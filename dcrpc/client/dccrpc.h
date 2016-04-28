@@ -17,6 +17,7 @@ public:
     int destroy();
     typedef std::function<void(int ret, const dcrpc::RpcValues &)>   RpcCallNotify;
     int notify(const string & svc, RpcCallNotify result_cb);//register callback
+    bool ready() const;
 public:
     int call(const std::string & svc, const dcrpc::RpcValues & args, RpcCallNotify result_cb);
     int push(const std::string & svc, const dcrpc::RpcValues & args);

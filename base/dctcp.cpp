@@ -1,11 +1,8 @@
 #include "dctcp.h"
-#include "msg_proto.hpp"
 #include "logger.h"
+#include "msg_proto.hpp"
 #include "profile.h"
-
-//typedef	std::shared_ptr<msg_buffer_t>	msg_buffer_ptr_t;
-
-//client
+//client connecting
 struct dctcp_connecting_t {
 	int				reconnect;
 	int				max_reconnect;
@@ -20,8 +17,6 @@ struct dctcp_listener_t {
 		bzero(this, sizeof(*this));
 	}
 };
-
-
 struct dctcp_t {
 	dctcp_config_t	conf;
 	int				epfd;	//epfd for poller
@@ -147,7 +142,9 @@ static int _get_sockerror(int fd){
 	else 
 		return errno;
 }
-
+static inline bool  _is_fd_ok(int fd){
+    return fcntl(fd, F_GETFL) != -1;
+}
 static void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
 	auto it = stcp->sock_recv_buffer.find(fd);
 	if (it != stcp->sock_recv_buffer.end()){
@@ -193,7 +190,7 @@ static void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason){
 	int error = _get_sockerror(fd);
 	_op_poll(stcp, EPOLL_CTL_DEL, fd);
 	close(fd);
-	//connection ?	//listener ?
+	//connecting ?	//listener ?
 	if (stcp->connectings.find(fd) != stcp->connectings.end()){
 		stcp->connectings.erase(fd);
 	}
@@ -255,14 +252,21 @@ static int _dispatch_msg(dctcp_t * stcp, int fd, msg_buffer_t * buffer){
 	int nmsg = 0;
 	int msg_buff_start = 0;
 	int total = ntohl(*(int32_t*)(buffer->buffer));
+    int msg_buff_total = buffer->valid_size;
 	while ( msg_buff_start + total <= buffer->valid_size ) {
 		dctcp_msg_t smsg(buffer->buffer + msg_buff_start + sizeof(int32_t),
 			total - sizeof(int32_t));
 		sev.msg = &smsg;
 		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
 		nmsg++;
-		msg_buff_start += total;
-		total = 0;
+        msg_buff_start += total;
+        //the connection may be close , check fd
+        if (!_is_fd_ok(fd)){
+            GLOG_TRA("fd closed when procssing msg rest of msg size:%d buff total:%d msg unit:%d",
+                msg_buff_total - msg_buff_start, msg_buff_total, total);
+            return nmsg;
+        }
+        total = 0;
 		if (msg_buff_start + (int)sizeof(int32_t) <= buffer->valid_size){
 			total = ntohl(*(int32_t*)(buffer->buffer + msg_buff_start));
 		}
@@ -377,8 +381,7 @@ static int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, int sz){
 		return -1;
 	}
 	msg_buffer_t* msgbuff = _get_sock_msg_buffer(stcp, fd, false);
-	if (!msgbuff){
-		//no buffer
+	if (!msgbuff){//no buffer		
 		return -2;
 	}
 	*(int32_t*)(msgbuff->buffer) = htonl(total);
@@ -386,8 +389,7 @@ static int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, int sz){
 	
 RETRY_WRITE_MSG:
 	int ret = send(fd, msgbuff->buffer, total, MSG_DONTWAIT | MSG_NOSIGNAL);
-	if (ret == total){
-		//send ok
+	if (ret == total){ //send ok
 		dctcp_msg_t smsg = dctcp_msg_t(msg, sz);
 		sev.msg = &smsg;
 		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
@@ -397,11 +399,15 @@ RETRY_WRITE_MSG:
 		if ( ret == -1 && errno == EINTR) {
 			goto RETRY_WRITE_MSG;
 		}
-		//just send one part , close connection
-		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR);
+        if (errno == EMSGSIZE || errno == EAGAIN || errno == EWOULDBLOCK){
+            return -3; //msg too long ? just give up
+        }
+        else {
+            _close_fd(stcp, fd, DCTCP_MSG_ERR); //error write 
+            return -4;
+        }
 	}
-	//errno 
-	return -2;
+	return -5;
 }
 
 inline bool _is_listenner(dctcp_t * stcp, int fd){
