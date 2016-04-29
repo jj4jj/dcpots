@@ -15,7 +15,7 @@ int main(int argc, char ** argv){
     }
     RpcService echo("echo");
     server.regis(&echo);
-    logger_set_level(global_logger(), LOG_LVL_TRACE);
+    logger_set_level(global_logger(), LOG_LVL_INFO);
     while (true){
         server.update();
     }

@@ -396,17 +396,17 @@ RETRY_WRITE_MSG:
 		return 0;
 	}
 	else {
-		if ( ret == -1 && errno == EINTR) {
-			goto RETRY_WRITE_MSG;
-		}
-        if (errno == EMSGSIZE || errno == EAGAIN || errno == EWOULDBLOCK){
-            return -3; //msg too long ? just give up
+        if (ret == -1){
+            if (errno == EINTR) {
+                goto RETRY_WRITE_MSG;
+            }
+            else if (errno == EMSGSIZE || errno == EAGAIN || errno == EWOULDBLOCK){
+                return -3; //giv up msg but not close it
+            }
         }
-        else {
-            _close_fd(stcp, fd, DCTCP_MSG_ERR); //error write 
-            return -4;
-        }
-	}
+        _close_fd(stcp, fd, DCTCP_MSG_ERR); //error write 
+        return -4;
+    }
 	return -5;
 }
 
