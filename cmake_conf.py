@@ -57,9 +57,21 @@ LIBS = [
         },
         {
             'name': 'pbjson',
-            'subdir': './3rd/pbjson/',
+            'subdir': '3rd/pbjson/',
             'includes': ['3rd'],
+        },
+        {
+            'name': 'dcutil-redis',
+            'subdir': 'utility/redis',
+            'includes': [],
+        },
+        {
+            'name': 'dcrpc',
+            'subdir': 'dcrpc',
+            'includes': [],
+            'src_dirs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/'],
         }
+
 
 ]
 EXES = [

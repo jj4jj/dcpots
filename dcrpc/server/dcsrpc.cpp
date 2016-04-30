@@ -82,7 +82,7 @@ int    RpcServer::init(const std::string & addr){
         return -2;
     }
     impl->send_buff.create(dcrpc::MAX_RPC_MSG_BUFF_SIZE);
-    dctcp_event_cb(impl->svr, [](dctcp_t* dc, const dctcp_event_t & ev, void * ud)->int {
+    dctcp_event_cb(impl->svr, [](dctcp_t* , const dctcp_event_t & ev, void * ud)->int {
         RpcServerImpl * impl = (RpcServerImpl*)ud;
         switch (ev.type){
         case DCTCP_CONNECTED:
@@ -126,7 +126,11 @@ void   RpcServer::destroy(){
     }
 }
 int    RpcServer::regis(RpcService * svc){
+    if(impl->dispatcher.find(svc->name()) != impl->dispatcher.end()){
+        return -1;
+    }
     impl->dispatcher[svc->name()] = svc;
+    return 0;
 }
 int    RpcServer::push(const std::string & svc, int id, const RpcValues & vals){
     dcrpc_msg_t rpc_msg;
@@ -142,6 +146,7 @@ RpcService::RpcService(const std::string  & name_){
 }
 int RpcService::call(dcrpc::RpcValues & result, const dcrpc::RpcValues & args, string * error){
     result = args;
+    error->clear();
     return 0;
 }
 
