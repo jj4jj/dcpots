@@ -49,6 +49,7 @@ namespace dcrpc {
         }
         this->data_ = v.data_;
         this->own_ = false;
+        return *this;
     }
     RpcValues::RpcValues(RpcValues & v){
         this->data_ = v.data_;
