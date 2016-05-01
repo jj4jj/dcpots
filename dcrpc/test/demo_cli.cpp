@@ -22,7 +22,7 @@ int main(){
     rpc.notify("push", [](int, const RpcValues & v){
         GLOG_IFO("push message:%d", v.length());
     });
-    static const int test_time = 10000000;
+    static const int test_time = 1000000;
     static int times = test_time;
     RpcValues args;
     args.adds("Hello,World!");
@@ -34,7 +34,7 @@ int main(){
                 s_start_time = time_unixtime_us();
             }
             if(times > 0){
-                for (int i = 0; i < 80; ++i){
+                for (int i = 0; i < 50; ++i){
                     rpc.call("echo", args, [&](int ret, const RpcValues & v){
                         times--;
                     });

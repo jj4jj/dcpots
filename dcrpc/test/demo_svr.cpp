@@ -13,7 +13,7 @@ int main(int argc, char ** argv){
         GLOG_ERR("create server errror !");
         return -1;
     }
-    RpcService echo("echo");
+    RpcService echo("echo", false);
     server.regis(&echo);
     logger_set_level(global_logger(), LOG_LVL_INFO);
     while (true){
