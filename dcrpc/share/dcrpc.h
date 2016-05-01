@@ -1,15 +1,22 @@
 #pragma  once
 #include <string>
-#include <inttypes.h>
-using std::string;
+#ifndef int64_t
+#define long long int int64_t;
+#endif
 namespace dcrpc {
     static const int MAX_RPC_MSG_BUFF_SIZE = (1024 * 1024);
     struct RpcValuesImpl;
     struct RpcValues {
         int64_t geti(int idx = 0) const;
-        const string & gets(int idx = 0) const;
+        const std::string & gets(int idx = 0) const;
         double getf(int idx = 0) const;
-        const string & getb(int idx = 0) const;
+        const std::string & getb(int idx = 0) const;
+		//////////////////////////////////////////
+		void seti(int64_t i, int idx = 0);
+		void sets(const std::string & s, int idx = 0);
+		void setf(double f, int idx = 0);
+		void setb(const std::string & b, int idx = 0);
+		//////////////////////////////////////////
         int length() const;
         void addi(int64_t i);
         void adds(const std::string & s);

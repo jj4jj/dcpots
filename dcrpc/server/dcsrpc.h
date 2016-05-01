@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <functional>
+#include "../share/dcrpc.h"
 namespace dcrpc {
 struct RpcValues;
 class RpcService;
@@ -17,7 +18,7 @@ public:
 public:
     int    regis(RpcService * svc);
     int    push(const std::string & svc, int id, const RpcValues & val);
-	int	   reply(RpcService * svc, uint64_t cookie, const RpcValues & result, int ret = 0, std::string * error = nullptr);
+	int	   reply(RpcService * svc, uint64_t cookie, const RpcValues & result, int ret = 0, const char * error = nullptr);
 
 private: 
     RpcServerImpl  * impl{ nullptr };
@@ -32,7 +33,7 @@ public:
 	bool		isasync() const ;
 	const RpcServiceImpl * impl() const { return impl_; }
 public:
-	int			resume(uint64_t cookie, const RpcValues & result, int ret = 0, std::string * error = nullptr);
+	int			resume(uint64_t cookie, const RpcValues & result, int ret = 0, const char * error = nullptr);
 public:
 	virtual int yield(uint64_t cookie, const RpcValues & args, std::string & error);
 	virtual int call(RpcValues & result, const RpcValues & args, std::string & error);

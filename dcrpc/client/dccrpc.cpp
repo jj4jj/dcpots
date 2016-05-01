@@ -38,9 +38,10 @@ public:
     }
 
 public:
-    uint64_t append_callback(RpcClient::RpcCallNotify cb, int expired=0){
+    uint64_t append_callback(RpcClient::RpcCallNotify cb, int expired = 0){
         uint64_t sn = rpcall_transaction_sn::next();
         rpcall_cbs[sn] = cb;
+		UNUSED(expired);
         return sn;
     }
     RpcClient::RpcCallNotify remove_callback(uint64_t transid){
@@ -129,6 +130,7 @@ int RpcClient::init(const std::string & svraddrs){
         default:
             return -1;
         }
+		return 0;
     }, impl);
     dcsutil::strsplit(svraddrs, ",", impl->rpc_server_addrs);
     return dctcp_connect(impl->cli, impl->select_server(), impl->connect_server_retry);
@@ -145,6 +147,7 @@ int RpcClient::destroy(){
         delete impl;
         impl = nullptr;
     }
+	return 0;
 }
 bool RpcClient::ready() const {
     return impl->fd != -1;

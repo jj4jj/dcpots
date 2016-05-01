@@ -97,13 +97,13 @@ static inline RpcServiceCallContext * async_rpc_get_context(RpcServerImpl * impl
 	}
 	return it->second;
 }
-int	   RpcServer::reply(RpcService *, uint64_t cookie, const RpcValues & result, int ret, string * error){
+int	   RpcServer::reply(RpcService *, uint64_t cookie, const RpcValues & result, int ret, const char * error){
 	RpcServiceCallContext * ctx = async_rpc_get_context(impl, cookie);
 	if (ctx){
 		dcrpc_msg_t & rpc_msg = ctx->msg;
 		rpc_msg.mutable_response()->set_status(ret);
 		if (error){
-			rpc_msg.mutable_response()->set_error(*error);
+			rpc_msg.mutable_response()->set_error(error);
 		}
 		auto msg_result = rpc_msg.mutable_response()->mutable_result();
 		msg_result->CopyFrom(*(decltype(msg_result))result.data());
@@ -145,6 +145,9 @@ static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, c
 				rpc_msg.mutable_response()->set_status(ret);
 				if (ret == 0){
 					return;
+				}
+				else {
+					rpc_msg.clear_request();
 				}
 			}
 		}
@@ -253,7 +256,7 @@ bool	RpcService::isasync() const {
 const std::string & RpcService::name() const {
 	return impl_->name;
 }
-int	RpcService::resume(uint64_t cookie, const RpcValues & result, int ret, std::string * error){
+int	RpcService::resume(uint64_t cookie, const RpcValues & result, int ret, const char * error){
 	return this->impl_->svr->reply(this, cookie, result, ret, error);
 }
 int RpcService::call(dcrpc::RpcValues & result, const dcrpc::RpcValues & args, string & error){

@@ -1,9 +1,5 @@
 #pragma once
-namespace google {
-    namespace protobuf {
-        class Message;
-    }
-}
+#include "../share/dcrpc.h"
 namespace dcrpc {
 struct RpcValues;
 struct RpcClientImpl;
