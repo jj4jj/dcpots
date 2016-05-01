@@ -1,8 +1,5 @@
 #pragma  once
 #include <string>
-#ifndef int64_t
-#define long long int int64_t;
-#endif
 namespace dcrpc {
     static const int MAX_RPC_MSG_BUFF_SIZE = (1024 * 1024);
     struct RpcValuesImpl;
@@ -12,12 +9,13 @@ namespace dcrpc {
         double getf(int idx = 0) const;
         const std::string & getb(int idx = 0) const;
 		//////////////////////////////////////////
+		void extend(int n);
 		void seti(int64_t i, int idx = 0);
 		void sets(const std::string & s, int idx = 0);
 		void setf(double f, int idx = 0);
 		void setb(const std::string & b, int idx = 0);
 		//////////////////////////////////////////
-        int length() const;
+		int	 length() const;
         void addi(int64_t i);
         void adds(const std::string & s);
         void addf(double f);

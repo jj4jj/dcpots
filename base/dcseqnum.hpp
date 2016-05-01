@@ -11,7 +11,7 @@ namespace dcsutil {
 			MAX_CLASS_ID = (1 << max_class_2e) - 1,
 		};
 	public:
-		static unsigned long long next(int id = 0){
+		static unsigned long long next(int id=0){
 			typename std::conditional<multi_thread, int, char>::type val = 0;
 			return next_dispatch(id, val);
 		}

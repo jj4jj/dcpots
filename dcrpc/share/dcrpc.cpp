@@ -16,6 +16,11 @@ namespace dcrpc {
     const string & RpcValues::getb(int idx) const {
         return data_->Get(idx).b();
     }
+	void RpcValues::extend(int n){
+		for (int i = data_->size(); i < n; ++i){
+			data_->Add();
+		}
+	}
 	void RpcValues::seti(int64_t i, int idx){
 		data_->Mutable(idx)->set_i(i);
 	}
