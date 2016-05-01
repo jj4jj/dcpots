@@ -33,6 +33,9 @@ namespace dcrpc {
 	void RpcValues::setb(const string & b, int idx){
 		data_->Mutable(idx)->set_b(b.data(), b.length());
 	}
+	void RpcValues::setb(const char * b, int len, int idx){
+		data_->Mutable(idx)->set_b(b, len);
+	}
     int RpcValues::length() const {
         return data_->size();
     }

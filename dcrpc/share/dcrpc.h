@@ -14,6 +14,7 @@ namespace dcrpc {
 		void sets(const std::string & s, int idx = 0);
 		void setf(double f, int idx = 0);
 		void setb(const std::string & b, int idx = 0);
+		void setb(const char * b, int len, int idx = 0);
 		//////////////////////////////////////////
 		int	 length() const;
         void addi(int64_t i);
