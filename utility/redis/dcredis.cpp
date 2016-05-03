@@ -23,45 +23,66 @@ struct RedisAsyncAgentImpl {
 	redisAsyncContext * rc{ nullptr };
 	typedef std::unordered_map<uint64_t, RedisCallBackPoolItem> RedisCallBackPool;
 	RedisCallBackPool	 callback_pool;
-	int		time_max_expired{ 10 };
+	int		             time_max_expired{ 10 };
+    string               addrs;
+    bool                 connected{ false };
+    int                  retry_connect{ 0 };
 };
 
-void connectCallback(const redisAsyncContext *c, int status) {
+static std::unordered_map<const redisAsyncContext *, RedisAsyncAgentImpl*>  s_redis_context_map_impl;
+static void connectCallback(const redisAsyncContext *c, int status) {
 	if (status != REDIS_OK) {
 		GLOG_ERR("redis connect Error: %s", c->errstr);
 	}
 	else {
 		GLOG_IFO("redis Connected...");
+        s_redis_context_map_impl[c]->connected = true;
 	}
 }
-
-void disconnectCallback(const redisAsyncContext *c, int status) {
-	if (status != REDIS_OK) {
+static void disconnectCallback(const redisAsyncContext *c, int status);
+static inline int redis_reconnect(RedisAsyncAgentImpl* impl){
+    if (impl->rc){
+        redisAsyncFree(impl->rc);
+        s_redis_context_map_impl.erase(impl->rc);
+        impl->rc = nullptr;
+    }
+#warning "todo change the ip by config param"
+    impl->rc = redisAsyncConnect("127.0.0.1", 6379);
+    if (!impl->rc){
+        GLOG_SER("redis connect error !");
+        return -2;
+    }
+    if (impl->rc->err){
+        GLOG_ERR("redis connect error :%s", impl->rc->errstr);
+        return -3;
+    }
+    redisLibevAttach(EV_DEFAULT_ impl->rc);
+    redisAsyncSetConnectCallback(impl->rc, connectCallback);
+    redisAsyncSetDisconnectCallback(impl->rc, disconnectCallback);
+    ///////////////////////////////////////////////////////////////
+    s_redis_context_map_impl[impl->rc] = impl;
+    return 0;
+}
+static void disconnectCallback(const redisAsyncContext *c, int status) {
+    RedisAsyncAgentImpl * impl = s_redis_context_map_impl[c];
+    impl->connected = false;
+    if (status != REDIS_OK) {
 		printf("redis diconnect Error: %s", c->errstr);
-		return;
 	}
 	else {
 		GLOG_WAR("redis Disconnected...");
 	}
+    ++impl->retry_connect;
+    GLOG_IFO("redis reconnecting times:%d....", impl->retry_connect);
+    redis_reconnect(impl);
 }
 int	RedisAsyncAgent::init(const string & addrs){
 	if (impl){
 		return -1;
 	}
 	impl = new RedisAsyncAgentImpl();
-	impl->rc = redisAsyncConnect("127.0.0.1", 6379);
-	if (!impl->rc){
-		return -2;
-	}
-	if (impl->rc->err){
-		GLOG_ERR("redis connect error :%s", impl->rc->errstr);
-		return -3;
-	}
-
-	redisLibevAttach(EV_DEFAULT_ impl->rc);
-	redisAsyncSetConnectCallback(impl->rc, connectCallback);
-	redisAsyncSetDisconnectCallback(impl->rc, disconnectCallback);
-	return 0;
+    impl->addrs = addrs;
+    return redis_reconnect(impl);
 }
 static inline void redis_check_time_expired_callback(RedisAsyncAgentImpl * impl){
 	auto it = impl->callback_pool.begin();
@@ -91,6 +112,9 @@ int	RedisAsyncAgent::destroy(){
 		impl = nullptr;
 	}
 	return 0;
+}
+bool RedisAsyncAgent::ready(){
+    return impl->connected;
 }
 static void _command_callback(redisAsyncContext *, void *r, void *privdata){
 	command_callback_argument* param = (command_callback_argument*)privdata;
@@ -123,7 +147,6 @@ int RedisAsyncAgent::command(CommandCallBack cb, const char * fmt, ...){
 }
 RedisAsyncAgent::RedisAsyncAgent(){
 }
-
 RedisAsyncAgent::~RedisAsyncAgent(){
 	destroy();
 }

@@ -10,6 +10,7 @@ struct RedisAsyncAgent {
 	int update();
 	int	destroy();
 	typedef std::function<void(int error, redisReply* r)> CommandCallBack;
+    bool ready();
 	int command(CommandCallBack cb, const char * fmt, ...);
 public:
 	RedisAsyncAgent();
