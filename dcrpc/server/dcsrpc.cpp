@@ -116,6 +116,22 @@ int	   RpcServer::reply(RpcService *, uint64_t cookie, const RpcValues & result,
 		return -1;
 	}
 }
+static inline void _dispatch_client_close(RpcServerImpl * impl, int fd){
+    auto it = impl->dispatcher.begin();
+    while (it != impl->dispatcher.end()){
+        auto cit = it++;
+        auto service = cit->second;
+        service->clientclosed(fd);
+    }
+}
+static inline void _dispatch_client_update(RpcServerImpl * impl){
+    auto it = impl->dispatcher.begin();
+    while (it != impl->dispatcher.end()){
+        auto cit = it++;
+        auto service = cit->second;
+        service->update();
+    }
+}
 static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, const char * buff, int ibuff){
     dcrpc_msg_t rpc_msg;
     if (!rpc_msg.Unpack(buff, ibuff)){
@@ -141,7 +157,7 @@ static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, c
 			else {
 				async_rpc_yield_call(impl, transac_cookie, fd, rpc_msg);
 				int ret = service->yield(transac_cookie,
-					args, *rpc_msg.mutable_response()->mutable_error());
+					args, *rpc_msg.mutable_response()->mutable_error(), fd);
 				rpc_msg.mutable_response()->set_status(ret);
 				if (ret == 0){
 					return;
@@ -155,7 +171,7 @@ static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, c
 			RpcValues result;
 			rpc_msg.mutable_response()->set_status(
 				service->call(result, args,
-				*rpc_msg.mutable_response()->mutable_error()));
+                *rpc_msg.mutable_response()->mutable_error(), fd));
 			auto msg_result = rpc_msg.mutable_response()->mutable_result();
 			msg_result->CopyFrom(*(decltype(msg_result))result.data());
 			rpc_msg.clear_request();
@@ -191,6 +207,7 @@ int    RpcServer::init(const std::string & addr){
         case DCTCP_NEW_CONNX:
             break;
         case DCTCP_CLOSED:
+            _dispatch_client_close(impl, ev.fd);
             break;
         case DCTCP_READ:
             GLOG_TRA("read tcp msg fd=%d buff:%p ibuff:%d", ev.fd, ev.msg->buff, ev.msg->buff_sz);
@@ -212,7 +229,9 @@ int    RpcServer::init(const std::string & addr){
     return 0;
 }
 int    RpcServer::update(){
-    return dctcp_poll(impl->svr, 1000);
+    int ret = dctcp_poll(impl->svr, 1000);
+    _dispatch_client_update(impl);
+    return ret;
 }
 void   RpcServer::destroy(){
     if (impl){
@@ -259,15 +278,24 @@ const std::string & RpcService::name() const {
 int	RpcService::resume(uint64_t cookie, const RpcValues & result, int ret, const char * error){
 	return this->impl_->svr->reply(this, cookie, result, ret, error);
 }
-int RpcService::call(dcrpc::RpcValues & result, const dcrpc::RpcValues & args, string & error){
+int RpcService::call(dcrpc::RpcValues & result, const dcrpc::RpcValues & args, string & error, int clientid){
     result = args;
 	UNUSED(error);
+    UNUSED(clientid);
     return 0;
 }
-int RpcService::yield(uint64_t cookie, const RpcValues & args, std::string & error){
+int RpcService::yield(uint64_t cookie, const RpcValues & args, std::string & error, int clientid){
 	UNUSED(error);
-	return resume(cookie, args);
+    UNUSED(clientid);
+    return resume(cookie, args);
 }
+void RpcService::clientclosed(int clientid){
+    UNUSED(clientid);
+}
+void RpcService::update(){
+}
+
+
 ///////////////////////////////////////////////////////////////////////////////////////
 int    RpcServer::regis(RpcService * svc){
 	if (impl->dispatcher.find(svc->name()) != impl->dispatcher.end()){
