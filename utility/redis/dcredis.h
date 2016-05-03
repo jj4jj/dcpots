@@ -12,6 +12,8 @@ struct RedisAsyncAgent {
 	typedef std::function<void(int error, redisReply* r)> CommandCallBack;
     bool ready();
 	int command(CommandCallBack cb, const char * fmt, ...);
+    int psubscribe(CommandCallBack cb, const char * channel);
+    int subscribe(CommandCallBack cb, const char * channel);
 public:
 	RedisAsyncAgent();
 	~RedisAsyncAgent();
