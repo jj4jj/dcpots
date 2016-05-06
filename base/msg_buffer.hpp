@@ -1,9 +1,9 @@
 #pragma once
 
 struct msg_buffer_t {
-	char *	buffer;
-	int		valid_size;
-	int		max_size;
+    char *	buffer{ nullptr };
+    int		valid_size{ 0 };
+    int		max_size{ 0 };
 	msg_buffer_t(const char * csp = nullptr, int sz = 0) :buffer((char*)csp), valid_size(sz), max_size(0){
 		if (csp != nullptr && sz == 0){
 			valid_size = strlen(csp) + 1;

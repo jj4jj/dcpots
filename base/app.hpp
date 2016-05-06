@@ -16,6 +16,9 @@ public:
 	void on_recover(int(*)());
 	void shedule(int aft_ms, void(*)(void *), void * arg = nullptr, int times = 1);
 	void on_contrl(const char*(*)(const char * cmdline));
+public:
+    int run();
+    int stop();
 private:
 	void * app;
 };

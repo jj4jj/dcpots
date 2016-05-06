@@ -1,36 +1,12 @@
 #pragma  once
 #include "stdinc.h"
-#include "dcobjects.hpp"
+//#include "dcobjects.hpp"
+//#include "noncopyable.h"
 
 NS_BEGIN(dcsutil)
-    //-----------------noncopy----------------------------
-	class noncopyable
-	{
-	protected:
-		noncopyable() {}
-		~noncopyable() {}
-	private: // emphasize the following members are private  
-		noncopyable(const noncopyable&);
-		const noncopyable& operator=(const noncopyable&);
-	};
     //-----------------lock-------------------------------
     template<bool threadsafe>
     struct lock_mixin;
-
-    template<>
-    struct lock_mixin<false>{
-        void lock(){}
-        void unlock(){}
-    };
-
-    template<>
-    struct lock_mixin<true>{
-        void lock(){ lock_.lock(); }
-        void unlock(){ lock_.unlock(); }
-    private:
-        std::mutex  lock_;
-    };
-    //-------------------------------------------------------------------------
     //----------misc------------------------------------------------------------
 	//time 
 	uint64_t			time_unixtime_us();
@@ -101,20 +77,48 @@ NS_BEGIN(dcsutil)
     string &            strrereplace(string & str, const string & repattern, const string & repl);
     bool                strrefind(string & str, const string & repattern, std::match_results<string::const_iterator>& m);
     template <typename StrItable>
-    const char         *strjoin(std::string & val, const std::string & sep, StrItable it){
-        size_t i = 0;
-        val.clear();
-        for (auto & v : it){
-            if (i != 0){v.append(sep);}
-            v.append(v);
-            ++i;
-        }
-        return val.c_str();
-    }
+    const char         *strjoin(std::string & val, const std::string & sep, StrItable it);
     const char          *strspack(std::string & str, const std::string & sep, const std::string & ks, ...);
     int                 strsunpack(const std::string & str, const std::string & sep, const std::string & k, ...);
     //todo variadic  ?
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+    //implementation
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    template<>
+    struct lock_mixin<false>{
+        void lock(){}
+        void unlock(){}
+    };
+
+    template<>
+    struct lock_mixin<true>{
+        void lock(){ lock_.lock(); }
+        void unlock(){ lock_.unlock(); }
+    private:
+        std::mutex  lock_;
+    };
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////
+    template <typename StrItable>
+    const char         *strjoin(std::string & val, const std::string & sep, StrItable it){
+        size_t i = 0;
+        val.clear();
+        for (auto & v : it){
+            if (i != 0){ v.append(sep); }
+            v.append(v);
+            ++i;
+        }
+        return val.c_str();
+    }
+
 
 NS_END()

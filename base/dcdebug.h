@@ -6,8 +6,8 @@ NS_BEGIN(dcsutil)
 struct stackframe_info_t {
     string      module;
     string      func;
-    size_t      offset;
-    void        * addr;
+    size_t      offset{ 0 };
+    void        * addr{ nullptr };
     string      info;
     stackframe_info_t();
     const char * str(string & s);

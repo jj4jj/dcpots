@@ -4,8 +4,9 @@
 #include <atomic>
 #include <cstdio>
 namespace dcsutil {
-    //todo , add policy class for classified sequence_number_t
-	template<int max_class_2e = 6, int max_hz_2e = 26, bool multi_thread = false>
+    struct sequence_type {
+    };
+    template<int max_class_2e = 6, int max_hz_2e = 26, bool multi_thread = false, class SEQT = sequence_type>
 	class sequence_number_t {
 		enum {
 			MAX_HZ_SEQN = (1 << max_hz_2e) - 1,
