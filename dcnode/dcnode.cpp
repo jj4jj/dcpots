@@ -1,6 +1,4 @@
-#include "dcnode.h"
 #include "../base/logger.h"
-#include "proto/dcnode.pb.h"
 #include "../base/msg_proto.hpp"
 #include "../base/dcsmq.h"
 #include "../base/dctcp.h"
@@ -8,7 +6,13 @@
 #include "../base/dcutils.hpp"
 #include "../base/dcshm.h"
 #include "../base/profile.h"
+#include "../base/dcobjects.hpp"
+
 #include "../utility/util_proto.h"
+
+#include "proto/dcnode.pb.h"
+
+#include "dcnode.h"
 
 typedef msgproto_t<dcnode::MsgDCNode>	dcnode_msg_t;
 
