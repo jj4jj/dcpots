@@ -1,7 +1,7 @@
 #include "dcreporter.h"
 #include "dcreport_collect.h"
-#include "../dagent/dagent.h"
 #include "../base/logger.h"
+#include "../dcagent/dcagent.h"
 
 int reporter_ready(){
     return dagent_ready();

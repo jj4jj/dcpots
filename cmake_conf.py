@@ -16,44 +16,29 @@ LIBS = [
             'extra_srcs': [''],
         },
         {
-            'name':'dcutil',
-            'subdir':'utility',
-            'linklibs' : [],
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
-            'src_dirs':[''],
-            'extra_srcs': ['3rd/pbjson'],
-        },
-        {
             'name':'dcnode',
             'subdir':'dcnode',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
-            'src_dirs':['base','utility','dcnode/proto','3rd/pbjson'],
+            'src_dirs':['base','utility/drs','dcnode/proto','3rd/pbjson'],
         },
         {
-            'name':'dagent',
-            'subdir':'dagent',
+            'name':'dcagent',
+            'subdir':'dcagent',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
-            'src_dirs':['base','utility','dcnode','dcnode/proto','dagent/proto','3rd/pbjson'],
+            'src_dirs':['base', 'dcagent/proto'],
         },
         {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
-            'includes':['/usr/local/include','3rd'],
+            'includes':['/usr/local/include/libbson-1.0','3rd'],
             'linkpaths':['/usr/local/lib'],
-            'src_dirs': ['app/mongoproxy/proto'],
-            'linklibs' : [
-                'dagent',
-                'python2.7',
-                'libprotobuf.a',
-                'mongoc-1.0',
-                'bson-1.0'
-            ]
+            'src_dirs': ['app/mongoproxy/proto','utility/mongo'],
         },
         {
             'name': 'dcrepoter',
             'subdir': 'reporter',
             'includes': ['base','dcnode','dcagent','/usr/local/include/libbson-1.0','3rd'],
-            'src_dirs': ['base', 'utility', 'dcnode', 'dcnode/proto', 'dagent', 'dagent/proto','3rd/pbjson']
+            'src_dirs': ['base', 'utility/drs', 'dcnode', 'dcnode/proto', 'dagent', 'dagent/proto','3rd/pbjson']
         },
         {
             'name': 'pbjson',
@@ -70,18 +55,56 @@ LIBS = [
             'subdir': 'dcrpc',
             'includes': [],
             'src_dirs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/'],
-        }
+        },
+		{
+            'name':'dcutil-mysql',
+            'subdir':'utility/mysql',
+            'linklibs' : [],
+            'includes':['/usr/local/include'],
+            'src_dirs':[''],
+            'extra_srcs': ['3rd/pbjson'],
+        },
+		{
+            'name':'dcutil-script',
+            'subdir':'utility/script',
+            'linklibs' : [],
+            'includes':['/usr/local/include'],
+            'src_dirs':[''],
+            'extra_srcs': ['3rd/pbjson'],
+        },
+		{
+            'name':'dcutil-mongo',
+            'subdir':'utility/mongo',
+            'linklibs' : [],
+            'includes':['/usr/local/include/libbson-1.0','3rd'],
+            'src_dirs':[''],
+            'extra_srcs': ['3rd/pbjson'],
+        },
+		{
+            'name':'dcutil-drs',
+            'subdir':'utility/drs',
+            'linklibs' : [],
+            'includes':['/usr/local/include','3rd'],
+            'src_dirs':[''],
+            'extra_srcs': ['3rd/pbjson'],
+        },
 
 
 ]
 EXES = [
         {
-            'name':'testagent',
+            'name':'test',
             'subdir':'app/test',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linkpaths':['/usr/local/lib'],
             'linklibs' : [
-                'dagent',
+				'dcbase',
+				'dcnode',
+                'dcagent',
+				'dcutil-drs',
+				'dcutil-mysql',
+				'dcutil-mongo',
+				'dcutil-script',
                 'python2.7',
                 'libprotobuf.a',
                 'mysqlclient',
@@ -96,7 +119,11 @@ EXES = [
             'linkpaths':['/usr/local/lib'],
             'src_dirs': ['app/mongoproxy/proto'],
             'linklibs' : [
-                'dagent',
+                'mongoproxyapi',
+				'dcnode',
+                'dcagent',
+				'dcutil-mongo',
+				'dcutil-drs',
                 'python2.7',
                 'libprotobuf.a',
                 'mongoc-1.0',
@@ -110,8 +137,10 @@ EXES = [
             'linkpaths':['/usr/local/lib'],
             'src_dirs': [],
             'linklibs' : [
-                'dagent',
                 'mongoproxyapi',
+				'dcnode',
+                'dcagent',
+				'dcutil-mongo',
                 'python2.7',
                 'libprotobuf.a',
                 'mongoc-1.0',
@@ -124,6 +153,10 @@ EXES = [
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linklibs' : [
                 'dcrepoter',
+				'dcagent',
+				'dcnode',
+				'dcutil-script',
+				'dcutil-drs',
                 'python2.7',
                 'protobuf',
             ]
@@ -134,6 +167,10 @@ EXES = [
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
             'linklibs' : [
                 'dcrepoter',
+				'dcagent',
+				'dcnode',
+				'dcutil-script',
+				'dcutil-drs',
                 'python2.7',
                 'protobuf',
             ]

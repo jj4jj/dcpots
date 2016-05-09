@@ -1,10 +1,10 @@
-#include "utility/util_mongo.h"
-#include "utility/util_proto.h"
 #include "base/cmdline_opt.h"
 #include "dcnode/dcnode.h"
-#include "mongoproxy_msg.h"
 #include "base/logger.h"
+#include "utility/mongo/dcmongoc.h"
+#include "utility/drs/dcproto.h"
 
+#include "mongoproxy_msg.h"
 
 struct dispatch_param {
 	dcsutil::mongo_client_t * mc;

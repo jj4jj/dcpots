@@ -3,7 +3,7 @@
 #include "../api/mongoproxy_api.h"
 #include "base/logger.h"
 #include "test.pb.h"
-#include "utility/util_proto.h"
+#include "utility/drs/dcproto.h"
 
 void test_cb(mongoproxy_cmd_t cmd, void * ud, const mongoproxy_result_t & result){
     GLOG_TRA("cmd:%d status:%d ok:%d nquery:%d nupdate:%d msg num:%d cb_data:%s cb_length:%d",

@@ -5,8 +5,8 @@
 #include "mongoproxy_api.h"
 #include "dcnode/dcnode.h"
 #include "base/msg_buffer.hpp"
-#include "utility/json_doc.hpp"
-#include "utility/util_proto.h"
+#include "utility/drs/dcjson.hpp"
+#include "utility/drs/dcproto.h"
 #include "google/protobuf/descriptor.h"
 
 using namespace dcorm;

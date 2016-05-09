@@ -1,7 +1,0 @@
-
-package dagent;
-message MsgDAgent
-{
-    required    int32			type = 1;
-    optional    bytes           msg_data = 2;
-};

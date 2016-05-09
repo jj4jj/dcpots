@@ -2,10 +2,12 @@
 #include "base/dctcp.h"
 #include "base/logger.h"
 #include "dcnode/dcnode.h"
-#include "dagent/dagent.h"
+#include "dcagent/dcagent.h"
 #include "base/dcutils.hpp"
 #include "base/msg_proto.hpp"
-#include "utility/util_mysql.h"
+#include "utility/mysql/dcmysqlc.h"
+#include "utility/script/dcscript_vm.h"
+using namespace dcsutil;
 
 static int max_ping_pong = 100000;
 static int max_ppsz = 0;
@@ -171,7 +173,6 @@ int test_node(const char * p)
 	}
 	return 0;
 }
-#include "utility/script_vm.h"
 static int python_test(){
 	script_vm_config_t smc;
 	smc.type = SCRIPT_VM_PYTHON;
@@ -252,7 +253,7 @@ int perf_test(const char * arg){
 		pack_unpack_times, speed);
 	return 0;
 }
-#include "utility/json_doc.hpp"
+#include "utility/drs/dcjson.hpp"
 #include "iostream"
 using namespace  std;
 static int json_test(const char * file){
@@ -293,7 +294,7 @@ static int json_test(const char * file){
 	jd2.dump_file("test.out.json");
 	return 0;
 }
-#include "utility/xml_doc.h"
+#include "utility/drs/dcxml.h"
 static int xml_test(const char * xmlfile){
 	xml_doc_t xml;
 	if (xml.parse_file(xmlfile)){
@@ -410,7 +411,7 @@ static int mysql_test(const char * p){
 	}
 	return 0;
 }
-#include "utility/util_mongo.h"
+#include "utility/mongo/dcmongoc.h"
 static int mongo_test(const char * p){
 	dcsutil::mongo_client_config_t conf;
 	dcsutil::mongo_client_t		mg;
@@ -476,7 +477,7 @@ static int mongo_test(const char * p){
 }
 
 #include "dcnode/proto/dcnode.pb.h"
-#include "utility/util_proto.h"
+#include "utility/drs/dcproto.h"
 static int pbxml_test(const char* arg){
 	dcnode::MsgDCNode mdn;
 	string error;

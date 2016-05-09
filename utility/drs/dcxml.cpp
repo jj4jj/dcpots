@@ -4,7 +4,7 @@
 #include "../../base/logger.h"
 #include "../../base/dcutils.hpp"
 
-#include "xml_doc.h"
+#include "dcxml.h"
 
 NS_BEGIN(dcsutil)
 

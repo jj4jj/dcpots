@@ -1,7 +1,6 @@
 #pragma once
 
-NS_BEGIN(dcsutil)
-
+namespace dcsutil{
 //object pool
 
 template<class T, int MAX_NUM = 1024>
@@ -135,4 +134,4 @@ public:
 	}
 };
 
-NS_END()
+}

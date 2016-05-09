@@ -8,7 +8,7 @@
 #include "../base/profile.h"
 #include "../base/dcobjects.hpp"
 
-#include "../utility/util_proto.h"
+#include "../utility/drs/dcproto.h"
 
 #include "proto/dcnode.pb.h"
 

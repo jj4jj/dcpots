@@ -2,6 +2,7 @@
 #include "libbson-1.0/bcon.h"
 #include "libmongoc-1.0/mongoc.h"
 
+#include "../../base/stdinc.h"
 #include "../../base/blocking_queue.hpp"
 #include "../../base/dcobjects.hpp"
 #include "../../base/logger.h"
