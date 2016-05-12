@@ -39,7 +39,7 @@ struct mysqlclient_t {
 		}
 	};
 private:
-	void	*	handle;
+	void	*	handle_;
 	//////////////////////////////////
 public:
 	mysqlclient_t();

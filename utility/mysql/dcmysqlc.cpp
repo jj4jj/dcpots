@@ -23,14 +23,14 @@ struct mysqlclient_impl_t {
 	}
 };
 
-#define _THIS_HANDLE	((mysqlclient_impl_t*)(handle))
+#define _THIS_HANDLE	((mysqlclient_impl_t*)(handle_))
 #define LOG_S(format, ...)	LOGRSTR(_THIS_HANDLE->error_msg, "mysql", "[%d (%s)]" format,mysql_errno(_THIS_HANDLE->mysql_conn),mysql_error(_THIS_HANDLE->mysql_conn), ##__VA_ARGS__)
 
 mysqlclient_t::mysqlclient_t(){
-	handle = new mysqlclient_impl_t();
+	handle_ = new mysqlclient_impl_t();
 }
 
-inline	void	mysqlclient_cleanup(void *handle){
+inline	void	mysqlclient_cleanup(void * handle_){
 	if (_THIS_HANDLE){
 		if (_THIS_HANDLE->mysql_conn){
 			mysql_close(_THIS_HANDLE->mysql_conn);
@@ -40,13 +40,15 @@ inline	void	mysqlclient_cleanup(void *handle){
 }
 
 mysqlclient_t::~mysqlclient_t(){
-	mysqlclient_cleanup(handle);
-	if(_THIS_HANDLE)
-		delete _THIS_HANDLE;
+	mysqlclient_cleanup(handle_);
+    if (_THIS_HANDLE){
+        delete _THIS_HANDLE;
+        handle_ = nullptr;
+    }
 }
 //
 int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
-	mysqlclient_cleanup(handle); //for reinit
+	mysqlclient_cleanup(handle_); //for reinit
     auto conn = mysql_init(&_THIS_HANDLE->mysqlenv);
 	if (!conn){
 		LOG_S("mysql client init error ip:%s port:%d db:%s",

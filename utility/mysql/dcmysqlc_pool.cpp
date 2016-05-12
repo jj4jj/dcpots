@@ -96,7 +96,7 @@ _process_one(mysqlclient_t & client, size_t transid){
 }
 static void *
 _worker(void * data){
-    int idx = *(int*)data;
+    int idx = (ptrdiff_t)(data);
     mysqlclient_t & client = g_ctx.clients[idx];
     //g_ctx.cond.notify_one();
     g_ctx.running.fetch_add(1);
@@ -130,7 +130,12 @@ mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum
         threadsnum = 1;
         GLOG_WAR("threadsnum config is less than 0 using thread num :%d", threadsnum);
     }
+    g_ctx.stop = false;
+    g_ctx.mconf = conf;
+    g_ctx.mconf.multithread = true;
+    g_ctx.threadsnum = threadsnum;
 
+    ///////////////////////////////////////////////////////////////////////////////////
     mysqlclient_t & selfclient = g_ctx.clients[0];
     if (selfclient.init(g_ctx.mconf)){
         GLOG_ERR("mysql client(idx:%d) init error ! error (%d:%s) config ip:%s config port:%d",
@@ -139,21 +144,18 @@ mysqlclient_pool_t::init(const mysqlclient_t::cnnx_conf_t & conf, int threadsnum
         return -1;
     }
 
-    g_ctx.stop = false;
-    g_ctx.mconf = conf;
-    g_ctx.mconf.multithread = true;
-    g_ctx.threadsnum = threadsnum;
     for (int idx = 0; idx < threadsnum; ++idx){
-        mysqlclient_t & client = g_ctx.clients[idx+1];
+        int myid = idx + 1;
+        mysqlclient_t & client = g_ctx.clients[myid];
         if (client.init(g_ctx.mconf)){
-            GLOG_ERR("thread mysql client(idx:%d) init error ! error (%d:%s) config ip:%s config port:%d",
-                idx, client.err_no(), client.err_msg(),
+            GLOG_ERR("thread mysql client(myid:%d) init error ! error (%d:%s) config ip:%s config port:%d",
+                myid, client.err_no(), client.err_msg(),
                 g_ctx.mconf.ip.c_str(), g_ctx.mconf.port);
             return -2;
         }
-        GLOG_IFO("mysql client idx:%d create ok ...", idx);
+        GLOG_IFO("mysql client idx:%d create ok ...", myid);
         ////////////////////////////////////////////////////
-        g_ctx.threads[idx] = std::thread(_worker, &idx);
+        g_ctx.threads[idx] = std::thread(_worker, (char*)NULL + myid);
         g_ctx.threads[idx].detach();
     }
 	return 0;
