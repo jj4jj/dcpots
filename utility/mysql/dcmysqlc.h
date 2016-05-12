@@ -58,7 +58,11 @@ public:
 	//mysql conn
 	void *			mysql_handle();
 	void			lock();
-	void			unlock();
+	void			unlock(); 
+    //escape string: ibuff >= 2*idata+1
+    int             escape(char * buff, int & ibuff, const char * data, int idata);
+    const char *    escape(string & str, const char * data, int idata);
+
 };
 
 NS_END()

@@ -1,5 +1,6 @@
-#include "dcmysqlc.h"
+#pragma  once
 #include "../../base/msg_buffer.hpp"
+#include "dcmysqlc.h"
 
 NS_BEGIN(dcsutil)
 
@@ -45,7 +46,7 @@ struct mysqlclient_pool_t {
     int			    execute(const command_t & cmd, cb_func_t cb, void * ud);
     void            stop();
     int             running();
-	mysqlclient_t*	mysql(int i);
+	mysqlclient_t*	mysql(int idx=0);
     //========================================================================
     ~mysqlclient_pool_t();
 };

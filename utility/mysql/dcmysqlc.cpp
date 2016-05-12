@@ -205,7 +205,20 @@ const char *	mysqlclient_t::err_msg(){
 void *			mysqlclient_t::mysql_handle(){
 	return _THIS_HANDLE->mysql_conn;
 }
-
+int   mysqlclient_t::escape(char * buff, int & ibuff, const char * data, int idata){
+    //at least length*2+1 bytes long
+    //unsigned long mysql_real_escape_string(MYSQL *mysql, char *to, const char *from, unsigned long length)
+    if (ibuff < 2 * idata + 1){
+        return -1;
+    }
+    ibuff = mysql_real_escape_string(_THIS_HANDLE->mysql_conn, buff, data, idata);
+    return 0;
+}
+const char *    mysqlclient_t::escape(string & str, const char * data, int idata){
+    str.reserve(2 * idata + 1);
+    mysql_real_escape_string(_THIS_HANDLE->mysql_conn, (char *)str.data(), data, idata);
+    return str.data();
+}
 void			mysqlclient_t::lock(){
 	if (_THIS_HANDLE->conf.multithread){
 		_THIS_HANDLE->lock.lock();
