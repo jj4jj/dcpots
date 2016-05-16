@@ -197,7 +197,7 @@ static inline int _send_msg(RpcClientImpl * impl, const dcrpc_msg_t & rpc_msg){
         return -1;
     }
 	_check_sending_queue(impl); //checking queue
-	if (!impl->sending_queue.empty()){ //not send all
+	if (!impl->sending_queue.empty() || impl->fd == -1){ //not send all
         impl->sending_queue.push(rpc_msg);
     }
 	else { //send all
