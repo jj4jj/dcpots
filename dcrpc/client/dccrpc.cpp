@@ -25,6 +25,8 @@ struct  RpcClientImpl {
     msg_buffer_t send_msg_buff;
     std::vector<std::string> rpc_server_addrs;
     int  connect_server_retry{ 3 };
+    std::queue<dcrpc_msg_t>  sending_queue;
+    int  queue_max_size{ 0 };
 public:
     const string select_server(){
         return rpc_server_addrs[rand() % rpc_server_addrs.size()];
@@ -103,7 +105,7 @@ _distpach_remote_service_smsg(RpcClientImpl * impl, const char * buff, int ibuff
         }
     }
 }
-int RpcClient::init(const std::string & svraddrs){
+int RpcClient::init(const std::string & svraddrs, int queue_size){
     if (impl){
         return -1;
     }
@@ -113,6 +115,7 @@ int RpcClient::init(const std::string & svraddrs){
     if (!impl->cli){
         return -2;
     }
+    impl->queue_max_size = queue_size;
     dctcp_event_cb(impl->cli, [](dctcp_t* dc, const dctcp_event_t & ev, void * ud)->int {
         RpcClientImpl * impl = (RpcClientImpl *)ud;
         switch (ev.type){
@@ -157,22 +160,45 @@ int RpcClient::notify(const string & svc, RpcCallNotify cb){
     impl->notify_cbs[svc]=cb;
     return 0;
 }
+static inline int _send_directly(RpcClientImpl * impl, const dcrpc_msg_t & tosend_msg){
+    if (!tosend_msg.Pack(impl->send_msg_buff)){
+        GLOG_ERR("pack msg error when send msg to svc:%s", tosend_msg.path().c_str());
+        return -1;
+    }
+    int ret = dctcp_send(impl->cli, impl->fd, dctcp_msg_t(impl->send_msg_buff.buffer, impl->send_msg_buff.valid_size));
+    GLOG_TRA("send [%d] [%s] [%s]", ret, tosend_msg.path().c_str(), tosend_msg.Debug());
+    if (ret){
+        GLOG_SER("tcp send error = %d when send msg to svc:%s", ret, tosend_msg.path().c_str());
+        return -2;
+    }
+    return 0;
+}
+static inline int _check_sending_queue(RpcClientImpl * impl){
+    int ret = 0;
+    while (impl->fd != -1 && !impl->sending_queue.empty()){
+        const dcrpc_msg_t & tosend_msg = impl->sending_queue.front();        
+        ret = _send_directly(impl, tosend_msg);
+        if (ret == 0 || ret == -1){ //directly or pack error
+            impl->sending_queue.pop();
+        }
+        else {
+            return ret;
+        }
+    }
+    return 0;
+}
 static inline int _send_msg(RpcClientImpl * impl, const dcrpc_msg_t & rpc_msg){
-    if (impl->fd == -1){
+    if (impl->fd == -1 && (int)impl->sending_queue.size() >= impl->queue_max_size){
         GLOG_ERR("connection not ready error send msg to svc:%s", rpc_msg.path().c_str());
         return -1;
     }
-    if (!rpc_msg.Pack(impl->send_msg_buff)){
-        GLOG_ERR("pack msg error when send msg to svc:%s", rpc_msg.path().c_str());
-        return -2;
+    if (impl->queue_max_size > 0 && !impl->sending_queue.empty()){ // caching
+        impl->sending_queue.push(rpc_msg);
+        return _check_sending_queue(impl);
     }
-    int ret = dctcp_send(impl->cli, impl->fd, dctcp_msg_t(impl->send_msg_buff.buffer, impl->send_msg_buff.valid_size));
-    GLOG_TRA("send [%d] [%s] [%s]", ret, rpc_msg.path().c_str(), rpc_msg.Debug());
-    if (ret){
-        GLOG_SER("tcp send error = %d when send msg to svc:%s", ret, rpc_msg.path().c_str());
-        return -3;
-    }
-    return 0;
+    else {
+        return _send_directly(impl, rpc_msg);
+    }    
 }
 int RpcClient::push(const std::string & svc, const dcrpc::RpcValues & args){
     dcrpc_msg_t rpc_msg;

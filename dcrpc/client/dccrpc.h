@@ -8,7 +8,7 @@ public:
     RpcClient();
     ~RpcClient();
 public:
-    int init(const std::string & svraddrs);
+    int init(const std::string & svraddrs, int queue_size = 0);
     int update();
     int destroy();
     typedef std::function<void(int ret, const dcrpc::RpcValues &)>   RpcCallNotify;
