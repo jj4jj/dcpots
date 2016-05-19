@@ -43,7 +43,7 @@ def generate(desc , root_path):
     if len(desc.DEFS) == 0 :
         definations=''
 
-    if len(desc.LIBS) + len(desc.EXES) == 0:
+    if len(desc.LIBS) == 0 and len(desc.EXES) == 0:
         print("not found lib or exe modules")
         sys.exit(-1)
 
@@ -132,14 +132,16 @@ def generate(desc , root_path):
 
 def main(desc_file_path):
     modfile = desc_file_path+'.py'
-    mod='cmake_conf'
+    modf='cmake_conf'
     if os.path.exists(modfile):
+        modf = os.path.basename(desc_file_path)
         desc_file_path = os.path.dirname(modfile)
-        mod = os.path.basename(desc_file_path)
 
-    if desc_file_path is not None:
+    if desc_file_path and len(desc_file_path) > 0:
         sys.path.append(desc_file_path)
-    desc=__import__(mod)
+    else:
+        sys.path.append('.')
+    desc=__import__(modf)
     generate(desc, desc_file_path or '.')
 
 def usage():
