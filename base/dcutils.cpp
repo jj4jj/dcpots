@@ -799,6 +799,7 @@ namespace dcsutil {
         if (!charset || !(*charset)){
             return nullptr;
         }
+        randoms.reserve(length);
         int charsetlen = strlen(charset);
         std::random_device	rd;
         for (int i = 0; i < length; ++i){
@@ -808,7 +809,8 @@ namespace dcsutil {
     }
     const char*			strrandom(std::string & randoms, int length, char charbeg, char charend){
 		if (charbeg > charend){std::swap(charbeg, charend);}
-		std::random_device	rd;
+        randoms.reserve(length);
+        std::random_device	rd;
 		for (int i = 0; i < length; ++i){
 			randoms.append(1, (char)(rd() % (charend - charbeg + 1) + charbeg));
 		}
