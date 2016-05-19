@@ -131,9 +131,15 @@ def generate(desc , root_path):
              '<extra_srcs>': extra_srcs})
 
 def main(desc_file_path):
+    modfile = desc_file_path+'.py'
+    mod='cmake_conf'
+    if os.path.exists(modfile):
+        desc_file_path = os.path.dirname(modfile)
+        mod = os.path.basename(desc_file_path)
+
     if desc_file_path is not None:
         sys.path.append(desc_file_path)
-    desc=__import__('cmake_conf')
+    desc=__import__(mod)
     generate(desc, desc_file_path or '.')
 
 def usage():
