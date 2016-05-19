@@ -2,7 +2,7 @@ PROJECT='dcagent'
 VERSION='0.0.1'
 DEBUG = 1    #0/1
 DEFS = []
-VERBOSE = 'off'    #on/off
+VERBOSE = 'on'    #on/off
 EXTRA_C_FLAGS = ''
 EXTRA_CXX_FLAGS = '-std=c++11'
 EXTRA_LD_FLAGS = '-ldl -lm -lrt -pthread'

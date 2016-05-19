@@ -16,14 +16,16 @@ if(BUILDING_IN_SOURCE)
 endif()
 
 # compile option
-option(DEBUG "Debug mode" <debug_mode>)
+option(DEBUG "Debug mode" 1)
 option(PCH "Use precompiled headers" 0)
+SET(DEBUG "Debug mode" <debug_mode>)
 
 <definations>
 SET( CMAKE_VERBOSE_MAKEFILE <verbose>)
 
 if(DEBUG)
 	set(CMAKE_BUILD_TYPE Debug)
+    add_definitions(-DDEBUG)
 	message("Build in debug-mode : Yes (default)")
 else()
 	set(CMAKE_BUILD_TYPE Release)
@@ -36,8 +38,8 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_COMM_FLAGS} -g3 -ggdb3 -
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}  ${CMAKE_COMM_FLAGS} -g3 -ggdb3 -Wall -Wfatal-errors -Wextra <extra_cxx_flags> -rdynamic <extra_ld_flags>")
 
 # release mode
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_COMM_FLAGS} -O2 -g <extra_c_flags>  -rdynamic <extra_ld_flags>")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_COMM_FLAGS} -O2 -g <extra_cxx_flags>  -rdynamic <extra_ld_flags>")
+set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_COMM_FLAGS} -g <extra_c_flags>  -rdynamic <extra_ld_flags>")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_COMM_FLAGS} -g <extra_cxx_flags>  -rdynamic <extra_ld_flags>")
 
 # output dir
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
