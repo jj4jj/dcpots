@@ -33,12 +33,12 @@ namespace dcsutil {
         ret = daemon(!chrootdir, !closestd);
 #else
         assert("not implement in this platform , using nohup & launch it ?")
-        ret = -404;//todo 
+            ret = -404;//todo 
 #endif
         if (pidfile){
             int pidget = lockpidfile(pidfile);
             if (pidget != getpid()){
-                GLOG_ERR("error daemonlization when lockpidfile:%s ret=%d ... errno:%d (%s)", 
+                GLOG_ERR("error daemonlization when lockpidfile:%s ret=%d ... errno:%d (%s)",
                     pidfile, pidget, errno, strerror(errno));
                 exit(-2);
             }
@@ -49,47 +49,47 @@ namespace dcsutil {
         }
         return 0;
     }
-	typedef  std::unordered_map<int, std::stack<sah_handler> >	signalh_stacks_t;
-	static signalh_stacks_t	s_sigh_stacks;
-	int					signalh_ignore(int sig){
-		return signalh_push(sig, (sah_handler)SIG_DFL);
-	}
-	int					signalh_default(int sig){
-		return signalh_push(sig, (sah_handler)SIG_DFL);
-	}
-	void				signalh_clear(int sig){
-		if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
-			return;
-		}
-		while (!s_sigh_stacks[sig].empty()){
-			s_sigh_stacks[sig].pop();
-		}
-	}
-	////////////////////////////////////////////////////////////////////////
-	//typedef void(*sah_handler)(int sig, siginfo_t * sig_info, void * ucontex);
-	int					signalh_push(int sig, sah_handler sah, int sah_flags){
-		if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
-			s_sigh_stacks[sig] = std::stack<sah_handler>();
-		}
-		s_sigh_stacks[sig].push((sah_handler)SIG_IGN);
-		struct sigaction act;
-		memset(&act,0,sizeof(act));
-		act.sa_flags = sah_flags;
-		act.sa_sigaction = sah;
-		//act.sa_mask = sah_mask;
-		act.sa_flags = sah_flags | SA_SIGINFO;
-		return sigaction(sig, &act, NULL);
-	}
-	sah_handler			signalh_pop(int sig){
-		if (s_sigh_stacks.find(sig) == s_sigh_stacks.end() ||
-			s_sigh_stacks[sig].empty()){
-			return (sah_handler)SIG_DFL;
-			//s_sigh_stacks[sig] = std::stack<sah_handler>();
-		}
-		sah_handler sah = s_sigh_stacks[sig].top();
-		s_sigh_stacks[sig].pop();
-		return sah;
-	}
+    typedef  std::unordered_map<int, std::stack<sah_handler> >	signalh_stacks_t;
+    static signalh_stacks_t	s_sigh_stacks;
+    int					signalh_ignore(int sig){
+        return signalh_push(sig, (sah_handler)SIG_DFL);
+    }
+    int					signalh_default(int sig){
+        return signalh_push(sig, (sah_handler)SIG_DFL);
+    }
+    void				signalh_clear(int sig){
+        if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
+            return;
+        }
+        while (!s_sigh_stacks[sig].empty()){
+            s_sigh_stacks[sig].pop();
+        }
+    }
+    ////////////////////////////////////////////////////////////////////////
+    //typedef void(*sah_handler)(int sig, siginfo_t * sig_info, void * ucontex);
+    int					signalh_push(int sig, sah_handler sah, int sah_flags){
+        if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
+            s_sigh_stacks[sig] = std::stack<sah_handler>();
+        }
+        s_sigh_stacks[sig].push((sah_handler)SIG_IGN);
+        struct sigaction act;
+        memset(&act, 0, sizeof(act));
+        act.sa_flags = sah_flags;
+        act.sa_sigaction = sah;
+        //act.sa_mask = sah_mask;
+        act.sa_flags = sah_flags | SA_SIGINFO;
+        return sigaction(sig, &act, NULL);
+    }
+    sah_handler			signalh_pop(int sig){
+        if (s_sigh_stacks.find(sig) == s_sigh_stacks.end() ||
+            s_sigh_stacks[sig].empty()){
+            return (sah_handler)SIG_DFL;
+            //s_sigh_stacks[sig] = std::stack<sah_handler>();
+        }
+        sah_handler sah = s_sigh_stacks[sig].top();
+        s_sigh_stacks[sig].pop();
+        return sah;
+    }
 
     int			readfile(const std::string & file, char * buffer, size_t sz){
         FILE * fp = fopen(file.c_str(), "r");
@@ -134,57 +134,57 @@ namespace dcsutil {
         fclose(fp);
         return sz;
     }
-	const char *		path_base(const char * path){
-		//#define MAX_PATH_LENGTH	 256
-		//char path_buff[MAX_PATH_LENGTH] = { 0 };
-		//strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
-		return basename(path);
-	}
+    const char *		path_base(const char * path){
+        //#define MAX_PATH_LENGTH	 256
+        //char path_buff[MAX_PATH_LENGTH] = { 0 };
+        //strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
+        return basename(path);
+    }
 #if 0
-	//include by libgen
-	string		path_base(const string & path){
-		#define MAX_PATH_LENGTH	 256
-		char path_buff[MAX_PATH_LENGTH] = { 0 };
-		strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
-		return basename(path_buff);
-	}
-	string 				path_dir(const string & path){
-		#define MAX_PATH_LENGTH	 256
-		char path_buff[MAX_PATH_LENGTH] = { 0 };
-		strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
-		return dirname(path_buff);
-	}
+    //include by libgen
+    string		path_base(const string & path){
+#define MAX_PATH_LENGTH	 256
+        char path_buff[MAX_PATH_LENGTH] = { 0 };
+        strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
+        return basename(path_buff);
+    }
+    string 				path_dir(const string & path){
+#define MAX_PATH_LENGTH	 256
+        char path_buff[MAX_PATH_LENGTH] = { 0 };
+        strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
+        return dirname(path_buff);
+    }
 #endif
     int			writefile(const std::string & file, const char * buffer, size_t sz){
         FILE * fp = fopen(file.c_str(), "w");
-		if (!fp){
+        if (!fp){
             GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
-			return -1;
-		}
-		if (sz == 0){
-			sz = strlen(buffer);
-		}
-		size_t tsz = 0;
-		int n = 0;
-		while ((n = fwrite(buffer + tsz, 1, sz - tsz, fp))){
-			if (n > 0){
-				tsz += n;
-			}
-			else  if (errno != EINTR &&
-				errno != EAGAIN && errno != EWOULDBLOCK) {
+            return -1;
+        }
+        if (sz == 0){
+            sz = strlen(buffer);
+        }
+        size_t tsz = 0;
+        int n = 0;
+        while ((n = fwrite(buffer + tsz, 1, sz - tsz, fp))){
+            if (n > 0){
+                tsz += n;
+            }
+            else  if (errno != EINTR &&
+                errno != EAGAIN && errno != EWOULDBLOCK) {
                 GLOG_ERR("write file:%s ret:%d error :%d writed sz:%zu total:%zu", file.c_str(), n, errno, tsz, sz);
-				break;
-			}
-		}
-		fclose(fp);
-		if (tsz == sz){
-			return tsz;
-		}
-		else {
+                break;
+            }
+        }
+        fclose(fp);
+        if (tsz == sz){
+            return tsz;
+        }
+        else {
             GLOG_ERR("write file:%s writed:%zu error :%d total sz:%zu", file.c_str(), tsz, errno, sz);
-			return -2;
-		}
-	}
+            return -2;
+        }
+    }
     //file://<path>
     //tcp://<ip:port>
     //udp://<ip:port>
@@ -249,7 +249,7 @@ namespace dcsutil {
         }
         else if (uri.find("http://") == 0){//7
             std::vector<string> vs;
-            strsplit(uri.substr(7), "/", vs, true, 2);           
+            strsplit(uri.substr(7), "/", vs, true, 2);
             if (vs.empty()){
                 GLOG_ERR("uri path is error :%s", uri.c_str());
                 return -1;
@@ -341,10 +341,10 @@ namespace dcsutil {
                 szlen = sizeof(uint8_t);
             }
             else {
-                GLOG_ERR("read fd:%d error mode:%s",fd, mode);
+                GLOG_ERR("read fd:%d error mode:%s", fd, mode);
                 return -1;
             }
-            if (_readfd(fd, (char *)&nrsz, szlen, timeout_ms)!= szlen){
+            if (_readfd(fd, (char *)&nrsz, szlen, timeout_ms) != szlen){
                 GLOG_ERR("read fd:%d size16 head error !", fd);
                 return -2;
             }
@@ -403,7 +403,7 @@ namespace dcsutil {
     }
     //write size , return > 0 wirte size, <= 0 error
     int         writefd(int fd, const char * buffer, size_t sz, int timeout_ms){
-		if (fd < 0){ return -1; }
+        if (fd < 0){ return -1; }
         if (sz == 0){
             sz = strlen(buffer);
         }
@@ -420,10 +420,10 @@ namespace dcsutil {
                         return -1;
                     }
                 }
-				else {
-					GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
-					return -2;
-				}
+                else {
+                    GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
+                    return -2;
+                }
             }
         }
         return tsz;
@@ -468,7 +468,7 @@ namespace dcsutil {
         FD_SET(fd, &fdset);
         struct timeval tv;
         tv.tv_sec = timeout_ms / 1000;
-        tv.tv_usec = (timeout_ms % 1000 ) * 1000;
+        tv.tv_usec = (timeout_ms % 1000) * 1000;
         int ret = select(fd + 1, &fdset, NULL, NULL, &tv);
         if (ret > 0){
             assert(FD_ISSET(fd, &fdset));
@@ -478,7 +478,7 @@ namespace dcsutil {
     }
     int         socknetaddr(sockaddr_in & addr, const std::string & saddr){
         memset(&addr, 0, sizeof(addr));
-        addr.sin_addr.s_addr = 0;        
+        addr.sin_addr.s_addr = 0;
         addr.sin_family = AF_INET;
         addr.sin_port = 0;
         std::vector<string> vs;
@@ -568,7 +568,7 @@ namespace dcsutil {
             return "";
         }
         close(sockfd);
-        snprintf(mac_addr,sizeof(mac_addr)-1, "%02x%02x%02x%02x%02x%02x",
+        snprintf(mac_addr, sizeof(mac_addr)-1, "%02x%02x%02x%02x%02x%02x",
             (unsigned char)_temp.ifr_hwaddr.sa_data[0],
             (unsigned char)_temp.ifr_hwaddr.sa_data[1],
             (unsigned char)_temp.ifr_hwaddr.sa_data[2],
@@ -615,79 +615,79 @@ namespace dcsutil {
     }
     int			lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd){
         int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
-		if (fd == -1) {
+        if (fd == -1) {
             GLOG_ERR("open file:%s error ", file.c_str());
-			return -1;
-		}
-		int flags = LOCK_EX;
-		if (nb){
-			flags |= LOCK_NB;
-		}
-		char szpid[16] = { 0 };
-		int pid = 0;
-		while (flock(fd, flags) == -1) {
-			if (pid == 0){ //just read once
+            return -1;
+        }
+        int flags = LOCK_EX;
+        if (nb){
+            flags |= LOCK_NB;
+        }
+        char szpid[16] = { 0 };
+        int pid = 0;
+        while (flock(fd, flags) == -1) {
+            if (pid == 0){ //just read once
                 int n = readfile(file, szpid, sizeof(szpid));
-				if (n > 0){
-					pid = strtol(szpid, NULL, 10);
+                if (n > 0){
+                    pid = strtol(szpid, NULL, 10);
                     GLOG_ERR("lock pidfile:%s fail , the file is held by pid %d", file.c_str(), pid);
-				}
-				else {
+                }
+                else {
                     GLOG_ERR("lock pidfile:%s fail but read pid from file error !", file.c_str());
-				}
-			}
-			if (pid > 0 && kill_other_sig > 0){
-				if (kill(pid, kill_other_sig) && errno == ESRCH){
+                }
+            }
+            if (pid > 0 && kill_other_sig > 0){
+                if (kill(pid, kill_other_sig) && errno == ESRCH){
                     GLOG_WAR("killed the pidfile locker:%d by signal:%d", pid, kill_other_sig);
-					break;
-				}
-			}
-			else { //pid > 0 && not kill
+                    break;
+                }
+            }
+            else { //pid > 0 && not kill
                 close(fd);
-				return pid;
-			}
-		}
-		pid = getpid();
-		snprintf(szpid, sizeof(szpid), "%d", pid);
+                return pid;
+            }
+        }
+        pid = getpid();
+        snprintf(szpid, sizeof(szpid), "%d", pid);
         writefile(file, szpid);
         if (pfd){ *pfd = fd; }
-		return pid;
-	}
+        return pid;
+    }
     int			strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs,
-                        bool ignore_empty, int maxsplit, int beg_ , int end_ ){
-		vs.clear();
+        bool ignore_empty, int maxsplit, int beg_, int end_){
+        vs.clear();
         string::size_type beg = beg_;
         string::size_type end = str.length();
         if (end_ > 0){
             end = end_;
         }
-		string::size_type pos = 0;
-		//if pos not found add the rest then return , else add substr . again
-		do {
-			pos = str.find(sep, beg);
-			if ( pos != string::npos && pos < end ){
-				if (pos > beg){
-					vs.push_back(str.substr(beg, pos - beg));
-				}
-				else if (!ignore_empty){
-					vs.push_back(""); //empty 
-				}
-				beg = pos + sep.length();
-			}
-			if (pos == string::npos || //last one
-				(maxsplit > 0 && (int)vs.size() + 1 == maxsplit) ||
+        string::size_type pos = 0;
+        //if pos not found add the rest then return , else add substr . again
+        do {
+            pos = str.find(sep, beg);
+            if (pos != string::npos && pos < end){
+                if (pos > beg){
+                    vs.push_back(str.substr(beg, pos - beg));
+                }
+                else if (!ignore_empty){
+                    vs.push_back(""); //empty 
+                }
+                beg = pos + sep.length();
+            }
+            if (pos == string::npos || //last one
+                (maxsplit > 0 && (int)vs.size() + 1 == maxsplit) ||
                 pos > end){
-				if (beg < end){
-					vs.push_back(str.substr(beg, end - beg));
-				}
-				else if (!ignore_empty){
-					vs.push_back(""); //empty 
-				}
-				return vs.size();
-			}
-		} while (true);
-		return vs.size();
-	}
+                if (beg < end){
+                    vs.push_back(str.substr(beg, end - beg));
+                }
+                else if (!ignore_empty){
+                    vs.push_back(""); //empty 
+                }
+                return vs.size();
+            }
+        } while (true);
+        return vs.size();
+    }
     bool                time_same_hour(time_t t1, time_t t2){
         return t1 / 3600 == t2 / 3600;
     }
@@ -697,7 +697,7 @@ namespace dcsutil {
         int d1 = _sftm.tm_wday;//0-6
         localtime_r(&t2, &_sftm);
         int d2 = _sftm.tm_wday;//0-6
-        return d1 == d2 && time_same_year(t1, t2) && abs(t1-t2) < (7*86400);
+        return d1 == d2 && time_same_year(t1, t2) && abs(t1 - t2) < (7 * 86400);
     }
     bool                time_same_year(time_t t1, time_t t2){
         struct tm _sftm;
@@ -724,31 +724,31 @@ namespace dcsutil {
         return m1 == m2 && time_same_year(t1, t2);
     }
 
-	const char*		strftime(std::string & str, time_t unixtime, const char * format){
-		str.reserve(32);
-		if (unixtime == 0U){
-			unixtime = time(NULL);
-		}
-		struct tm _sftm;
-		localtime_r(&unixtime, &_sftm);
-		strftime((char*)str.c_str(), str.capacity(), format, &_sftm);
-		return str.c_str();
-	}
-    const char*         strptime(time_t & unixtime ,const std::string & str, const char * format){
+    const char*		strftime(std::string & str, time_t unixtime, const char * format){
+        str.reserve(32);
+        if (unixtime == 0U){
+            unixtime = time(NULL);
+        }
+        struct tm _sftm;
+        localtime_r(&unixtime, &_sftm);
+        strftime((char*)str.c_str(), str.capacity(), format, &_sftm);
+        return str.c_str();
+    }
+    const char*         strptime(time_t & unixtime, const std::string & str, const char * format){
         struct tm _tmptm;
         unixtime = 0;
         const char * p = strptime(str.c_str(), format, &_tmptm);
-        if(!p){
+        if (!p){
             return nullptr;
         }
         unixtime = mktime(&_tmptm);
         return p;
     }
-	time_t			    stdstrtime(const char * strtime){
+    time_t			    stdstrtime(const char * strtime){
         time_t _tmt;
         strptime(_tmt, strtime);
         return _tmt;
-	}
+    }
     bool            strisint(const std::string & str, int base){
         char * endptr;
         if (str.empty()){
@@ -764,38 +764,38 @@ namespace dcsutil {
         }
         return true;
     }
-	void			strrepeat(std::string & str, const char * rep, int repcount){
-		while (repcount-- > 0){
-			str.append(rep);
-		}
-	}
-	size_t			vstrprintf(std::string & str, const char* format, va_list ap){
-		size_t ncvt = vsnprintf((char*)str.data(), str.capacity(), format, ap);
-		if (ncvt == str.capacity()){
-			str[ncvt - 1] = 0;
-			--ncvt;
-		}
-		return ncvt;
-	}
-	size_t			strprintf(std::string & str, const char * format, ...){
-		va_list	ap;
-		va_start(ap, format);
-		size_t ncvt = vstrprintf(str, format, ap);
-		va_end(ap);
-		return ncvt;
-	}
-	size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...){
-		str.reserve(max_sz);
-		va_list	ap;
-		va_start(ap, format);
-		size_t ncvt = vstrprintf(str, format, ap);
-		va_end(ap);
-		return ncvt;
-	}
+    void			strrepeat(std::string & str, const char * rep, int repcount){
+        while (repcount-- > 0){
+            str.append(rep);
+        }
+    }
+    size_t			vstrprintf(std::string & str, const char* format, va_list ap){
+        size_t ncvt = vsnprintf((char*)str.data(), str.capacity(), format, ap);
+        if (ncvt == str.capacity()){
+            str[ncvt - 1] = 0;
+            --ncvt;
+        }
+        return ncvt;
+    }
+    size_t			strprintf(std::string & str, const char * format, ...){
+        va_list	ap;
+        va_start(ap, format);
+        size_t ncvt = vstrprintf(str, format, ap);
+        va_end(ap);
+        return ncvt;
+    }
+    size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...){
+        str.reserve(max_sz);
+        va_list	ap;
+        va_start(ap, format);
+        size_t ncvt = vstrprintf(str, format, ap);
+        va_end(ap);
+        return ncvt;
+    }
 
 
-	//////////////////////////////////////////////////////////////////////////////////////////
-    const char*			strcharsetrandom(std::string & randoms, int length , const char * charset){
+    //////////////////////////////////////////////////////////////////////////////////////////
+    const char*			strcharsetrandom(std::string & randoms, int length, const char * charset){
         if (!charset || !(*charset)){
             return nullptr;
         }
@@ -808,14 +808,14 @@ namespace dcsutil {
         return randoms.c_str();
     }
     const char*			strrandom(std::string & randoms, int length, char charbeg, char charend){
-		if (charbeg > charend){std::swap(charbeg, charend);}
+        if (charbeg > charend){ std::swap(charbeg, charend); }
         randoms.reserve(length);
         std::random_device	rd;
-		for (int i = 0; i < length; ++i){
-			randoms.append(1, (char)(rd() % (charend - charbeg + 1) + charbeg));
-		}
-		return randoms.c_str();
-	}
+        for (int i = 0; i < length; ++i){
+            randoms.append(1, (char)(rd() % (charend - charbeg + 1) + charbeg));
+        }
+        return randoms.c_str();
+    }
     string &            strreplace(string & str, const string & sub, const string & repl, bool global){
         string::size_type found = str.find(sub);
         if (global){
@@ -845,9 +845,9 @@ namespace dcsutil {
         //name=v
         std::map<string, string>      kvmap;
         std::vector<string> vs;
-		string kvsep;
-		strrepeat(kvsep, sep.c_str(), 2);//,
-		strsplit(str, kvsep, vs, true, 0, 1, str.length() - 1); //{<---------->}
+        string kvsep;
+        strrepeat(kvsep, sep.c_str(), 2);//,
+        strsplit(str, kvsep, vs, true, 0, 1, str.length() - 1); //{<---------->}
         for (auto & kv : vs){
             std::vector<string> skv;
             int lkv = strsplit(kv, sep, skv, true, 2);//k=v
@@ -855,17 +855,17 @@ namespace dcsutil {
                 kvmap[skv[0]] = skv[1];
             }
         }
-		/////////////////////////////////////////
-		std::vector<string> vsks;
-		strsplit(ks, ",", vsks, true);
-		va_list ap;
-		va_start(ap, ks);
-		for (auto & k : vsks){
-			//k=v
-			string * v = va_arg(ap, std::string *);
-			v->assign(kvmap[k]);
-		}
-		va_end(ap);
+        /////////////////////////////////////////
+        std::vector<string> vsks;
+        strsplit(ks, ",", vsks, true);
+        va_list ap;
+        va_start(ap, ks);
+        for (auto & k : vsks){
+            //k=v
+            string * v = va_arg(ap, std::string *);
+            v->assign(kvmap[k]);
+        }
+        va_end(ap);
         return vs.size();
     }
     const char         *strspack(std::string & str, const std::string & sep, const std::string & ks, ...){
@@ -876,7 +876,7 @@ namespace dcsutil {
         strsplit(ks, ",", vs, true);
         va_list ap;
         va_start(ap, ks);
-		for (size_t i = 0; i < vs.size(); ++i){
+        for (size_t i = 0; i < vs.size(); ++i){
             if (i > 0){
                 strrepeat(str, sep.c_str(), 2);//,
             }
@@ -890,8 +890,140 @@ namespace dcsutil {
         str += "}";
         return str.data();
     }
+    int             b64_encode(std::string & b64, const char * buff, int slen){
+        static const char lookup[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        b64.clear();
+        b64.reserve(slen * 4 / 3 + 3);
+        const unsigned char * data = (const u1 *)buff;
+        for (int i = 0; i < slen; i += 3) {
+            unsigned n = data[i] << 16;
+            if (i + 1 < slen)
+            {
+                n |= data[i + 1] << 8;
+            }
+            if (i + 2 < slen)
+            {
+                n |= data[i + 2];
+            }
 
+            const char n0 = (const char)(n >> 18) & 0x3f;
+            const char n1 = (const char)(n >> 12) & 0x3f;
+            const char n2 = (const char)(n >> 6) & 0x3f;
+            const char n3 = (const char)(n)& 0x3f;
+            b64.push_back(lookup[n0]);
+            b64.push_back(lookup[n1]);
+            if (i + 1 < slen)
+            {
+                b64.push_back(lookup[n2]);
+            }
+            if (i + 2 < slen)
+            {
+                b64.push_back(lookup[n3]);
+            }
+        }
+        for (int k = 0; k < (int)(3 - slen % 3) % 3; k++)
+        {
+            b64.push_back('=');
+        }
+        return b64.length();
+    }
+    int             b64_decode(std::string & buff, const std::string & b64){
+        static const char lookup[] = ""
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x00
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x10
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x3e\x80\x80\x80\x3f" // 0x20
+            "\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x80\x80\x80\x00\x80\x80" // 0x30
+            "\x80\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e" // 0x40
+            "\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x80\x80\x80\x80\x80" // 0x50
+            "\x80\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25\x26\x27\x28" // 0x60
+            "\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x80\x80\x80\x80\x80" // 0x70
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x80
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x90
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xa0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xb0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xc0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xd0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xe0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xf0
+            "";
+        int slen = b64.length();
+        const unsigned char * s = (const unsigned char *)b64.data();
+        if (slen % 4 || slen < 2){
+            return -1;
+        }
+        size_t pad = 0;
+        if (b64[slen - 1] == '=') pad++;
+        if (b64[slen - 2] == '=') pad++;
 
+        buff.clear();
+        buff.reserve(slen * 3 / 4 + 3);
+        int len = 0;
+        size_t i = 0;
+        for (i = 0; i < slen; i += 4) {
+            unsigned char n0 = lookup[s[i + 0]];
+            unsigned char n1 = lookup[s[i + 1]];
+            unsigned char n2 = lookup[s[i + 2]];
+            unsigned char n3 = lookup[s[i + 3]];
+            if (0x80 & (n0 | n1 | n2 | n3)){
+                return i;
+            }
+            unsigned n = (n0 << 18) | (n1 << 12) | (n2 << 6) | n3;
+            buff.push_back((n >> 16) & 0xff);
+            if (s[i + 2] != '='){
+                buff.push_back((n >> 8) & 0xff);
+            }
+            if (s[i + 3] != '='){
+                buff.push_back((n)& 0xff);
+            }
+        }
+        return 0;
+    }
+    int                 hex2bin(std::string & bin, const char * hex){
+        static const char lookup[] = ""
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x00
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x10
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x3e\x80\x80\x80\x3f" // 0x20
+            "\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x80\x80\x80\x00\x80\x80" // 0x30
+            "\x80\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e" // 0x40
+            "\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x80\x80\x80\x80\x80" // 0x50
+            "\x80\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25\x26\x27\x28" // 0x60
+            "\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x80\x80\x80\x80\x80" // 0x70
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x80
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x90
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xa0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xb0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xc0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xd0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xe0
+            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xf0
+            "";
+        bin.clear();
+        int nhex = strlen(hex);
+        bin.reserve((nhex >> 1) + 1);///2
+        if ((nhex & 1) == 1){
+            return -1; //error length
+        }
+        while (hex && *hex){
+            unsigned char n = (lookup[(unsigned char)*hex] << 4) + lookup[(unsigned char)*(hex+1)];
+            bin.push_back(n);
+            hex += 2;
+        }
+        return 0;
+    }
+    int                 bin2hex(std::string & hex, const char * buff, int ibuff){
+        static const char lookup[] = "0123456789abcdef";
+        hex.clear();
+        hex.reserve(ibuff*2+1);
+        if (ibuff <= 0){
+            return 0;
+        }
+        while (ibuff--){
+            unsigned char n = buff[ibuff];
+            hex.push_back(lookup[n >> 4]);
+            hex.push_back(lookup[n & 0xF]);
+        }
+        return 0;
+    }
 
 
 

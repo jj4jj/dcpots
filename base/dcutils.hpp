@@ -83,7 +83,10 @@ NS_BEGIN(dcsutil)
     //todo variadic  ?
     
     //////////////////////////////////////////////////////////////////////////////////////////////////////
-
+    int                 b64_encode(std::string & b64, const char * buff, int ibuff);
+    int                 b64_decode(std::string & buff, const std::string & b64);
+    int                 hex2bin(std::string & bin, const char * hex);
+    int                 bin2hex(std::string & hex, const char * buff, int ibuff);
 
 
 
