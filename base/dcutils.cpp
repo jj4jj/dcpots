@@ -90,40 +90,60 @@ namespace dcsutil {
         s_sigh_stacks[sig].pop();
         return sah;
     }
-
+	bool		file_exists(const std::string & file){
+		FILE * fp = fopen(file.c_str(), "r");
+		fclose(fp);
+		return fp != nullptr;
+	}
+	int			readfile(std::string & content, const std::string & file){
+		char filebuff[512];
+		content.clear();
+		content.reserve(1024 * 8);
+		FILE * fp = fopen(file.c_str(), "r");
+		if (!fp){
+			GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
+			return -1;
+		}
+		while (true){
+			int tsz = fread(filebuff, 1, sizeof(filebuff), fp);
+			if (tsz == sizeof(filebuff)){
+				content.append(filebuff, tsz);
+			}
+			else if (feof(fp)){
+				content.append(filebuff, tsz);
+				fclose(fp);
+				return content.length();
+			}
+			else {
+				GLOG_SER("read file:%s ret:%zd error :%d ", file.c_str(), tsz, errno);
+				fclose(fp);
+				return -2;
+			}
+		}
+		return -3;
+	}
     int			readfile(const std::string & file, char * buffer, size_t sz){
-        FILE * fp = fopen(file.c_str(), "r");
+		FILE * fp = fopen(file.c_str(), "r");
         if (!fp){
             GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
             return -1;
         }
-        if (sz == 0 || !buffer){
-            return 0; //file exist
-            fclose(fp);
-        }
-        int n;
-        size_t tsz = 0;
-        while ((n = fread(buffer + tsz, 1, sz - tsz, fp))){
-            if (n > 0){
-                tsz += n;
-            }
-            else if (errno != EINTR &&
-                errno != EAGAIN && errno != EWOULDBLOCK) {
-                GLOG_ERR("read file:%s ret:%d error :%d total sz:%zu", file.c_str(), n, errno, tsz);
-                break;
-            }
-        }
-        fclose(fp);
-        if (n >= 0){
-            if (tsz < sz){
-                buffer[tsz] = 0;
-            }
-            return tsz;
-        }
-        else {
-            return -2;
-        }
-    }
+		if (sz == 0 || !buffer){
+			fclose(fp);
+			return 0; //file exists
+		}
+		int tsz = fread(buffer, 1, sz, fp);
+		if (feof(fp)){
+			if (tsz < sz){
+				buffer[tsz] = 0;
+			}
+			fclose(fp);
+			return tsz;
+		} 
+		GLOG_SER("read file:%s error :%d total sz:%zu", file.c_str(), errno, tsz);
+		fclose(fp);
+		return -2;
+	}
     size_t      filesize(const std::string & file){
         FILE * fp = fopen(file.c_str(), "r");
         if (!fp){
@@ -164,25 +184,15 @@ namespace dcsutil {
         if (sz == 0){
             sz = strlen(buffer);
         }
-        size_t tsz = 0;
-        int n = 0;
-        while ((n = fwrite(buffer + tsz, 1, sz - tsz, fp))){
-            if (n > 0){
-                tsz += n;
-            }
-            else  if (errno != EINTR &&
-                errno != EAGAIN && errno != EWOULDBLOCK) {
-                GLOG_ERR("write file:%s ret:%d error :%d writed sz:%zu total:%zu", file.c_str(), n, errno, tsz, sz);
-                break;
-            }
-        }
-        fclose(fp);
+        size_t tsz = fwrite(buffer, 1, sz, fp);
         if (tsz == sz){
-            return tsz;
+			fclose(fp);
+			return tsz;
         }
         else {
-            GLOG_ERR("write file:%s writed:%zu error :%d total sz:%zu", file.c_str(), tsz, errno, sz);
-            return -2;
+            GLOG_SER("write file:%s writed:%zu error :%d total sz:%zu", file.c_str(), tsz, errno, sz);
+			fclose(fp);
+			return -2;
         }
     }
     //file://<path>
@@ -894,7 +904,7 @@ namespace dcsutil {
         static const char lookup[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         b64.clear();
         b64.reserve(slen * 4 / 3 + 3);
-        const unsigned char * data = (const u1 *)buff;
+		const unsigned char * data = (const unsigned char *)buff;
         for (int i = 0; i < slen; i += 3) {
             unsigned n = data[i] << 16;
             if (i + 1 < slen)

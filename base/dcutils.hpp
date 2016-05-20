@@ -23,9 +23,11 @@ NS_BEGIN(dcsutil)
 
 	//file releataed
     //if sz = 0 , test file exist
-    int					readfile(const std::string & file, char * buffer = 0, size_t sz = 0);
+	int					readfile(std::string & content, const std::string & file);
+	int					readfile(const std::string & file, char * buffer = 0, size_t sz = 0);
     int					writefile(const std::string & file, const char * buffer, size_t sz = 0);
-    size_t              filesize(const std::string & file);
+	bool				file_exists(const std::string & file);
+	size_t              filesize(const std::string & file);
 	const char *		path_base(const char * path);
     //file://<path>
     //tcp://<ip:port>
