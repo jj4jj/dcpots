@@ -5,6 +5,8 @@ namespace dcsutil {
 
 void * rsa_from_perm_pubkey(const char * file);
 void * rsa_from_perm_prvkey(const char * file);
+void * rsa_from_der_pubkey(const char * buff, int ibuff);
+void * rsa_from_der_prvkey(const char * buff, int ibuff);
 void   rsa_free(void * rsa);
 
 enum RSASignAlgoType {
