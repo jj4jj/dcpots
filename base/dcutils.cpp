@@ -8,6 +8,38 @@
 #include<netinet/in.h>
 //#include <libgen.h>
 
+namespace {
+    static const char s_b64_lookup_c2d[] = ""
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x00
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x10
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x3e\x80\x80\x80\x3f" // 0x20
+        "\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x80\x80\x80\x00\x80\x80" // 0x30
+        "\x80\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e" // 0x40
+        "\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x80\x80\x80\x80\x80" // 0x50
+        "\x80\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25\x26\x27\x28" // 0x60
+        "\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x80\x80\x80\x80\x80" // 0x70
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x80
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x90
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xa0
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xb0
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xc0
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xd0
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xe0
+        "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xf0
+        "";
+    static const char s_b64_lookup_d2c[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    static inline unsigned char s_hex_lookup_c2d(int c){
+        return  (c >= '0' && c <= '9') ? c - '0' : (
+                (c >= 'a' && c <= 'f') ? c - 'a' + 10: (
+                (c >= 'A' && c <= 'F') ? c - 'A' + 10: 0 ) );
+    }
+    static inline char s_hex_lookup_d2c(unsigned char d){
+        static const char s_hex_lookup[] = "0123456789abcdef";
+        return s_hex_lookup[d];
+    }
+
+};
+
 namespace dcsutil {
     uint64_t	time_unixtime_us(){
         timeval tv;
@@ -132,7 +164,7 @@ namespace dcsutil {
 			fclose(fp);
 			return 0; //file exists
 		}
-		int tsz = fread(buffer, 1, sz, fp);
+		size_t tsz = fread(buffer, 1, sz, fp);
 		if (feof(fp)){
 			if (tsz < sz){
 				buffer[tsz] = 0;
@@ -901,34 +933,30 @@ namespace dcsutil {
         return str.data();
     }
     int             b64_encode(std::string & b64, const char * buff, int slen){
-        static const char lookup[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
         b64.clear();
         b64.reserve(slen * 4 / 3 + 3);
 		const unsigned char * data = (const unsigned char *)buff;
         for (int i = 0; i < slen; i += 3) {
-            unsigned n = data[i] << 16;
-            if (i + 1 < slen)
-            {
+            uint32_t n = data[i] << 16;
+            if (i + 1 < slen){
                 n |= data[i + 1] << 8;
             }
-            if (i + 2 < slen)
-            {
+            if (i + 2 < slen){
                 n |= data[i + 2];
             }
-
-            const char n0 = (const char)(n >> 18) & 0x3f;
-            const char n1 = (const char)(n >> 12) & 0x3f;
-            const char n2 = (const char)(n >> 6) & 0x3f;
-            const char n3 = (const char)(n)& 0x3f;
-            b64.push_back(lookup[n0]);
-            b64.push_back(lookup[n1]);
+            const unsigned char n0 = (const unsigned char)(n >> 18) & 0x3f;
+            const unsigned char n1 = (const unsigned char)(n >> 12) & 0x3f;
+            const unsigned char n2 = (const unsigned char)(n >> 6) & 0x3f;
+            const unsigned char n3 = (const unsigned char)(n)& 0x3f;
+            b64.push_back(s_b64_lookup_d2c[n0]);
+            b64.push_back(s_b64_lookup_d2c[n1]);
             if (i + 1 < slen)
             {
-                b64.push_back(lookup[n2]);
+                b64.push_back(s_b64_lookup_d2c[n2]);
             }
             if (i + 2 < slen)
             {
-                b64.push_back(lookup[n3]);
+                b64.push_back(s_b64_lookup_d2c[n3]);
             }
         }
         for (int k = 0; k < (int)(3 - slen % 3) % 3; k++)
@@ -938,46 +966,22 @@ namespace dcsutil {
         return b64.length();
     }
     int             b64_decode(std::string & buff, const std::string & b64){
-        static const char lookup[] = ""
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x00
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x10
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x3e\x80\x80\x80\x3f" // 0x20
-            "\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x80\x80\x80\x00\x80\x80" // 0x30
-            "\x80\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e" // 0x40
-            "\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x80\x80\x80\x80\x80" // 0x50
-            "\x80\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25\x26\x27\x28" // 0x60
-            "\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x80\x80\x80\x80\x80" // 0x70
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x80
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x90
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xa0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xb0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xc0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xd0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xe0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xf0
-            "";
         int slen = b64.length();
         const unsigned char * s = (const unsigned char *)b64.data();
-        if (slen % 4 || slen < 2){
+        if (slen == 0 || slen % 4){ // empty || !/4
             return -1;
         }
-        size_t pad = 0;
-        if (b64[slen - 1] == '=') pad++;
-        if (b64[slen - 2] == '=') pad++;
-
         buff.clear();
         buff.reserve(slen * 3 / 4 + 3);
-        int len = 0;
-        size_t i = 0;
-        for (i = 0; i < slen; i += 4) {
-            unsigned char n0 = lookup[s[i + 0]];
-            unsigned char n1 = lookup[s[i + 1]];
-            unsigned char n2 = lookup[s[i + 2]];
-            unsigned char n3 = lookup[s[i + 3]];
+        for (int i = 0; i < slen; i += 4) {
+            unsigned char n0 = s_b64_lookup_c2d[s[i + 0]];
+            unsigned char n1 = s_b64_lookup_c2d[s[i + 1]];
+            unsigned char n2 = s_b64_lookup_c2d[s[i + 2]];
+            unsigned char n3 = s_b64_lookup_c2d[s[i + 3]];
             if (0x80 & (n0 | n1 | n2 | n3)){
                 return i;
             }
-            unsigned n = (n0 << 18) | (n1 << 12) | (n2 << 6) | n3;
+            uint32_t n = (n0 << 18) | (n1 << 12) | (n2 << 6) | n3;
             buff.push_back((n >> 16) & 0xff);
             if (s[i + 2] != '='){
                 buff.push_back((n >> 8) & 0xff);
@@ -988,49 +992,29 @@ namespace dcsutil {
         }
         return 0;
     }
-    int                 hex2bin(std::string & bin, const char * hex){
-        static const char lookup[] = ""
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x00
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x10
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x3e\x80\x80\x80\x3f" // 0x20
-            "\x34\x35\x36\x37\x38\x39\x3a\x3b\x3c\x3d\x80\x80\x80\x00\x80\x80" // 0x30
-            "\x80\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e" // 0x40
-            "\x0f\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x80\x80\x80\x80\x80" // 0x50
-            "\x80\x1a\x1b\x1c\x1d\x1e\x1f\x20\x21\x22\x23\x24\x25\x26\x27\x28" // 0x60
-            "\x29\x2a\x2b\x2c\x2d\x2e\x2f\x30\x31\x32\x33\x80\x80\x80\x80\x80" // 0x70
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x80
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0x90
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xa0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xb0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xc0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xd0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xe0
-            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80\x80" // 0xf0
-            "";
+    int                 hex2bin(std::string & bin, const char * hex){        
         bin.clear();
         int nhex = strlen(hex);
         bin.reserve((nhex >> 1) + 1);///2
         if ((nhex & 1) == 1){
             return -1; //error length
         }
-        while (hex && *hex){
-            unsigned char n = (lookup[(unsigned char)*hex] << 4) + lookup[(unsigned char)*(hex+1)];
+        while (hex && *hex){ //'A''B''C' => 16
+            unsigned char n = (s_hex_lookup_c2d(*hex) << 4) + s_hex_lookup_c2d(*(hex + 1));
             bin.push_back(n);
             hex += 2;
         }
         return 0;
     }
     int                 bin2hex(std::string & hex, const char * buff, int ibuff){
-        static const char lookup[] = "0123456789abcdef";
         hex.clear();
         hex.reserve(ibuff*2+1);
         if (ibuff <= 0){
             return 0;
         }
         while (ibuff--){
-            unsigned char n = buff[ibuff];
-            hex.push_back(lookup[n >> 4]);
-            hex.push_back(lookup[n & 0xF]);
+            hex.push_back(s_hex_lookup_d2c((buff[ibuff]) >> 4));
+            hex.push_back(s_hex_lookup_d2c((buff[ibuff]) & 0xF));
         }
         return 0;
     }

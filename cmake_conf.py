@@ -88,6 +88,15 @@ LIBS = [
             'src_dirs':[''],
             'extra_srcs': ['3rd/pbjson'],
         },
+        {
+            'name':'dcutil-crypt',
+            'subdir':'utility/crypt',
+            'linklibs' : [],
+            'includes':[],
+            'src_dirs':[],
+            'extra_srcs': [],
+        },
+
 
 
 ]

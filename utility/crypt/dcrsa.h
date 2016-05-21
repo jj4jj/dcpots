@@ -12,7 +12,7 @@ enum RSASignAlgoType {
 	RSA_SIGN_SHA256,
 };
 
-bool    rsa_sign(std::string & signature, void * rsa, RSASignAlgoType meth, const char * medssage, int msglen);
-bool    rsa_verify(const std::string & signature, void * rsa, RSASignAlgoType meth, const char * message, int msglen);
+bool    rsa_sign(std::string & signature, void * rsa, RSASignAlgoType meth, const char * buff, int ibuff);
+bool    rsa_verify(const std::string & signature, void * rsa, RSASignAlgoType meth, const char * buff, int ibuff);
 
 }
