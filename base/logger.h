@@ -1,7 +1,7 @@
 #pragma once
 #include "dcutils.hpp"
-struct logger_t;
 
+struct logger_t;
 enum log_msg_level_type {
 	LOG_LVL_PROF = 0,
 	LOG_LVL_TRACE = 1,
@@ -38,7 +38,8 @@ struct logger_config_t{
 	int		max_roll;
 	int		max_msg_size;
 	int		max_file_size;
-	log_msg_level_type	lv;
+    string  error_pattern;
+    log_msg_level_type	lv;
 	logger_config_t() :max_roll(20),
 		max_msg_size(1024 * 1024), max_file_size(1024*1024*10){
 		lv = LOG_LVL_TRACE;
@@ -48,6 +49,7 @@ struct logger_config_t{
 int				global_logger_init(const logger_config_t & conf);
 void			global_logger_destroy();
 logger_t *		global_logger();
+
 //======================================================================
 void            logger_lock(logger_t * logger = nullptr);
 void            logger_unlock(logger_t * logger = nullptr);

@@ -1,6 +1,8 @@
+#include "dclogfile.h"
 #include "logger.h"
 
 #define  THREAD_SAFE
+
 struct logger_t {
 	logger_config_t	conf;
 #ifdef  THREAD_SAFE
@@ -8,17 +10,13 @@ struct logger_t {
 #else
     dcsutil::lock_mixin<false>  lock;
 #endif //  THREAD_SAFE
-	//lock info todo ?
 	int			last_err;
 	string		last_msg;
-	FILE	*	pf;
-	int			next_rollid;
-	bool		inited;
-	string		logfile;//current
-	logger_t() :last_err(0){
-		pf = nullptr;
-		next_rollid = 1;
-		inited = false;
+	
+    dcsutil::logfile_t   logfile;
+    dcsutil::logfile_t   errfile;
+
+    logger_t() :last_err(0){
 	}
 };
 #undef THREAD_SAFE
@@ -45,50 +43,16 @@ void			global_logger_destroy(){
 	logger_destroy(G_LOGGER);
 	G_LOGGER = nullptr;
 }
-FILE * logfile_open(const char * filename, int & nextrollid){
-	FILE * pf = nullptr;
-	if (nextrollid == 0){
-		pf = fopen(filename, "a");
-	}
-	else {
-		pf = fopen(filename, "w");
-	}
-	if (pf == nullptr){
-		GLOG_FTL("open file :%s error!", filename);
-		return nullptr;
-	}
-	if (nextrollid == 0){
-		char nextfileid[32];
-		FILE* rfp = fopen(filename, "r");
-		if (rfp){
-			size_t sz = sizeof(nextfileid)-1;
-			char * pnxf = (char*)nextfileid;
-			if (getline(&pnxf, &sz, rfp) > 0){
-				nextrollid = strtoul(nextfileid, nullptr, 10);
-			}
-			fclose(rfp);
-		}
-		nextrollid = nextrollid > 0 ? nextrollid : 1;
-	}
-	fprintf(pf, "%d\n", nextrollid);
-	return pf;
-}
+
 logger_t *	logger_create(const logger_config_t & conf){
-	FILE * pf = nullptr;
-	int	 nextrollid = 0;
 	string filepath = conf.dir + "/" + conf.pattern;
-	if (filepath.length() > 1){
-		pf = logfile_open(filepath.c_str(), nextrollid);
-	}
+    string error_filepath = conf.dir + "/" + conf.error_pattern;   
 	logger_t * em = new logger_t();
 	if (!em) return nullptr;
 	em->last_msg.reserve(conf.max_msg_size);
 	em->conf = conf;
-	em->inited = true;
-	em->next_rollid = nextrollid;
-	em->logfile = filepath;
-	em->pf = pf;
-
+    em->logfile.init(filepath.c_str());
+    em->errfile.init(error_filepath.c_str());
 	return em;
 }
 void            logger_lock(logger_t * logger){
@@ -106,9 +70,6 @@ void            logger_unlock(logger_t * logger){
 
 void			logger_destroy(logger_t * logger){
 	if (logger) {
-		if (logger->pf){
-			fclose(logger->pf);
-		}
 		delete logger; 
 	}
 }
@@ -167,24 +128,12 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 		snprintf(&msg_start[n], available_size, " [system errno:%d(%s)]\n", errno,
 			strerror_r(errno, errorno_msg_buff, sizeof(errorno_msg_buff)-1));
 	}
-	if (logger->pf){
-		fputs(msg_start, logger->pf);
-		if (ftell(logger->pf) >= logger->conf.max_file_size){
-			//shift file <>
-			fflush(logger->pf);
-			fclose(logger->pf);
-			string nextfile = logger->logfile + "." + std::to_string(logger->next_rollid);
-			rename(logger->logfile.c_str(), nextfile.c_str());
-			int nextrollid = (logger->next_rollid + 1) % logger->conf.max_roll;
-			if (nextrollid == 0) nextrollid = 3;
-			if ((logger->pf = logfile_open(logger->logfile.c_str(), nextrollid))){
-				logger->next_rollid = nextrollid;
-			}
-		}
-	}
-	else{
-		fputs(logger->last_msg.c_str(), stderr);
-	}
+    if (logger->logfile.write(msg_start, logger->conf.max_file_size, logger->conf.max_roll)){
+        fputs(msg_start, stderr);
+    }
+    if (loglv == LOG_LVL_ERROR || loglv == LOG_LVL_FATAL){
+        logger->errfile.write(msg_start, logger->conf.max_file_size, logger->conf.max_roll);
+    }
     logger_unlock(logger);
 	return n;
 }

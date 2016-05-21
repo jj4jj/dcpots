@@ -6,7 +6,7 @@ extern int optind, opterr, optopt;
 
 struct cmdline_opt_impl_t {
 	int								argc;
-	char **							argv;
+	const char *	*				argv;
 	std::multimap<string, string>	dict_opts;
 	std::map<string, string>		dict_opts_default;
 	string							usage;
@@ -14,7 +14,7 @@ struct cmdline_opt_impl_t {
 
 #define _THIS_HANDLE ((cmdline_opt_impl_t*)handle)
 
-cmdline_opt_t::cmdline_opt_t(int argc, char ** argv){
+cmdline_opt_t::cmdline_opt_t(int argc, const char ** argv){
 	handle = new cmdline_opt_impl_t();
 	_THIS_HANDLE->argc = argc;
 	_THIS_HANDLE->argv = argv;
@@ -28,16 +28,18 @@ cmdline_opt_t::~cmdline_opt_t(){
 		delete _THIS_HANDLE;
 	}
 }
-// = "version:n:v:desc:default;log-path:r::desc;:o:I:desc:default"
-void
-cmdline_opt_t::parse(const char * pattern, const char * version){
+static inline void pversion(const char * version){
+    std::cerr << version << std::endl;
+    exit(-1);
+}
+void cmdline_opt_t::parse(const char * pattern, const char * version){
 	std::vector<std::string>	sopts;
-    string pattern_ex = "help:n:h:show help info;version:n:V:show version info:";
-    if (!version){
-        version = "0.0.1";
+    string pattern_ex = "help:n:h:show help info;";
+    if (version){
+        pattern_ex += "version:n:V:show version info:";
+        pattern_ex += version;
+        pattern_ex += ";";
     }
-    pattern_ex += version;
-    pattern_ex += ";";
     pattern_ex += pattern;
 	dcsutil::strsplit(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
@@ -134,7 +136,7 @@ cmdline_opt_t::parse(const char * pattern, const char * version){
 	int longIndex = 0;
 	int opt = 0;
 	//std::cout << "dbg:" << short_opt << std::endl;
-	opt = getopt_long(_THIS_HANDLE->argc, _THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
+    opt = getopt_long(_THIS_HANDLE->argc, (char* const *)_THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
 	while (opt != -1) {
 		if (opt == 0){
 			string opt_name = longopts[longIndex].name;
@@ -150,6 +152,9 @@ cmdline_opt_t::parse(const char * pattern, const char * version){
 			if (opt_name == "help"){
 				pusage();
 			}
+            else if (version && opt_name == "version"){
+                pversion(version);
+            }
 		}
 		else if (opt == '?'){
 			//usage
@@ -172,7 +177,7 @@ cmdline_opt_t::parse(const char * pattern, const char * version){
 
 
 		}
-		opt = getopt_long(_THIS_HANDLE->argc, _THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
+        opt = getopt_long(_THIS_HANDLE->argc, (char* const *)_THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
 	}
 }
 int			

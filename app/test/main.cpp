@@ -562,8 +562,16 @@ static int uri_test(const char * arg){
     cout << buffer << endl;
     return 0;
 }
+#include "base/app.hpp"
+static int app_test(int argc, const char * argv[]){
+    struct TestApp : dcsutil::App {
+    };
+    TestApp app;
+    app.init(argc, argv);
+    return app.run();
+}
 
-int main(int argc, char* argv[])
+int main(int argc, const char* argv[])
 {
 	global_logger_init(logger_config_t());
 	int agent_mode = 0;
@@ -584,6 +592,9 @@ int main(int argc, char* argv[])
         }
         if (strstr(argv[1], "uri")){
             return uri_test(argv[2]);
+        }
+        if (strstr(argv[1], "app")){
+            return app_test(argc, argv);
         }
 
 		switch (argv[1][0])

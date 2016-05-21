@@ -17,7 +17,7 @@ void test_cb(mongoproxy_cmd_t cmd, void * ud, const mongoproxy_result_t & result
             result.results[i].second->ShortDebugString().c_str());
     }
 }
-int main(int argc, char ** argv){
+int main(int argc,const char ** argv){
 	using namespace std;
 	cmdline_opt_t cmdopt(argc, argv);
 	cmdopt.parse("path:r:p:proxy communication msgq path:/tmp");

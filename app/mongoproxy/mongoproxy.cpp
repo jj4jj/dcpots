@@ -112,7 +112,7 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
 	return 0;
 }
 using namespace std;
-int main(int argc, char * argv[]){
+int main(int argc, const char * argv[]){
 
 	cmdline_opt_t	cmdline(argc, argv);
 	cmdline.parse("daemon:n:D:daemon mode;"
