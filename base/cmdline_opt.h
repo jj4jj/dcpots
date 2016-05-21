@@ -1,8 +1,8 @@
 #pragma once
 
 struct cmdline_opt_t {
-	//opt:<long name>:[nro]:[short name]:[desc][;<opt>]* , n:no arguments, r:required, o:optinal
-	void			parse(const char * pattern = "version:n:v:desc:default;log-path:r::desc;:o:I:desc:default");
+	//opt:<long name>:[nro]:[short name]:[desc]:[default value][;<opt>]* , n:no arguments, r:required, o:optinal
+	void			parse(const char * pattern = "version:n:v:desc:default;log-path:r::desc;:o:I:desc:default", const char * version = __DATE__);
 	int				getoptnum(const char * opt);
 	const char *	getoptstr(const char * opt, int idx = 0);
 	int				getoptint(const char * opt, int idx = 0);

@@ -30,9 +30,14 @@ cmdline_opt_t::~cmdline_opt_t(){
 }
 // = "version:n:v:desc:default;log-path:r::desc;:o:I:desc:default"
 void
-cmdline_opt_t::parse(const char * pattern){
+cmdline_opt_t::parse(const char * pattern, const char * version){
 	std::vector<std::string>	sopts;
-    string pattern_ex = "help:n:h:show the help info;";
+    string pattern_ex = "help:n:h:show help info;version:n:V:show version info:";
+    if (!version){
+        version = "0.0.1";
+    }
+    pattern_ex += version;
+    pattern_ex += ";";
     pattern_ex += pattern;
 	dcsutil::strsplit(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
