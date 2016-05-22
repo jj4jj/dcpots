@@ -152,7 +152,7 @@ static inline int init_command(App & app, const char * pidfile){
 		int confd = openfd(console_server.c_str(), "w", 3000);
 		if (!confd){			
 			fprintf(stderr, "connect error %s!\n", strerror(errno));
-			return -1;
+			exit(-1);
 		}
 		enum { CONSOLE_BUFFER_SIZE = 1024*1024};
 		char * console_buffer = new char[CONSOLE_BUFFER_SIZE];
