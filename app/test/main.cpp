@@ -575,7 +575,11 @@ static int app_test(int argc, const char * argv[]){
     struct TestApp : dcsutil::App {
     };
     TestApp app;
-    app.init(argc, argv);
+	int ret = app.init(argc, argv);
+	if (ret){
+		GLOG_ERR("app init error:%d ", ret);
+		return -1;
+	}
     return app.run();
 }
 

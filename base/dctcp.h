@@ -8,7 +8,7 @@ struct dctcp_msg_t {
 };
 
 struct dctcp_config_t {
-    int server_mode; //0:client, 1:server
+	//int server_mode; //0:client, 1:server
     int max_recv_buff;
     int max_send_buff;
 	int max_backlog;
@@ -21,7 +21,7 @@ struct dctcp_config_t {
 		max_recv_buff = max_send_buff = 1024 * 100; //100K
 		max_tcp_send_buff_size = 1024 * 100; //100K
 		max_tcp_recv_buff_size = 640 * 100; //600K
-		server_mode = 0;
+		//server_mode = 0;
 	}
 };
 

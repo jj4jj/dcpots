@@ -447,6 +447,7 @@ namespace dcsutil {
             else if (szlen == 32){
                 nrsz = ntohl(nrsz);
             }
+			nrsz -= szlen;
             if ((int)sz < nrsz){
                 GLOG_ERR("read fd:%d buffer size:%d not enough %zd  ", fd, nrsz, sz);
                 return -3;
@@ -455,7 +456,7 @@ namespace dcsutil {
                 GLOG_ERR("read fd:%d buffer data erorr size:%d", fd, nrsz);
                 return -4;
             }
-            return nrsz;
+            return nrsz + szlen;
         }
         else if (strstr(mode, "token:") == mode){
             const char * sep = mode + 6;
@@ -496,7 +497,7 @@ namespace dcsutil {
     }
 
 	//mode: msg:sz32/16/8, token:\r\n\r\n , return > 0 write size, = 0 end, < 0 error
-	int         writefd(const char * mode, int fd, const char * buffer, size_t sz, int timeout_ms){
+	int         writefd(int fd, const char * buffer, size_t sz, const char * mode, int timeout_ms){
 		if (fd < 0){ return -1; }
 		if (sz == 0){
 			sz = strlen(buffer);
@@ -526,6 +527,7 @@ namespace dcsutil {
 				return -3;
 			}
 
+			nwsz = szlen + sz;
 			if (szlen == 16){
 				nwsz = htons(nwsz);
 			}

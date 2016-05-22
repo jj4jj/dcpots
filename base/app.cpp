@@ -19,29 +19,45 @@ struct AppImpl {
     bool        stoping{ false };
     bool        reloading{ false };
 	bool        restarting{ false };
-	dctcp_t		* console{ nullptr };
+	dctcp_t		* stcp{ nullptr };
 	std::unordered_map<uint32_t, App::timer_task_t>	task_pool;
 	uint32_t									task_id{ 0 };
-
+	int			console{ -1 };
 };
+
+static App * s_app_instance{ nullptr };
+static inline void _app_register(App * app){
+	if (s_app_instance){
+		GLOG_FTL("repeat register app !");
+		assert("repeat register app !" && false);
+		return;
+	}
+	s_app_instance = app;
+}
+
+App & App::instance(){
+	return *s_app_instance;
+}
 
 App::App(const char * ver){
     impl_ = new AppImpl;
     if (ver){
         impl_->version = ver;
     }
+	_app_register(this);
 }
 App::~App(){
     if (impl_){
         if (impl_->cmdopt){
             delete impl_->cmdopt;
         }
-		if (impl_->console){
-			dctcp_destroy(impl_->console);
+		if (impl_->stcp){
+			dctcp_destroy(impl_->stcp);
 		}
         delete impl_;
     }
 }
+
 int App::on_init(const char  * config){
     UNUSED(config);
     return 0;
@@ -102,8 +118,7 @@ static inline int init_command(App & app, const char * pidfile){
 			fprintf(stderr, "lacking command line option pid-file ...\n");
 			return -1;
 		}
-		int killpid = 0;
-		lockpidfile(pidfile, SIGTERM, false, &killpid);
+		int killpid = lockpidfile(pidfile, SIGTERM, false);
 		fprintf(stderr, "stoped process with normal stop mode [%d]\n", killpid);
 		exit(0);
 	}
@@ -112,8 +127,7 @@ static inline int init_command(App & app, const char * pidfile){
 			fprintf(stderr, "lacking command line option pid-file ...\n");
 			return -1;
 		}
-		int killpid = 0;
-		lockpidfile(pidfile, SIGUSR1, false, &killpid);
+		int killpid = lockpidfile(pidfile, SIGUSR1, false);
 		fprintf(stderr, "stoped process with restart mode [%d]\n", killpid);
 		exit(0);
 	}
@@ -122,15 +136,15 @@ static inline int init_command(App & app, const char * pidfile){
 			fprintf(stderr, "lacking command line option pid-file ...\n");
 			return -1;
 		}
-		int killpid = 0;
-		lockpidfile(pidfile, SIGUSR2, false, &killpid);
-		fprintf(stderr, "stoped process with restart mode [%d]\n", killpid);
+		int killpid = lockpidfile(pidfile, SIGUSR2, false);
+		fprintf(stderr, "reloaded process [%d]\n", killpid);
 		exit(0);
 	}
 	if (app.cmdopt().hasopt("console-shell")){
 		const char * console = app.cmdopt().getoptstr("console-listen");
 		if (!console){
 			fprintf(stderr, "has no console-listen option open console shell error !\n");
+			exit(-1);
 		}
 		string console_server = "tcp://";
 		console_server += console;
@@ -147,15 +161,15 @@ static inline int init_command(App & app, const char * pidfile){
 			int n = readfd(confd, console_buffer, CONSOLE_BUFFER_SIZE,
 				"msg:sz32", 1000 * 3600);
 			if (n < 0){
-				fprintf(stderr, "console server closed !\n");
+				fprintf(stderr, "console server closed [ret=%d]!\n", n);
 				break;
 			}
-			printf("%s\n%s$", console_buffer);
-			const char * command = gets(console_buffer);
+			printf("%s\n%s$", console_buffer, console);
+			const char * command = fgets(console_buffer, CONSOLE_BUFFER_SIZE, stdin);
 			if (strcasecmp(command, "quit") == 0){
 				break;
 			}
-			writefd(confd, command, 0, "msg:sz32");
+			dcsutil::writefd(confd, command, 0, "msg:sz32");
 		}
 		closefd(confd);
 		delete console_buffer;
@@ -165,34 +179,48 @@ static inline int init_command(App & app, const char * pidfile){
 	return 0;
 }
 static inline int 
-app_console_command(App * app, const char * msg, int msgsz, int fd, dctcp_t * dc){
+app_console_command(AppImpl * , const char * msg, int msgsz, int fd, dctcp_t * dc){
 	string cmd(msg, msgsz);
 	GLOG_IFO("session:%d recv msg:%s", cmd.c_str());
-	const char * resp = app->on_control(cmd.c_str());
+	const char * resp = App::instance().on_control(cmd.c_str());
 	if (resp){
 		return dctcp_send(dc, fd, dctcp_msg_t(resp, strlen(resp)));
 	}
 	return -1;
 }
 //typedef int(*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
-static int 
-app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
-	App * app = (App*)ud;
+static inline int 
+app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, AppImpl * impl){
 	switch (ev.type){
 	case DCTCP_NEW_CONNX:
 		GLOG_IFO("console open session fd:%d", ev.fd);
+		return dctcp_send(dc, ev.fd,
+			dctcp_msg_t(impl->version.c_str(),impl->version.length()));
 		break;
 	case DCTCP_CLOSED:
 		GLOG_IFO("console close session fd:%d", ev.fd);
 		break;
 	case DCTCP_READ:
-		return app_console_command(app, ev.msg->buff, ev.msg->buff_sz, ev.fd, dc);
+		return app_console_command(impl, ev.msg->buff, ev.msg->buff_sz, ev.fd, dc);
 		break;
 	default:
 		return -1;
 	}
 	return 0;
 }
+
+static inline int
+app_stcp_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
+	AppImpl * app = (AppImpl*)ud;
+	if (ev.listenfd == app->console){
+		return app_console_listener(dc, ev, app);
+	}
+	else {
+		GLOG_ERR("stcp listen fd:%d no listener !", ev.listenfd);
+		return -1;
+	}
+}
+
 static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
 	assert(sz == sizeof(AppImpl*));
 	AppImpl * app = *(AppImpl**)cb;
@@ -202,6 +230,11 @@ static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
 	}
 	return 0;
 }
+static inline void app_tick_update(AppImpl * impl_){
+	eztimer_update();
+	dctcp_poll(impl_->stcp, 20);
+}
+
 int App::init(int argc, const char * argv[]){
     int ret = 0;
     impl_->cmdopt = new cmdline_opt_t(argc, argv);
@@ -233,11 +266,15 @@ int App::init(int argc, const char * argv[]){
 	//"stop:n:T:stop process normal mode;"
 	//"restart:n:R:stop process with restart mode;"
 	ret = init_command(*this, pidfile);
-	if (!ret){
+	if (ret){
 		GLOG_ERR("control command init error !");
 		return -1;
 	}
 
+	//"start:n:S:start process normal mode;"
+	if (!cmdopt().hasopt("start")){
+		exit(0);
+	}
 	//2.daemonlization and pid running checking
 	if (cmdopt().hasopt("daemon")){
 		daemonlize(1, 0, pidfile);
@@ -246,6 +283,33 @@ int App::init(int argc, const char * argv[]){
 		fprintf(stderr, "process should be unique running ...");
 		return -2;
 	}
+	dcsutil::signalh_ignore(SIGPIPE);
+	dcsutil::signalh_push(SIGTERM, [](int, siginfo_t *, void *){
+		App::instance().stop();
+	});
+	//stop
+	dcsutil::signalh_push(SIGUSR1, [](int, siginfo_t *, void *){
+		App::instance().restart();
+	});
+	//stop
+	dcsutil::signalh_push(SIGUSR2, [](int , siginfo_t * , void * ){
+		App::instance().reload();
+	});
+	dcsutil::signalh_push(SIGSEGV, [](int signo, siginfo_t * info, void * ucontex){
+		if (ucontex) {
+			//ucontext_t *uc = (ucontext_t *)ucontex;
+			GLOG_FTL("program crash info: \n"
+				"info.si_signo = %d \n"
+				"info.si_errno = %d \n"
+				"info.si_code  = %d (%s) \n"
+				"info.si_addr  = %p\n",
+				signo, info->si_errno,
+				info->si_code,
+				(info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
+				info->si_addr);
+		}
+	});
+
 	//////////////////////////////////////////////////////////////
 	//3.global logger
 	logger_config_t lconf;
@@ -267,18 +331,25 @@ int App::init(int argc, const char * argv[]){
     }
 	eztimer_set_dispatcher(app_timer_dispatch);
 
+	dctcp_config_t dconf;
+	dconf.max_send_buff = 1024 * 1024;
+	dconf.max_recv_buff = 1024 * 1024;
+	dconf.max_tcp_send_buff_size = 1024 * 1024 * 4;
+	dconf.max_tcp_recv_buff_size = 1024 * 1024 * 4;
+	impl_->stcp = dctcp_create(dconf);
+	if (!impl_->stcp){
+		GLOG_SER("stcp init error !");
+		return -4;
+	}
+	//typedef int (*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
+	dctcp_event_cb(impl_->stcp, app_stcp_listener, impl_);
 	//control
 	const char * console_listen = cmdopt().getoptstr("console-listen");
 	if (console_listen){
-		dctcp_config_t dconf;
-		dconf.server_mode = 1;
-		impl_->console = dctcp_create(dconf);
-		//typedef int (*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
-		dctcp_event_cb(impl_->console, app_console_listener, impl_);
-		ret = dctcp_listen(impl_->console, console_listen);
-		if (ret){
-			GLOG_SER("console init listen error : %d!",ret);
-			return -4;
+		impl_->console = dctcp_listen(impl_->stcp, console_listen);
+		if (impl_->console < 0){
+			GLOG_SER("console init listen error : %d!", impl_->console);
+			return -5;
 		}
 	}
 
@@ -288,7 +359,7 @@ int App::run(){
     int  iret = 0;
     bool bret = 0;
     while (true){
-        eztimer_update();
+		app_tick_update(impl_);
         if (impl_->stoping){ //need stop
             bret = on_stop();
             if (bret){
@@ -318,6 +389,7 @@ int App::run(){
     }
     return on_exit();
 }
+
 void App::stop(){
     impl_->stoping = true;
 }

@@ -5,7 +5,7 @@ namespace dcsutil {
 struct AppImpl;
 class App {
 public:
-    static App & instance();
+	static App & instance();
 protected:
 	App(const char * version = __DATE__);
 	virtual ~App();

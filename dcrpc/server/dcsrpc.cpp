@@ -188,10 +188,9 @@ int    RpcServer::init(const std::string & addr){
     }
     impl = new RpcServerImpl();
     dctcp_config_t dctcp;
-    dctcp.server_mode = true;
     dctcp.max_recv_buff = 1024 * 1024 * 2;
     dctcp.max_send_buff = 1024 * 1024 * 1;
-    dctcp.max_tcp_recv_buff_size = 512 * 1024;
+    dctcp.max_tcp_recv_buff_size = 1 * 1024 * 1024;
     dctcp.max_tcp_send_buff_size = 1 * 1024 * 1024;
     impl->svr = dctcp_create(dctcp);
     if (!impl->svr){
