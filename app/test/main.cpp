@@ -207,14 +207,22 @@ int log_test(){
 	lc.max_file_size = 1024;
 	lc.max_roll = 3;
 	lc.dir = "./";
-	lc.pattern = "test.log";
+	lc.pattern = "test";
 	int ret = global_logger_init(lc);
 	if (ret){
 		return ret;
 	}
 	int n = 3 * 1000;
 	while (n--){
-		GLOG_IFO("test logger msg just for size , this is dummy");
+		if (rand() % 100 < 10){
+			GLOG_ERR("test logger msg just for size , this is dummy");
+		}
+		else if (rand() % 100 < 5){
+			GLOG_FTL("test logger msg just for size , this is dummy");
+		}
+		else {
+			GLOG_IFO("test logger msg just for size , this is dummy");
+		}
 	}
 	return 0;
 }

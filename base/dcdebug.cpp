@@ -13,7 +13,7 @@ stackframe_info_t::stackframe_info_t(){
 }
 const char * stackframe_info_t::str(string & s){
     if (!this->func.empty()){
-        strnprintf(s, 256, "%-18s%-44s%p", this->module.c_str(), this->func.c_str(), this->addr);
+        strnprintf(s, 384, "%s|%s|%p", this->module.c_str(), this->func.c_str(), this->addr);
     }
     else {
         s = this->info;
@@ -83,10 +83,13 @@ const char *  stacktrace(string & str, int startlevel, int maxlevel){
     int n = stacktrace(vsi, startlevel + 1, maxlevel);
     string  allocator_s;
     assert(n == (int)vsi.size());
+	char sibuff[16];
     for (int i = 0; i < n; ++i){
         if (i > 0){
             str.append("\n");
         }
+		snprintf(sibuff, sizeof(sibuff)-1, "#%02d#", startlevel + i);
+		str.append(sibuff);
         str.append(vsi[i].str(allocator_s));
     }
     return str.c_str();

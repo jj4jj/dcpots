@@ -1,5 +1,6 @@
 #include "dclogfile.h"
 #include "logger.h"
+#include "dcdebug.h"
 
 #define  THREAD_SAFE
 
@@ -45,14 +46,22 @@ void			global_logger_destroy(){
 }
 
 logger_t *	logger_create(const logger_config_t & conf){
-	string filepath = conf.dir + "/" + conf.pattern;
-    string error_filepath = conf.dir + "/" + conf.error_pattern;   
 	logger_t * em = new logger_t();
 	if (!em) return nullptr;
 	em->last_msg.reserve(conf.max_msg_size);
 	em->conf = conf;
-    em->logfile.init(filepath.c_str());
-    em->errfile.init(error_filepath.c_str());
+	string filepath = conf.dir;
+	string error_filepath = conf.dir;
+	if (!conf.pattern.empty()){
+		//debug log
+		filepath += "/" + conf.pattern + ".all.log";
+		em->logfile.init(filepath.c_str());
+		em->logfile.open();
+		//error log
+		error_filepath += "/" + conf.pattern + ".err.log";
+		em->errfile.init(error_filepath.c_str());
+		em->errfile.open();
+	}
 	return em;
 }
 void            logger_lock(logger_t * logger){
@@ -125,14 +134,22 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 		if (msg_start[n-1] == '\n'){
 			--n;
 		}
-		snprintf(&msg_start[n], available_size, " [system errno:%d(%s)]\n", errno,
+		n += snprintf(&msg_start[n], available_size, " [system errno:%d(%s)]\n", errno,
 			strerror_r(errno, errorno_msg_buff, sizeof(errorno_msg_buff)-1));
+		available_size = logger->last_msg.capacity() - (n + 2);
 	}
-    if (logger->logfile.write(msg_start, logger->conf.max_file_size, logger->conf.max_roll)){
+	if (loglv == LOG_LVL_FATAL && available_size > 128){
+		//append stack frame info
+		string strstack;
+		snprintf(&msg_start[n], available_size, "%s\n",
+			dcsutil::stacktrace(strstack, 1));
+	}
+
+	if (logger->logfile.write(msg_start, logger->conf.max_roll, logger->conf.max_file_size)){
         fputs(msg_start, stderr);
     }
     if (loglv == LOG_LVL_ERROR || loglv == LOG_LVL_FATAL){
-        logger->errfile.write(msg_start, logger->conf.max_file_size, logger->conf.max_roll);
+		logger->errfile.write(msg_start, logger->conf.max_roll, logger->conf.max_file_size);
     }
     logger_unlock(logger);
 	return n;

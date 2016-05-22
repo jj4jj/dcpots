@@ -38,11 +38,11 @@ struct logger_config_t{
 	int		max_roll;
 	int		max_msg_size;
 	int		max_file_size;
-    string  error_pattern;
     log_msg_level_type	lv;
 	logger_config_t() :max_roll(20),
 		max_msg_size(1024 * 1024), max_file_size(1024*1024*10){
 		lv = LOG_LVL_TRACE;
+		dir = ".";
 	}
 };
 

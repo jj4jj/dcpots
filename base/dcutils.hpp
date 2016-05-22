@@ -33,11 +33,17 @@ NS_BEGIN(dcsutil)
     //tcp://<ip:port>
     //udp://<ip:port>
     //?
-    int                 openfd(const std::string & uri, int timeout_ms = 30000);
-    //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
-    int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms = 10000);
-    //write size , return > 0 wirte size, <= 0 error
-    int                 writefd(int fd, const char * buffer, size_t sz = 0, int timeout_ms = 2000);
+	//mode:r:listen/w:connect,others -> file
+    int                 openfd(const std::string & uri, const char * mode = "w", int timeout_ms = 30000);
+
+	//mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
+	int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms = 10000);
+	//mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 write size, = 0 end, < 0 error
+	int                 writefd(int fd, const char * buffer, size_t sz = 0, const char * mode = "sz", int timeout_ms = 10000);
+	//tcp return fd, udp return 0 , error < 0
+	int					readfromfd(int fd, struct sockaddr_in & addr);
+
+
     int                 closefd(int fd);
     int                 nonblockfd(int fd, bool nonblock = true);
     bool                isnonblockfd(int fd);

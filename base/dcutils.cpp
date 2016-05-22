@@ -227,10 +227,35 @@ namespace dcsutil {
 			return -2;
         }
     }
-    //file://<path>
+	//write size , return > 0 wirte size, <= 0 error
+	static inline	int  _writefd(int fd, const char * buffer, size_t sz, int timeout_ms){
+		if (fd < 0 || sz == 0){ return -1; }
+		size_t tsz = 0;
+		int n = 0;
+		while (sz > tsz && (n = write(fd, buffer + tsz, sz - tsz))){
+			if (n > 0){
+				tsz += n;
+			}
+			else  if (errno != EINTR){
+				if (errno == EAGAIN || errno == EWOULDBLOCK){
+					if (waitfd_writable(fd, timeout_ms)){
+						GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
+						return -1;
+					}
+				}
+				else {
+					GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
+					return -2;
+				}
+			}
+		}
+		return tsz;
+	}
+	//file://<path>
     //tcp://<ip:port>
     //udp://<ip:port>
-    int                 openfd(const std::string & uri, int timeout_ms){
+	//mode:r:listen/w:connect
+    int                 openfd(const std::string & uri, const char * mode, int timeout_ms){
         if (uri.find("file://") == 0){ //+7
             int fd = open(uri.substr(7).c_str(), O_CREAT | O_RDWR);
             if (fd >= 0){
@@ -238,32 +263,48 @@ namespace dcsutil {
             }
             return fd;
         }
-        else if (uri.find("tcp://") == 0){//+6
-            const char * connaddr = uri.substr(6).c_str();
-            sockaddr_in iaddr;
-            int ret = socknetaddr(iaddr, connaddr);
-            if (ret){
-                GLOG_ERR("error tcp address:%s", connaddr);
-                return -1;
-            }
-            int fd = socket(AF_INET, SOCK_STREAM, 0);
-            if (fd < 0){
-                GLOG_ERR("create sock stream error !");
-                return -2;
-            }
-            socklen_t len = sizeof(sockaddr_in);
-            nonblockfd(fd, true);
-            ret = connect(fd, (struct sockaddr*)&iaddr, len);
-            if (ret){
-                if (errno == EINPROGRESS){
-                    ret = waitfd_writable(fd, timeout_ms);
-                }
-                if (ret){
-                    GLOG_ERR("connect addr:%s error !", connaddr);
-                    close(fd);
-                    return -3;
-                }
-            }
+		else if (uri.find("tcp://") == 0){//+6
+			const char * skaddr = uri.substr(6).c_str();
+			sockaddr_in iaddr;
+			int ret = socknetaddr(iaddr, skaddr);
+			if (ret){
+				GLOG_ERR("error tcp address:%s", skaddr);
+				return -1;
+			}
+			int fd = socket(AF_INET, SOCK_STREAM, 0);
+			if (fd < 0){
+				GLOG_SER("create sock stream error !");
+				return -2;
+			}
+			socklen_t len = sizeof(sockaddr_in);
+			nonblockfd(fd, true);
+			if (strcmp(mode, "w") == 0){
+				ret = connect(fd, (struct sockaddr*)&iaddr, len);
+				if (ret){
+					if (errno == EINPROGRESS){
+						ret = waitfd_writable(fd, timeout_ms);
+					}
+					if (ret){
+						GLOG_SER("connect addr:%s error !", skaddr);
+						close(fd);
+						return -3;
+					}
+				}
+			}
+			else {
+				ret = bind(fd, (struct sockaddr*)&iaddr, len);
+				if (ret){
+					GLOG_SER("bind addr:%s error !", skaddr);
+					close(fd);
+					return -4;
+				}
+				ret = listen(fd, 1024);
+				if (ret){
+					GLOG_SER("listen addr:%s error !", skaddr);
+					close(fd);
+					return -5;
+				}
+			}
             return fd;
         }
         else if (uri.find("udp://") == 0){//+6
@@ -276,17 +317,27 @@ namespace dcsutil {
             }
             int fd = socket(AF_INET, SOCK_DGRAM, 0);
             if (fd < 0){
-                GLOG_ERR("create sock stream error !");
+                GLOG_SER("create sock stream error !");
                 return -2;
             }
             socklen_t len = sizeof(sockaddr_in);
             nonblockfd(fd, true);
-            ret = connect(fd, (struct sockaddr*)&iaddr, len);
-            if (ret){
-                GLOG_ERR("connect addr:%s error !", connaddr);
-                close(fd);
-                return -3;
-            }
+			if (strcmp(mode, "w") == 0){
+				ret = connect(fd, (struct sockaddr*)&iaddr, len);
+				if (ret){
+					GLOG_SER("udp bind addr:%s error !", connaddr);
+					close(fd);
+					return -3;
+				}
+			}
+			else {
+				ret = bind(fd, (struct sockaddr*)&iaddr, len);
+				if (ret){
+					GLOG_SER("udp bind addr:%s error !", connaddr);
+					close(fd);
+					return -4;
+				}
+			}
             return fd;
         }
         else if (uri.find("http://") == 0){//7
@@ -302,7 +353,7 @@ namespace dcsutil {
             if (tcpvs.size() < 2){
                 tcpuri += ":80";//default
             }
-            int fd = openfd(tcpuri, timeout_ms);
+            int fd = openfd(tcpuri, "w", timeout_ms);
             if (fd < 0){
                 GLOG_ERR("open tcp uri error:%s http uri:%s", tcpuri.c_str(), uri.c_str());
                 return -2;
@@ -316,7 +367,7 @@ namespace dcsutil {
             httpget += "Host: ";
             httpget += tcpvs[0];
             httpget += "\r\n\r\n";
-            int ret = writefd(fd, httpget.data(), httpget.length(), timeout_ms);
+            int ret = _writefd(fd, httpget.data(), httpget.length(), timeout_ms);
             if (ret != (int)httpget.length()){
                 GLOG_ERR("write http get request:%s error ret:%d", httpget.c_str(), ret);
                 closefd(fd);
@@ -353,11 +404,11 @@ namespace dcsutil {
         return tsz;
     }
     //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
-    int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms){
-        if (sz == 0 || !buffer || fd < 0){
+	int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms){
+        if (sz == 0 || !buffer || fd < 0 ||!mode){
             return 0;
         }
-        if (strstr(mode, "size")){
+        if (strstr(mode, "size") == mode){
             //just read sz or end
             size_t tsz = _readfd(fd, buffer, sz, timeout_ms);
             if (sz != tsz){
@@ -406,7 +457,7 @@ namespace dcsutil {
             }
             return nrsz;
         }
-        else if (strstr(mode, "token:")){
+        else if (strstr(mode, "token:") == mode){
             const char * sep = mode + 6;
             if (!*sep){ //blocksz == 0
                 GLOG_ERR("error mode:%s", mode);
@@ -443,33 +494,83 @@ namespace dcsutil {
             return -1;
         }
     }
-    //write size , return > 0 wirte size, <= 0 error
-    int         writefd(int fd, const char * buffer, size_t sz, int timeout_ms){
-        if (fd < 0){ return -1; }
-        if (sz == 0){
-            sz = strlen(buffer);
-        }
-        size_t tsz = 0;
-        int n = 0;
-        while (sz > tsz && (n = write(fd, buffer + tsz, sz - tsz))){
-            if (n > 0){
-                tsz += n;
-            }
-            else  if (errno != EINTR){
-                if (errno == EAGAIN || errno == EWOULDBLOCK){
-                    if (waitfd_writable(fd, timeout_ms)){
-                        GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
-                        return -1;
-                    }
-                }
-                else {
-                    GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
-                    return -2;
-                }
-            }
-        }
-        return tsz;
-    }
+
+	//mode: msg:sz32/16/8, token:\r\n\r\n , return > 0 write size, = 0 end, < 0 error
+	int         writefd(const char * mode, int fd, const char * buffer, size_t sz, int timeout_ms){
+		if (fd < 0){ return -1; }
+		if (sz == 0){
+			sz = strlen(buffer);
+		}
+		if (strstr(mode, "msg:") == mode){
+			//read 32
+			size_t nwsz = sz;
+			int szlen = 0;
+			if (strstr(mode, ":sz32")){
+				szlen = sizeof(uint32_t);
+				nwsz = UINT_MAX;
+			}
+			else if (strstr(mode, ":sz16")){
+				szlen = sizeof(uint16_t);
+				nwsz = USHRT_MAX;
+			}
+			else if (strstr(mode, ":sz8")){
+				szlen = sizeof(uint8_t);
+				nwsz = UCHAR_MAX;
+			}
+			else {
+				GLOG_ERR("write fd:%d error mode:%s", fd, mode);
+				return -1;
+			}
+			if (sz > nwsz){
+				GLOG_ERR("write fd:%d buffer size:%d not enough %zd  ", fd, nwsz, sz);
+				return -3;
+			}
+
+			if (szlen == 16){
+				nwsz = htons(nwsz);
+			}
+			else if (szlen == 32){
+				nwsz = htonl(nwsz);
+			}
+			int n = _writefd(fd, (const char *)&nwsz, szlen, timeout_ms);
+			if (n != szlen){
+				GLOG_ERR("write fd:%d buffer head size:%d write sz error ret:%d",
+					fd, szlen, n);
+				return -4;
+			}
+			n = _writefd(fd, buffer, sz, timeout_ms);
+			if ((size_t)n != sz){
+				GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
+					fd, sz, n);
+				return -5;
+			}
+			return szlen + sz;
+		}
+		else if (strstr(mode, "token:") == mode){
+			const char * sep = mode + 6;
+			if (!*sep){ //blocksz == 0
+				GLOG_ERR("write fd:%d error mode:%s",fd, mode);
+				return -1;
+			}
+			int n = _writefd(fd, buffer, sz, timeout_ms);
+			if ((size_t)n != sz){
+				GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
+					fd, sz, n);
+				return -2;
+			}
+			int seplen = strlen(sep);
+			n = _writefd(fd, sep, seplen, timeout_ms);
+			if (n != seplen){
+				GLOG_ERR("write fd:%d buffer token size:%d write sz error ret:%d",
+					fd, sz, n);
+				return -3;
+			}
+			return seplen + sz;
+		}
+		else {
+			return _writefd(fd, buffer, sz, timeout_ms);
+		}
+	}
     int        closefd(int fd){
         int ret = close(fd);
         if (ret){

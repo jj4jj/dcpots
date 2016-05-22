@@ -19,18 +19,19 @@ logfile_t::~logfile_t(){
         delete impl;
 }
 void logfile_t::init(const char * file){
-    if (file) impl->logfile = file;
+    if (file && *file) impl->logfile = file;
 }
 int logfile_t::open(){
     if (impl->logfile.empty()){
-        fputs("log file config file is empty!", stderr);
+        fputs("log file config file is empty!\n", stderr);
         return -1;
     }
-    if (!impl->pf){
+    if (!impl->pf){ //open file
         impl->pf = fopen(impl->logfile.c_str(), "a");
     }
     if (impl->pf == nullptr){ // read file
-        fprintf(stderr, "open file :%s write role id error!", impl->logfile.c_str());
+        fprintf(stderr, "open log file :%s error %s!\n", 
+			impl->logfile.c_str(), strerror(errno));
         return -2;
     }
     if (impl->next_rollid == 0){ //init , get the next roll id
@@ -56,8 +57,9 @@ int logfile_t::open(){
         impl->next_rollid = impl->next_rollid > 0 ? impl->next_rollid : 1;
     }
     else {
-        fseek(impl->pf, 0, SEEK_SET);
-        fprintf(impl->pf, "%d\n", impl->next_rollid);
+		fseek(impl->pf, 0, SEEK_SET);
+		ftruncate(fileno(impl->pf), 0);
+		fprintf(impl->pf, "%d\n", impl->next_rollid);
     }
     return 0;
 }

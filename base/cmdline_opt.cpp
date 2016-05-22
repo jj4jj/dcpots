@@ -164,6 +164,9 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
             if(opt == 'h'){
                 pusage();
             }
+			if (version && opt == 'V'){
+				pversion(version);
+			}
 			string opt_name = string((char*)&opt, 1);
 			string opt_value = (optarg ? optarg : "");
 			_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
