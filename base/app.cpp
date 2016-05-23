@@ -284,21 +284,20 @@ int App::init(int argc, const char * argv[]){
 		return -2;
 	}
 	dcsutil::signalh_ignore(SIGPIPE);
-	dcsutil::signalh_push(SIGTERM, [](int, siginfo_t *, void *){
-		App::instance().stop();
-	});
-	//stop
-	dcsutil::signalh_push(SIGUSR1, [](int, siginfo_t *, void *){
-		App::instance().restart();
-	});
-	//stop
-	dcsutil::signalh_push(SIGUSR2, [](int , siginfo_t * , void * ){
-		App::instance().reload();
-	});
-	dcsutil::signalh_push(SIGSEGV, [](int signo, siginfo_t * info, void * ucontex){
-		if (ucontex) {
-			//ucontext_t *uc = (ucontext_t *)ucontex;
-			GLOG_FTL("program crash info: \n"
+    struct signalh_function {
+        static void term_stop(int, siginfo_t *, void *){
+		    App::instance().stop();
+	    }
+        static void usr1_restart(int, siginfo_t *, void *){
+		    App::instance().restart();
+	    }
+        static void usr2_reload(int, siginfo_t *, void *){
+		    App::instance().reload();
+	    }
+        static void segv_crash(int signo, siginfo_t * info, void * ucontex){
+		    if (ucontex) {
+			    //ucontext_t *uc = (ucontext_t *)ucontex;
+			    GLOG_FTL("program crash info: \n"
 				"info.si_signo = %d \n"
 				"info.si_errno = %d \n"
 				"info.si_code  = %d (%s) \n"
@@ -307,8 +306,13 @@ int App::init(int argc, const char * argv[]){
 				info->si_code,
 				(info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
 				info->si_addr);
-		}
-	});
+		    }
+	    }
+    };
+	dcsutil::signalh_push(SIGTERM, signalh_function::term_stop);
+	dcsutil::signalh_push(SIGUSR1, signalh_function::usr1_restart);
+	dcsutil::signalh_push(SIGUSR2, signalh_function::usr2_reload);
+	dcsutil::signalh_push(SIGSEGV, signalh_function::segv_crash);
 
 	//////////////////////////////////////////////////////////////
 	//3.global logger
