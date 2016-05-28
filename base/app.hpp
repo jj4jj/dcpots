@@ -25,6 +25,7 @@ public:
 
 public:
     cmdline_opt_t &					cmdopt();
+    dctcp_t       *                 stcp();
     typedef std::function<void()>   timer_task_t;
     //ms: > 0 (just after ms excute once),0:(excute now),<0(period ms excute);
     void		shedule(timer_task_t task, int ms);

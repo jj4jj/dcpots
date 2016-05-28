@@ -162,7 +162,7 @@ static inline int init_command(App & app, const char * pidfile){
 		printf("console server connected ! command <quit> will exit shell\n");
 		while (true){
 			int n = readfd(confd, console_buffer, CONSOLE_BUFFER_SIZE,
-				"token:\n\n", 1000 * 3600);
+				"token:\r\n\r\n", 1000 * 3600);
 			if (n < 0){
 				fprintf(stderr, "console server closed [ret=%d]!\n", n);
 				break;
@@ -172,7 +172,7 @@ static inline int init_command(App & app, const char * pidfile){
 			if (strcasecmp(command, "quit") == 0){
 				break;
 			}
-			dcsutil::writefd(confd, command, 0, "token:\n\n");
+			dcsutil::writefd(confd, command, 0, "token:\r\n\r\n");
 		}
 		closefd(confd);
 		delete console_buffer;
@@ -193,12 +193,13 @@ app_console_command(AppImpl * , const char * msg, int msgsz, int fd, dctcp_t * d
 }
 //typedef int(*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
 static inline int 
-app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, AppImpl * impl){
-	switch (ev.type){
+app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
+    AppImpl * impl = (AppImpl*)ud;
+    switch (ev.type){
 	case DCTCP_NEW_CONNX:
 		GLOG_IFO("console open session fd:%d", ev.fd);
 		return dctcp_send(dc, ev.fd,
-			dctcp_msg_t(impl->version.c_str(),impl->version.length()));
+			dctcp_msg_t("Welcome login console !"));
 		break;
 	case DCTCP_CLOSED:
 		GLOG_IFO("console close session fd:%d", ev.fd);
@@ -217,13 +218,8 @@ app_stcp_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
     GLOG_TRA("app stcp listener ev.type:%d ev.fd:%d ev.listenfd:%d",
         ev.type, ev.fd, ev.listenfd);
 	AppImpl * app = (AppImpl*)ud;
-	if (ev.listenfd == app->console){
-		return app_console_listener(dc, ev, app);
-	}
-	else {
-		GLOG_ERR("stcp listen fd:%d no listener !", ev.listenfd);
-		return -1;
-	}
+	GLOG_ERR("stcp listen fd:%d no listener !", ev.listenfd);
+	return -1;
 }
 
 static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
@@ -364,8 +360,8 @@ int App::init(int argc, const char * argv[]){
 	//control
 	const char * console_listen = cmdopt().getoptstr("console-listen");
 	if (console_listen){
-		impl_->console = dctcp_listen(impl_->stcp, console_listen, "token:\n\n",
-            app_stcp_listener, impl_);
+		impl_->console = dctcp_listen(impl_->stcp, console_listen, "token:\r\n\r\n",
+            app_console_listener, impl_);
 		if (impl_->console < 0){
 			GLOG_SER("console init listen error : %d!", impl_->console);
 			return -5;
@@ -419,6 +415,10 @@ void App::reload(){
 void App::restart(){
     impl_->restarting = true;
 }
+dctcp_t       * App::stcp(){
+    return impl_->stcp;
+}
+
 cmdline_opt_t & App::cmdopt(){
     return *impl_->cmdopt;
 }
