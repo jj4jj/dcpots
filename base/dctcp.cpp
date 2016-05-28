@@ -5,13 +5,7 @@
 
 
 dctcp_msg_t::dctcp_msg_t(const char * buf, int sz) :buff(buf), buff_sz(sz){
-	if (!sz){
-		sz = strlen(buf);
-	}
-}
-dctcp_msg_t::dctcp_msg_t(const std::string & str){
-	buff = str.data();
-	buff_sz = str.length();
+	if (!sz){buff_sz = strlen(buf);}
 }
 dctcp_config_t::dctcp_config_t() {
 	max_client = 8192;
@@ -63,7 +57,7 @@ struct dctcp_t {
 	std::unordered_map<int, dctcp_listener_t>		listeners;//server listeners fd
 	///////////////////////////////////////////////////////////////
 	dctcp_listener_env_t							proto_listeners;
-	std::unordered_map<int, int>					fd2listenfd;
+	std::unordered_map<int, int>					fd_map_listenfd;
 	///////////////////////////////////////////////////////////////
 	epoll_event	*	events;
 	int				nproc;
@@ -161,8 +155,8 @@ void            dctcp_destroy(dctcp_t * stcp){
 	delete stcp;
 }
 static inline int _dctcp_get_fd_listenfd(dctcp_t * stcp, int fd){
-	auto it = stcp->fd2listenfd.find(fd);
-	if (it == stcp->fd2listenfd.end()){
+	auto it = stcp->fd_map_listenfd.find(fd);
+	if (it == stcp->fd_map_listenfd.end()){
 		return -1;
 	}
 	return it->second;
@@ -207,7 +201,7 @@ static inline int _op_poll(dctcp_t * stcp, int cmd, int fd, int flag = 0, int li
 	epoll_event ev;
 	ev.data.u64 = (uint32_t)listenfd;
 	ev.data.u64 <<= 32;
-	ev.data.u64 |= (uint32_t)fd;
+	ev.data.fd = (uint32_t)fd;
 	ev.events = flag;
 	return epoll_ctl(stcp->epfd, cmd, fd, &ev);
 }
@@ -252,7 +246,6 @@ static inline void _add_listenner(dctcp_t * stcp, int fd, const sockaddr_in & ad
 static inline dctcp_connector_t & _add_connector(dctcp_t * stcp, int fd, const sockaddr_in & saddr, int retry,
 	const char * fproto, dctcp_event_cb_t cb, void * ud){
 	assert(fd >= 0);
-
     dctcp_connector_t cnx;
     cnx.max_reconnect = retry;
     cnx.reconnect = 0;
@@ -301,7 +294,7 @@ static inline msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool f
 		auto it = stcp->sock_recv_buffer.find(fd);
 		if (it == stcp->sock_recv_buffer.end()){
 			msg_buffer_t buf;
-			if (buf.create(stcp->conf.max_recv_buff)){
+			if (buf.create(stcp->conf.max_recv_buff + 1)){
 				return nullptr;
 			}
 			stcp->sock_recv_buffer[fd] = buf;
@@ -313,7 +306,7 @@ static inline msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool f
 		auto it = stcp->sock_send_buffer.find(fd);
 		if (it == stcp->sock_send_buffer.end()){
 			msg_buffer_t	buf;
-			if (buf.create(stcp->conf.max_send_buff)){
+			if (buf.create(stcp->conf.max_send_buff + 1)){
 				return nullptr;
 			}
 			stcp->sock_send_buffer[fd] = buf;
@@ -344,7 +337,7 @@ static inline void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type rea
 	sev.error = error;
 	dctcp_event_dispatch(stcp, sev);
 	stcp->proto_listeners.cust_listener.erase(fd);
-	stcp->fd2listenfd.erase(fd);
+	stcp->fd_map_listenfd.erase(fd);
 }
 
 static inline void _new_connx(dctcp_t * stcp, int listenfd){
@@ -352,6 +345,7 @@ static inline void _new_connx(dctcp_t * stcp, int listenfd){
 	socklen_t	len = sizeof(addr);
 	int nfd = accept(listenfd, &addr, &len);
 	if (nfd >= 0){
+        stcp->fd_map_listenfd[nfd] = listenfd;
 		dctcp_event_t sev;
 		sev.listenfd = listenfd;
 		sev.fd = nfd;
@@ -363,26 +357,6 @@ static inline void _new_connx(dctcp_t * stcp, int listenfd){
 	}
 	else{		//error
 		GLOG_TRA("accept error listen fd:%d for:%s", listenfd, strerror(errno));
-	}
-}
-
-static inline int _read_msg_error(dctcp_t * stcp, int fd, int read_ret, int listenfd){
-	if (read_ret == 0){
-		//peer close
-		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE, listenfd);
-		return -1;
-	}
-	else{ //if (sz < 0 ) 
-		if (errno == EINTR) {
-			return 0;
-		}
-		if (errno != EAGAIN &&
-			errno != EWOULDBLOCK ){
-			//error
-			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_SYS_ERR, listenfd);
-			return -2;
-		}
-		return -3;
 	}
 }
 static inline int _dctcp_proto_msg_sz_length(int hsz, const char * buffer){
@@ -410,11 +384,10 @@ static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * bu
 	sev.fd = fd;
 	sev.listenfd = listenfd;
 	int nproc = 0;//proc msg num
-	bool need_normalize = true;
 	//need dispatching
 	//////////////////////////////////////////////////
 	int msg_buff_start = 0;
-	int msg_buff_valid = buffer->valid_size;
+	int msg_buff_rest = buffer->valid_size;
 	int msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
 	int msg_buff_total = buffer->valid_size;
 	while (msg_length > hsz) {
@@ -425,7 +398,7 @@ static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * bu
 			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR, listenfd);
 			return -1;
 		}
-		if (msg_length > msg_buff_valid){
+		if (msg_length > msg_buff_rest){
 			break;
 		}
 		dctcp_msg_t smsg(buffer->buffer + msg_buff_start + hsz, msg_length - hsz);
@@ -433,27 +406,23 @@ static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * bu
 		dctcp_event_dispatch(stcp, sev, proto_env);
 		++nproc;
 		msg_buff_start += msg_length;
-		msg_buff_valid -= msg_length;
+		msg_buff_rest -= msg_length;
 		//the connection may be close , check fd
 		if (!_is_fd_ok(fd)){
 			GLOG_TRA("fd closed when procssing msg rest of msg size:%d buff total:%d last msg unit size is :%d",
-				msg_buff_valid, msg_buff_total, msg_length);
-			need_normalize = false;
-			break;
+				msg_buff_rest, msg_buff_total, msg_length);
+            return nproc;
 		}
 		msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
-	}
-	if (need_normalize && nproc > 0 && msg_buff_total > msg_buff_start){
+	}//
+    if (msg_buff_start > 0 && buffer->valid_size >= msg_buff_start){
 		memmove(buffer->buffer,
 			buffer->buffer + msg_buff_start,
-			msg_buff_total - msg_buff_start);
+            buffer->valid_size - msg_buff_start);
 		////////////////////////////////////////////////////////////////
 		buffer->valid_size -= msg_buff_start;
 	}
-	else if(need_normalize){
-		assert(buffer->valid_size == msg_buff_start);
-		assert(nproc == 0);
-	}
+
 	return nproc;
 }
 static inline int _dctcp_proto_dispatch_token(dctcp_t * stcp, msg_buffer_t * buffer, int fd, int listenfd,
@@ -463,17 +432,16 @@ static inline int _dctcp_proto_dispatch_token(dctcp_t * stcp, msg_buffer_t * buf
 	sev.fd = fd;
 	sev.listenfd = listenfd;
 	int nproc = 0;//proc msg num
-	bool need_normalize = true;
 	//need dispatching
 	//////////////////////////////////////////////////
 	int msg_buff_start = 0;
-	int msg_buff_valid = buffer->valid_size;
+	int msg_buff_rest = buffer->valid_size;
 	int msg_buff_total = buffer->valid_size;
 	int msg_token_length = proto_env->token.length();
 	int msg_length = 0;
 	const char * ftok = strstr(buffer->buffer, proto_env->token.c_str());
 	if (ftok && ftok < buffer->buffer + msg_buff_total){
-		msg_length = ftok - buffer->buffer;
+        msg_length = ftok - buffer->buffer + msg_token_length;
 	}
 	if (!ftok && buffer->valid_size == buffer->max_size){
 		//errror msg , too big 
@@ -483,43 +451,41 @@ static inline int _dctcp_proto_dispatch_token(dctcp_t * stcp, msg_buffer_t * buf
 		return -1;
 	}
 	while (msg_length > 0) {
+        *(buffer->buffer + msg_length - msg_token_length) = '\0';
 		dctcp_msg_t smsg(buffer->buffer + msg_buff_start, msg_length - msg_token_length);
 		sev.msg = &smsg;
 		dctcp_event_dispatch(stcp, sev, proto_env);
 		++nproc;
 		msg_buff_start += msg_length;
-		msg_buff_valid -= msg_length;
+		msg_buff_rest -= msg_length;
 		//the connection may be close , check fd
 		if (!_is_fd_ok(fd)){
 			GLOG_TRA("fd closed when procssing msg rest of msg size:%d buff total:%d last msg unit size is :%d",
-				msg_buff_valid, msg_buff_total, msg_length);
-			need_normalize = false;
-			break;
+				msg_buff_rest, msg_buff_total, msg_length);
+            return nproc;
 		}
 		ftok = strstr(buffer->buffer + msg_buff_start, proto_env->token.c_str());
 		if (ftok && ftok < buffer->buffer + msg_buff_total){
-			msg_length = ftok - (buffer->buffer + msg_buff_start);
+            msg_length = ftok - (buffer->buffer + msg_buff_start) + msg_token_length;
 		}
 		else {
 			break;
 		}
 	}
-
-	if (need_normalize && nproc > 0 && msg_buff_total > msg_buff_start){
+    if (msg_buff_start > 0 && buffer->valid_size >= msg_buff_start){
 		memmove(buffer->buffer,
 			buffer->buffer + msg_buff_start,
-			msg_buff_total - msg_buff_start);
+            buffer->valid_size - msg_buff_start);
 		////////////////////////////////////////////////////////////////
 		buffer->valid_size -= msg_buff_start;
-	}
-	else if (need_normalize){
-		assert(buffer->valid_size == msg_buff_start);
-		assert(nproc == 0);
 	}
 	return nproc;
 }
 static inline int _dctcp_proto_dispatch(dctcp_t * stcp, msg_buffer_t * buffer, 
 	int fd, int listenfd, dctcp_proto_dispatcher_t * proto_env){
+    if (buffer->valid_size == 0){
+        return 0;
+    }
 	switch (proto_env->fproto){
 	case DCTCP_PROTO_MSG_SZ32:
 		return _dctcp_proto_dispatch_msg_sz(stcp, buffer, fd, listenfd, proto_env, sizeof(uint32_t));
@@ -532,7 +498,6 @@ static inline int _dctcp_proto_dispatch(dctcp_t * stcp, msg_buffer_t * buffer,
 	default:
 		return -1;
 	}
-	return -10;
 }
 static inline int _read_tcp_socket(dctcp_t * stcp, int fd, int listenfd){
 	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
@@ -544,19 +509,30 @@ static inline int _read_tcp_socket(dctcp_t * stcp, int fd, int listenfd){
 		return -2;
 	}
 	int nmsg = 0;
-	while (buffer->max_size > buffer->valid_size) {
+	while (buffer->max_size > (buffer->valid_size + 1)) {
 		int sz = recv(fd, buffer->buffer + buffer->valid_size, 
-						buffer->max_size - buffer->valid_size, MSG_DONTWAIT);
-		if (sz > 0){
+						buffer->max_size - buffer->valid_size - 1, MSG_DONTWAIT);
+		if (sz > 0){ //ok
 			buffer->valid_size += sz;
 		}
-		else if (sz == -1 && errno == EINTR){
+        else if (sz == 0){ //peer close
+            _close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE, listenfd);
+            return -3;
+        }
+        else if (sz == -1 && errno == EINTR){ //continue
 			continue;
 		}
-		else if (_read_msg_error(stcp, fd, sz, listenfd)){
-			return -3;
-		}
-
+        else if (sz == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+            return nmsg;
+        }
+        else {
+            _close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_SYS_CALL_ERR, listenfd);
+            return -4;
+        }
+        //text protocol
+        if (proto_env->fproto ==  DCTCP_PROTO_TOKEN && buffer->valid_size < buffer->max_size){
+            buffer->buffer[buffer->valid_size] = 0;
+        }
 		//dispatch
 		int ret = _dctcp_proto_dispatch(stcp, buffer, fd, listenfd, proto_env);
 		if (ret < 0){
@@ -612,26 +588,60 @@ static inline void _connect_check(dctcp_t * stcp, int fd){
 		}
 	}
 }
-
-//write msg
+static inline int _dctcp_check_send_queue(dctcp_t * stcp, int fd, int listenfd, msg_buffer_t * msgbuff){
+    int send_pdu = stcp->conf.max_tcp_send_buff_size;
+    if (send_pdu > msgbuff->valid_size){
+        send_pdu = msgbuff->valid_size;
+    }
+    int sent = 0;
+    while (send_pdu > 0){
+        int ret = send(fd, msgbuff->buffer + sent,
+            send_pdu, MSG_DONTWAIT | MSG_NOSIGNAL);
+        if (ret > 0){ //send ok
+            sent += ret;
+        }
+        else if (ret == 0){
+            break;
+        }
+        else if (ret == -1 && errno == EINTR){
+            continue;
+        }
+        else if (ret == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)){
+            break;
+        }
+        else {
+            GLOG_SER("send tcp fd:%d error sent:%d pdu:%d", fd, sent, send_pdu);
+            _close_fd(stcp, fd, DCTCP_MSG_ERR, listenfd); //error write 
+            return -1;
+        }
+        send_pdu = msgbuff->valid_size - sent;
+        if (send_pdu > stcp->conf.max_tcp_send_buff_size){
+            send_pdu = stcp->conf.max_tcp_send_buff_size;
+        }
+    }
+    if (sent > 0 && msgbuff->valid_size >= sent){
+        memmove(msgbuff->buffer, msgbuff->buffer + sent,
+            msgbuff->valid_size - sent);
+        msgbuff->valid_size -= sent;
+    }
+    return 0;
+}
 static inline int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, int sz){
 	//write app buffer ? write tcp socket directly ?
-	dctcp_event_t sev;
-	sev.fd = fd;
-	sev.type = dctcp_event_type::DCTCP_WRITE;
-	sev.listenfd = _dctcp_get_fd_listenfd(stcp, fd);
-	dctcp_proto_dispatcher_t * proto_env = _dctcp_get_proto_dispatcher(stcp, fd, sev.listenfd);
 	msg_buffer_t* msgbuff = _get_sock_msg_buffer(stcp, fd, false);
 	if (!msgbuff){//no buffer		
+        GLOG_ERR("stcp fd:%d get buffer error !", fd);
 		return -1;
 	}
-
-	size_t msg_buff_total = 0;
+    int listenfd = _dctcp_get_fd_listenfd(stcp, fd);
+    dctcp_proto_dispatcher_t * proto_env = _dctcp_get_proto_dispatcher(stcp, fd, listenfd);
+    int msg_buff_total = 0;
 	switch (proto_env->fproto){
 	case DCTCP_PROTO_MSG_SZ32:
 		msg_buff_total = sz + (int)sizeof(uint32_t);
-		if ((int)msg_buff_total > stcp->conf.max_send_buff ||
-			msg_buff_total > INT_MAX){
+		if (msg_buff_total > stcp->conf.max_send_buff ||
+			msg_buff_total > INT_MAX ||
+            msgbuff->valid_size + msg_buff_total > msgbuff->max_size){
 			return -2;
 		}
 		memcpy(msgbuff->buffer + sizeof(uint32_t), msg, sz);
@@ -639,52 +649,39 @@ static inline int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, in
 		break;
 	case DCTCP_PROTO_MSG_SZ16:
 		msg_buff_total = sz + (int)sizeof(uint16_t);
-		if ((int)msg_buff_total > stcp->conf.max_send_buff ||
-			msg_buff_total > USHRT_MAX){
+		if (msg_buff_total > stcp->conf.max_send_buff ||
+            msg_buff_total > USHRT_MAX ||
+            msgbuff->valid_size + msg_buff_total > msgbuff->max_size){
 			return -2;
 		}
-		memcpy(msgbuff->buffer + sizeof(uint16_t), msg, sz);
-		*(uint16_t*)(msgbuff->buffer) = htons((uint16_t)msg_buff_total);
+		memcpy(msgbuff->buffer + msgbuff->valid_size + sizeof(uint16_t), msg, sz);
+        *(uint16_t*)(msgbuff->buffer + msgbuff->valid_size) = htons((uint16_t)msg_buff_total);
 		break;
 	case DCTCP_PROTO_MSG_SZ8:
 		msg_buff_total = sz + (int)sizeof(uint8_t);
-		if ((int)msg_buff_total > stcp->conf.max_send_buff ||
-			msg_buff_total > UCHAR_MAX){
+		if (msg_buff_total > stcp->conf.max_send_buff ||
+            msg_buff_total > UCHAR_MAX ||
+            msgbuff->valid_size + msg_buff_total > msgbuff->max_size){
 			return -2;
 		}
-		memcpy(msgbuff->buffer + sizeof(uint8_t), msg, sz);
-		*(uint8_t*)(msgbuff->buffer) = msg_buff_total;
+        memcpy(msgbuff->buffer + msgbuff->valid_size + sizeof(uint8_t), msg, sz);
+        *(uint8_t*)(msgbuff->buffer + msgbuff->valid_size) = msg_buff_total;
 		break;
 	case DCTCP_PROTO_TOKEN:
 		msg_buff_total = sz + proto_env->token.length();
-		if ((int)msg_buff_total > stcp->conf.max_send_buff){
+        if (msg_buff_total > stcp->conf.max_send_buff ||
+            msgbuff->valid_size + msg_buff_total > msgbuff->max_size){
 			return -2;
 		}
-		memcpy(msgbuff->buffer, msg, sz);
-		memcpy(msgbuff->buffer + sz, proto_env->token.c_str(), proto_env->token.length());
+        memcpy(msgbuff->buffer + msgbuff->valid_size, msg, sz);
+        memcpy(msgbuff->buffer + msgbuff->valid_size + sz, proto_env->token.c_str(), proto_env->token.length());
 		break;
-	}	
-RETRY_WRITE_MSG:
-	int ret = send(fd, msgbuff->buffer, msg_buff_total, MSG_DONTWAIT | MSG_NOSIGNAL);
-	if (ret == (int)msg_buff_total){ //send ok
-		dctcp_msg_t smsg = dctcp_msg_t(msg, sz);
-		sev.msg = &smsg;
-		dctcp_event_dispatch(stcp, sev, proto_env);
-		return 0;
+    default:
+        GLOG_ERR("error proto format :%d fd:%d", proto_env->fproto, fd);
+        return -3;
 	}
-	else {
-        if (ret == -1){
-            if (errno == EINTR) {
-                goto RETRY_WRITE_MSG;
-            }
-            else if (errno == EMSGSIZE || errno == EAGAIN || errno == EWOULDBLOCK){
-                return -3; //giv up msg but not close it
-            }
-        }
-        _close_fd(stcp, fd, DCTCP_MSG_ERR, sev.listenfd); //error write 
-        return -4;
-    }
-	return -5;
+    msgbuff->valid_size += msg_buff_total;
+    return _dctcp_check_send_queue(stcp, fd, listenfd, msgbuff);
 }
 
 static inline bool _is_listenner(dctcp_t * stcp, int fd){
@@ -720,7 +717,7 @@ static inline void _proc(dctcp_t * stcp, const epoll_event & ev){
 	}
 	else {
 		//error
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_SYS_ERR, listenfd);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_SYS_CALL_ERR, listenfd);
 	}
 }
 void			dctcp_close(dctcp_t * stcp, int fd){

@@ -78,13 +78,14 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 	if (ev.type == dctcp_event_type::DCTCP_CONNECTED){
 		tcp_server_mode = 0;
 		for (int i = 0; i < 60; i++){
-			dctcp_send(stc, ev.fd, dctcp_msg_t(stmsg, strlen(stmsg) + 1));
+			dctcp_send(stc, ev.fd, dctcp_msg_t(stmsg));
 		}
 		start_us = dcsutil::time_unixtime_us();
 	}
 
 	if (ev.type == dctcp_event_type::DCTCP_READ){
-		GLOG_TRA("ping pang get msg from fd:%d msg:%s",ev.fd, ev.msg->buff);
+		GLOG_TRA("ping pang get msg from fd:%d msg:%s length:%d",
+            ev.fd, ev.msg->buff, ev.msg->buff_sz);
 		
 		pingpong++;
 		if (pingpong == 1 && tcp_server_mode){
@@ -120,13 +121,31 @@ int test_tcp(const char * ap)
 		return -1;
 	}
 	if (ap){
-		dctcp_listen(p, listen_addr);
-	}
-	dctcp_event_cb(p, _dctcp_cb, nullptr);
-	if (!ap){
-		int ret = dctcp_connect(p, listen_addr, 5);
-		CHECK(ret)		
-	}
+        if (ap[0] == '1'){
+            dctcp_listen(p, listen_addr, "msg:sz8", _dctcp_cb);
+        }
+        if (ap[0] == '2'){
+            int ret = dctcp_connect(p, listen_addr, 5,"msg:sz8", _dctcp_cb);
+        }
+        if (ap[0] == '3'){
+            dctcp_listen(p, listen_addr, "msg:sz16", _dctcp_cb);
+        }
+        if (ap[0] == '4'){
+            dctcp_connect(p, listen_addr, 5, "msg:sz16", _dctcp_cb);
+        }
+        if (ap[0] == '5'){
+            dctcp_listen(p, listen_addr, "msg:sz32", _dctcp_cb);
+        }
+        if (ap[0] == '6'){
+            dctcp_connect(p, listen_addr, 5, "msg:sz32", _dctcp_cb);
+        }
+        if (ap[0] == '7'){
+            dctcp_listen(p, listen_addr, "token:\r\n\r\n", _dctcp_cb);
+        }
+        if (ap[0] == '8'){
+            dctcp_connect(p, listen_addr, 5, "token:\r\n\r\n", _dctcp_cb);
+        }
+    }
 	logger_set_level(NULL, LOG_LVL_PROF);
 	while (true)
 	{

@@ -162,7 +162,7 @@ static inline int init_command(App & app, const char * pidfile){
 		printf("console server connected ! command <quit> will exit shell\n");
 		while (true){
 			int n = readfd(confd, console_buffer, CONSOLE_BUFFER_SIZE,
-				"msg:sz32", 1000 * 3600);
+				"token:\n\n", 1000 * 3600);
 			if (n < 0){
 				fprintf(stderr, "console server closed [ret=%d]!\n", n);
 				break;
@@ -172,7 +172,7 @@ static inline int init_command(App & app, const char * pidfile){
 			if (strcasecmp(command, "quit") == 0){
 				break;
 			}
-			dcsutil::writefd(confd, command, 0, "msg:sz32");
+			dcsutil::writefd(confd, command, 0, "token:\n\n");
 		}
 		closefd(confd);
 		delete console_buffer;
@@ -214,6 +214,8 @@ app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, AppImpl * impl){
 
 static inline int
 app_stcp_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
+    GLOG_TRA("app stcp listener ev.type:%d ev.fd:%d ev.listenfd:%d",
+        ev.type, ev.fd, ev.listenfd);
 	AppImpl * app = (AppImpl*)ud;
 	if (ev.listenfd == app->console){
 		return app_console_listener(dc, ev, app);
@@ -358,12 +360,12 @@ int App::init(int argc, const char * argv[]){
 		GLOG_SER("stcp init error !");
 		return -4;
 	}
-	//typedef int (*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
 	dctcp_event_cb(impl_->stcp, app_stcp_listener, impl_);
 	//control
 	const char * console_listen = cmdopt().getoptstr("console-listen");
 	if (console_listen){
-		impl_->console = dctcp_listen(impl_->stcp, console_listen);
+		impl_->console = dctcp_listen(impl_->stcp, console_listen, "token:\n\n",
+            app_stcp_listener, impl_);
 		if (impl_->console < 0){
 			GLOG_SER("console init listen error : %d!", impl_->console);
 			return -5;

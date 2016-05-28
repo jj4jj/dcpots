@@ -20,9 +20,11 @@ struct RpcServiceCallContext {
 	}
 };
 struct RpcServerImpl{
-    dctcp_t * svr { nullptr };
+    dctcp_t * stcp_looper{ nullptr };
+    bool      stcp_looper_own{ false };
     std::unordered_map<string, RpcService *> dispatcher;
     msg_buffer_t       send_buff;
+    uint64_t           update_tick_time{ 0 };
 	/////////////////////////////////////////////////////////////////////////////
 	std::multimap<int, uint64_t>		fd_pending_cookie;
 	std::unordered_map<uint64_t, RpcServiceCallContext *>	cookie_pending_context;
@@ -39,7 +41,7 @@ static inline int _send_msg(RpcServerImpl * impl, int id, const dcrpc_msg_t & rp
         GLOG_ERR("pack rpc reply msg error ! buff length:%d", rpc_msg.ByteSize());
         return -1;
     }
-    int ret = dctcp_send(impl->svr, id, dctcp_msg_t(impl->send_buff.buffer, impl->send_buff.valid_size));
+    int ret = dctcp_send(impl->stcp_looper, id, dctcp_msg_t(impl->send_buff.buffer, impl->send_buff.valid_size));
     GLOG_TRA("send [%d] [%d] [%s] [%s] [%p:%d]", ret, id, rpc_msg.path().c_str(),
         rpc_msg.Debug(), impl->send_buff.buffer, impl->send_buff.valid_size);
     if (ret){
@@ -181,62 +183,70 @@ static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, c
         _send_msg(impl, fd, rpc_msg);
     }
 }
-int    RpcServer::init(const std::string & addr){
+static int rpc_server_dispatch(dctcp_t*, const dctcp_event_t & ev, void * ud) {
+    RpcServerImpl * impl = (RpcServerImpl*)ud;
+    switch (ev.type){
+    case DCTCP_NEW_CONNX:
+        break;
+    case DCTCP_CLOSED:
+        _dispatch_client_close(impl, ev.fd);
+        break;
+    case DCTCP_READ:
+        GLOG_TRA("read tcp msg fd=%d buff:%p ibuff:%d", ev.fd, ev.msg->buff, ev.msg->buff_sz);
+        _distpach_remote_service_cmsg(impl, ev.fd, ev.msg->buff, ev.msg->buff_sz);
+        break;
+    default:
+        assert(false && "error event !");
+        return -1;
+    }
+    return 0;
+}
+int    RpcServer::init(const std::string & addr, dctcp_t * stcp){
     if (this->impl){
         GLOG_ERR("error init server again £¡");
         return -1;
     }
     impl = new RpcServerImpl();
-    dctcp_config_t dctcp;
-    dctcp.max_recv_buff = 1024 * 1024 * 2;
-    dctcp.max_send_buff = 1024 * 1024 * 1;
-    dctcp.max_tcp_recv_buff_size = 1 * 1024 * 1024;
-    dctcp.max_tcp_send_buff_size = 1 * 1024 * 1024;
-    impl->svr = dctcp_create(dctcp);
-    if (!impl->svr){
-        return -2;
+
+    impl->stcp_looper = stcp;
+    if (!stcp){
+        dctcp_config_t dctcp;
+        dctcp.max_recv_buff = 1024 * 1024 * 2;
+        dctcp.max_send_buff = 1024 * 1024 * 1;
+        dctcp.max_tcp_recv_buff_size = 1 * 1024 * 1024;
+        dctcp.max_tcp_send_buff_size = 1 * 1024 * 1024;
+        impl->stcp_looper = dctcp_create(dctcp);
+        if (!impl->stcp_looper){
+            return -2;
+        }
+        impl->stcp_looper_own = true;
     }
     impl->send_buff.create(dcrpc::MAX_RPC_MSG_BUFF_SIZE);
-    dctcp_event_cb(impl->svr, [](dctcp_t* , const dctcp_event_t & ev, void * ud)->int {
-        RpcServerImpl * impl = (RpcServerImpl*)ud;
-        switch (ev.type){
-        case DCTCP_CONNECTED:
-            assert(false && "no connected event !");
-            break;
-        case DCTCP_NEW_CONNX:
-            break;
-        case DCTCP_CLOSED:
-            _dispatch_client_close(impl, ev.fd);
-            break;
-        case DCTCP_READ:
-            GLOG_TRA("read tcp msg fd=%d buff:%p ibuff:%d", ev.fd, ev.msg->buff, ev.msg->buff_sz);
-            _distpach_remote_service_cmsg(impl, ev.fd, ev.msg->buff, ev.msg->buff_sz);
-            break;
-        case DCTCP_WRITE:
-            break;
-        default:
-            assert(false && "error event !");
-            return -1;
-        }
-        return 0;
-    }, impl);
-    
-    if (dctcp_listen(impl->svr, addr) < 0){
-        GLOG_ERR("bind address and start listening error !");
+    int ret = dctcp_listen(impl->stcp_looper, addr, "msg:sz32", rpc_server_dispatch, impl);
+    if (ret < 0){
+        GLOG_ERR("bind address and start listening error :%d !", ret);
         return -3;
     }
     return 0;
 }
-int    RpcServer::update(){
-    int ret = dctcp_poll(impl->svr, 1000);
+int    RpcServer::update(int tick_us){
+    int ret = 0;
+    uint64_t t_now_us = dcsutil::time_unixtime_us();
+    if (impl->update_tick_time + tick_us > t_now_us){
+        return 0;
+    }
+    impl->update_tick_time = t_now_us;
+    if (impl->stcp_looper_own){
+        ret = dctcp_poll(impl->stcp_looper, tick_us);
+    }
     _dispatch_client_update(impl);
     return ret;
 }
 void   RpcServer::destroy(){
     if (impl){
-        if (impl->svr){
-            dctcp_destroy(impl->svr);
-            impl->svr = nullptr;
+        if (impl->stcp_looper){
+            dctcp_destroy(impl->stcp_looper);
+            impl->stcp_looper = nullptr;
         }
         impl->send_buff.destroy();
         delete impl;

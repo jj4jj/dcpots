@@ -2,6 +2,8 @@
 #include <string>
 #include <functional>
 #include "../share/dcrpc.h"
+
+struct dctcp_t;
 namespace dcrpc {
 struct RpcValues;
 class RpcService;
@@ -11,8 +13,8 @@ public:
     RpcServer();
     ~RpcServer();
 public:
-    int    init(const std::string & addr);
-    int    update();
+    int    init(const std::string & addr, dctcp_t * stcp = nullptr);
+    int    update(int tick_us = 1000);
     void   destroy();
 
 public:

@@ -5,7 +5,6 @@ struct dctcp_msg_t {
     const char * buff{ nullptr };
     int   buff_sz{ 0 };
     dctcp_msg_t(const char * buf, int sz = 0);
-    dctcp_msg_t(const std::string & str);
 };
 struct dctcp_config_t {
     int max_recv_buff;
@@ -24,7 +23,7 @@ enum dctcp_close_reason_type {
 	DCTCP_PEER_CLOSE = 3,
 	DCTCP_POLL_ERR = 4, //refer to errno
 	DCTCP_INVAL_CALL = 5, //usage err
-	DCTCP_SYS_ERR = 6, //system call error refer to errno
+	DCTCP_SYS_CALL_ERR = 6, //system call error refer to errno
 	DCTCP_CLOSE_ACTIVE = 7, //by uplayer
 };
 
@@ -34,7 +33,6 @@ enum dctcp_event_type {
 	DCTCP_NEW_CONNX,
 	DCTCP_CLOSED ,
     DCTCP_READ ,
-    DCTCP_WRITE ,
     DCTCP_EVENT_MAX
 };
 struct dctcp_event_t {
