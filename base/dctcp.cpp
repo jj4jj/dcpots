@@ -2,62 +2,99 @@
 #include "logger.h"
 #include "msg_proto.hpp"
 #include "profile.h"
+
+
+dctcp_msg_t::dctcp_msg_t(const char * buf, int sz) :buff(buf), buff_sz(sz){
+	if (!sz){
+		sz = strlen(buf);
+	}
+}
+dctcp_msg_t::dctcp_msg_t(const std::string & str){
+	buff = str.data();
+	buff_sz = str.length();
+}
+dctcp_config_t::dctcp_config_t() {
+	max_client = 8192;
+	max_backlog = 2048;
+	max_recv_buff = max_send_buff = 1024 * 100; //100K
+	max_tcp_send_buff_size = 1024 * 100; //100K
+	max_tcp_recv_buff_size = 640 * 100; //600K
+}
+dctcp_event_t::dctcp_event_t() :type(DCTCP_EVT_INIT), listenfd(-1), fd(-1), 
+    msg(nullptr), reason(DCTCP_MSG_OK), error(0){
+}
+
 //client connecting
-struct dctcp_connecting_t {
-	int				reconnect;
-	int				max_reconnect;
-	sockaddr_in 	connect_addr;
-	dctcp_connecting_t() {
-		bzero(this, sizeof(*this));
+struct dctcp_connector_t {
+	int					reconnect;
+	int					max_reconnect;
+	sockaddr_in 		connect_addr;
+	dctcp_connector_t() {
+		memset(this, 0, sizeof(*this));
 	}
 };
 struct dctcp_listener_t {
 	sockaddr_in			listenaddr;
 	dctcp_listener_t(){
-		bzero(this, sizeof(*this));
+		memset(this, 0, sizeof(*this));
 	}
+};
+enum dctcp_proto_type {
+	DCTCP_PROTO_MSG_SZ32 = 0,
+	DCTCP_PROTO_MSG_SZ16 = 1,
+	DCTCP_PROTO_MSG_SZ8 = 2,
+	DCTCP_PROTO_TOKEN = 3,
+};
+struct dctcp_proto_dispatcher_t {
+	dctcp_proto_type	fproto{ DCTCP_PROTO_MSG_SZ32 };
+	std::string			token;
+	dctcp_event_cb_t	event_cb{ nullptr };
+	void		*		event_cb_ud{ nullptr };
+};
+struct dctcp_listener_env_t {
+	typedef std::unordered_map<int, dctcp_proto_dispatcher_t>	dctcp_event_listener_t;
+	dctcp_proto_dispatcher_t		base_listener;
+	dctcp_event_listener_t			cust_listener;
 };
 struct dctcp_t {
 	dctcp_config_t	conf;
 	int				epfd;	//epfd for poller
-	std::unordered_map<int, dctcp_connecting_t>		connectings;//client connecting
+	std::unordered_map<int, dctcp_connector_t>		connectors;//client connecting
 	std::unordered_map<int, dctcp_listener_t>		listeners;//server listeners fd
-	///////////////////////////////
-	dctcp_event_cb_t	event_cb;
-	void		*		event_cb_ud;
-	///////////////////////////////
+	///////////////////////////////////////////////////////////////
+	dctcp_listener_env_t							proto_listeners;
+	std::unordered_map<int, int>					fd2listenfd;
+	///////////////////////////////////////////////////////////////
 	epoll_event	*	events;
 	int				nproc;
 	int				nevts;
-	//////////////////////////////fd<->send and recv
+	//////////////////////////////fd<->send and recv//////////////
 	std::unordered_map<int, msg_buffer_t>	sock_recv_buffer;
 	std::unordered_map<int, msg_buffer_t>	sock_send_buffer;
-	////////////////////////////////////////
-	msg_buffer_t		misc_buffer;
+	///////////////////////////////////////////////////////////////
+	msg_buffer_t	misc_buffer;
 	dctcp_t(){
 		init();
 	}
 	void init(){
 		epfd = -1;
-		event_cb = nullptr;
-		event_cb_ud = nullptr;
 		events = nullptr;
 		nevts = nproc = 0;
 		sock_recv_buffer.clear();
 		sock_send_buffer.clear();
-		connectings.clear();
+		connectors.clear();
 		listeners.clear();
 		misc_buffer.destroy();
 	}
 };
 
-static int _set_socket_opt(int fd, int name, void * val, socklen_t len){
+static inline int _set_socket_opt(int fd, int name, void * val, socklen_t len){
 	int lv = SOL_SOCKET;
 	if (name == TCP_NODELAY) lv = IPPROTO_TCP;
 	return setsockopt(fd, lv, name, val, len);
 }
 
-static int _set_socket_ctl(int fd, int flag, bool open){
+static inline int _set_socket_ctl(int fd, int flag, bool open){
 	int flags = fcntl(fd, F_GETFL, 0);
 	if (flags < 0){
 		return -1;
@@ -73,7 +110,7 @@ static int _set_socket_ctl(int fd, int flag, bool open){
 	}
 	return 0;
 }
-static int 	_init_socket_options(int fd, int sendbuffsize,int recvbuffsize){
+static inline  int 	_init_socket_options(int fd, int sendbuffsize,int recvbuffsize){
 	int on = 1;
 	int ret = _set_socket_opt(fd, TCP_NODELAY, &on, sizeof(on));
 	ret |= _set_socket_opt(fd, SO_REUSEADDR, &on, sizeof(on));
@@ -88,7 +125,7 @@ static int 	_init_socket_options(int fd, int sendbuffsize,int recvbuffsize){
 	}
 	return 0;
 }
-static int _create_tcpsocket(int sendbuffsize, int recvbuffsize){
+static inline int _create_tcpsocket(int sendbuffsize, int recvbuffsize){
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0) return -1;
 	int ret = _init_socket_options(fd , sendbuffsize, recvbuffsize);
@@ -108,11 +145,11 @@ struct dctcp_t * dctcp_create(const dctcp_config_t & conf){
 	stcp->misc_buffer.create(1024 * 1024);
 	return stcp;
 }
-inline	void	_close_listeners(dctcp_t * stcp){
+static inline	void	_close_listeners(dctcp_t * stcp){
 	for (auto & it : stcp->listeners) close(it.first);
 }
-inline	void	_close_connections(dctcp_t * stcp){
-	for (auto & it : stcp->connectings) close(it.first);
+static inline	void	_close_connections(dctcp_t * stcp){
+	for (auto & it : stcp->connectors) close(it.first);
 }
 void            dctcp_destroy(dctcp_t * stcp){
 	GLOG_TRA("stcp destroy ....");
@@ -123,17 +160,117 @@ void            dctcp_destroy(dctcp_t * stcp){
 	stcp->init();
 	delete stcp;
 }
-void            dctcp_event_cb(dctcp_t* stcp, dctcp_event_cb_t cb, void * ud){
-	stcp->event_cb = cb;
-	stcp->event_cb_ud = ud;
+static inline int _dctcp_get_fd_listenfd(dctcp_t * stcp, int fd){
+	auto it = stcp->fd2listenfd.find(fd);
+	if (it == stcp->fd2listenfd.end()){
+		return -1;
+	}
+	return it->second;
 }
-static int _op_poll(dctcp_t * stcp, int cmd, int fd, int flag = 0){
+static inline dctcp_proto_dispatcher_t * 
+_dctcp_get_proto_dispatcher(dctcp_t * stcp, int fd, int listenfd){
+	int efd = -1;
+	if (listenfd != -1){
+		efd = listenfd;
+	}
+	else if (fd != -1) {
+		efd = fd;
+	}
+	else {
+		assert("dctcp event fd or listenfd error !" && false);
+	}
+	auto it = stcp->proto_listeners.cust_listener.find(efd);
+	if (it != stcp->proto_listeners.cust_listener.end()){
+		return &(it->second);
+	}
+	return &stcp->proto_listeners.base_listener;
+}
+static	inline void	dctcp_event_dispatch(dctcp_t *stcp, const dctcp_event_t & ev, 
+		dctcp_proto_dispatcher_t * proto_env = nullptr){
+	if (proto_env){ //settings
+		if (proto_env->event_cb){
+			proto_env->event_cb(stcp, ev, proto_env->event_cb_ud);
+		}
+	}
+	else { // no settings
+		dctcp_proto_dispatcher_t * proto_env = _dctcp_get_proto_dispatcher(stcp, ev.fd, ev.listenfd);
+		if (proto_env && proto_env->event_cb){
+			proto_env->event_cb(stcp, ev, proto_env->event_cb_ud);
+		}
+	}
+}
+void            dctcp_event_cb(dctcp_t *stcp, dctcp_event_cb_t cb, void * ud){
+	stcp->proto_listeners.base_listener.event_cb = cb;
+	stcp->proto_listeners.base_listener.event_cb_ud = ud;
+}
+static inline int _op_poll(dctcp_t * stcp, int cmd, int fd, int flag = 0, int listenfd = -1){
 	epoll_event ev;
-	ev.data.fd = fd;
+	ev.data.u64 = (uint32_t)listenfd;
+	ev.data.u64 <<= 32;
+	ev.data.u64 |= (uint32_t)fd;
 	ev.events = flag;
 	return epoll_ctl(stcp->epfd, cmd, fd, &ev);
 }
-static int _get_sockerror(int fd){
+static inline dctcp_proto_type _dctcp_get_proto_info(const char * fproto, const char ** proto_token = nullptr){
+	dctcp_proto_type proto_type = DCTCP_PROTO_MSG_SZ32;
+	if (!strcasecmp(fproto, "msg:sz32")){
+		proto_type = DCTCP_PROTO_MSG_SZ32;
+	}
+	else if (!strcasecmp(fproto, "msg:sz16")){
+		proto_type = DCTCP_PROTO_MSG_SZ32;
+	}
+	else if (!strcasecmp(fproto, "msg:sz8")){
+		proto_type = DCTCP_PROTO_MSG_SZ8;
+	}
+	else if (strstr(fproto, "token:")){
+		proto_type = DCTCP_PROTO_TOKEN;
+		if (proto_token){
+			*proto_token = fproto + 6;
+		}
+	}
+	return proto_type;
+}
+static inline void _add_listenner(dctcp_t * stcp, int fd, const sockaddr_in & addr,
+	const char * fproto, dctcp_event_cb_t cb, void * ud){
+	assert(fd >= 0);
+	assert(stcp->listeners.find(fd) == stcp->listeners.end());
+	dctcp_listener_t listener;
+	listener.listenaddr = addr;
+	stcp->listeners[fd] = listener;
+	///////////////////////////////////////////////////////////////////
+	if (cb){
+		dctcp_proto_dispatcher_t	custom_cbenv;
+		const char * proto_token = "";
+		dctcp_proto_type proto_type = _dctcp_get_proto_info(fproto, &proto_token);
+		custom_cbenv.event_cb = cb;
+		custom_cbenv.event_cb_ud = ud;
+		custom_cbenv.fproto = proto_type;
+		custom_cbenv.token = proto_token;
+		stcp->proto_listeners.cust_listener[fd] = custom_cbenv;
+	}
+}
+static inline dctcp_connector_t & _add_connector(dctcp_t * stcp, int fd, const sockaddr_in & saddr, int retry,
+	const char * fproto, dctcp_event_cb_t cb, void * ud){
+	assert(fd >= 0);
+
+    dctcp_connector_t cnx;
+    cnx.max_reconnect = retry;
+    cnx.reconnect = 0;
+    cnx.connect_addr = saddr;
+    stcp->connectors[fd] = cnx;
+	if (fproto && cb){
+		dctcp_proto_dispatcher_t	custom_cbenv;
+		const char * proto_token = "";
+		dctcp_proto_type proto_type = _dctcp_get_proto_info(fproto, &proto_token);
+		custom_cbenv.event_cb = cb;
+		custom_cbenv.event_cb_ud = ud;
+		custom_cbenv.fproto = proto_type;
+		custom_cbenv.token = proto_token;
+		stcp->proto_listeners.cust_listener[fd] = custom_cbenv;
+	}
+    return stcp->connectors[fd];
+}
+static inline int _get_sockerror(int fd){
 	int error = 0;
 	socklen_t len = sizeof(int);
 	int ret = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len);
@@ -145,7 +282,7 @@ static int _get_sockerror(int fd){
 static inline bool  _is_fd_ok(int fd){
     return fcntl(fd, F_GETFL) != -1;
 }
-static void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
+static inline void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
 	auto it = stcp->sock_recv_buffer.find(fd);
 	if (it != stcp->sock_recv_buffer.end()){
 		GLOG_TRA("free recv buffer ....fd:%d", fd);
@@ -159,7 +296,7 @@ static void _free_sock_msg_buffer(dctcp_t * stcp, int fd){
 		stcp->sock_send_buffer.erase(it);
 	}
 }
-static msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool for_recv){
+static inline msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool for_recv){
 	if (for_recv){
 		auto it = stcp->sock_recv_buffer.find(fd);
 		if (it == stcp->sock_recv_buffer.end()){
@@ -185,14 +322,14 @@ static msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool for_recv
 		return &(it->second);
 	}
 }
-static void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason){
+static inline void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason, int listenfd){
 	GLOG_TRA("close fd:%d for reason:%d", fd, reason);
 	int error = _get_sockerror(fd);
 	_op_poll(stcp, EPOLL_CTL_DEL, fd);
 	close(fd);
 	//connecting ?	//listener ?
-	if (stcp->connectings.find(fd) != stcp->connectings.end()){
-		stcp->connectings.erase(fd);
+	if (stcp->connectors.find(fd) != stcp->connectors.end()){
+		stcp->connectors.erase(fd);
 	}
 	else if (stcp->listeners.find(fd) != stcp->listeners.end()){
 		stcp->listeners.erase(fd);
@@ -202,12 +339,15 @@ static void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason){
 	dctcp_event_t  sev;
 	sev.type = dctcp_event_type::DCTCP_CLOSED;
 	sev.fd = fd;
+	sev.listenfd = listenfd;
 	sev.reason = reason;
 	sev.error = error;
-	stcp->event_cb(stcp, sev, stcp->event_cb_ud);
+	dctcp_event_dispatch(stcp, sev);
+	stcp->proto_listeners.cust_listener.erase(fd);
+	stcp->fd2listenfd.erase(fd);
 }
 
-static void _new_connx(dctcp_t * stcp, int listenfd){
+static inline void _new_connx(dctcp_t * stcp, int listenfd){
 	struct sockaddr	addr;
 	socklen_t	len = sizeof(addr);
 	int nfd = accept(listenfd, &addr, &len);
@@ -218,18 +358,18 @@ static void _new_connx(dctcp_t * stcp, int listenfd){
 		sev.type = dctcp_event_type::DCTCP_NEW_CONNX;
 		_init_socket_options(nfd, stcp->conf.max_tcp_send_buff_size, stcp->conf.max_tcp_recv_buff_size);
 		//add epollin
-		_op_poll(stcp, EPOLL_CTL_ADD, nfd, EPOLLIN);
-		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
+		_op_poll(stcp, EPOLL_CTL_ADD, nfd, EPOLLIN, listenfd);
+		dctcp_event_dispatch(stcp, sev);
 	}
 	else{		//error
 		GLOG_TRA("accept error listen fd:%d for:%s", listenfd, strerror(errno));
 	}
 }
 
-static int _read_msg_error(dctcp_t * stcp, int fd, int read_ret){
+static inline int _read_msg_error(dctcp_t * stcp, int fd, int read_ret, int listenfd){
 	if (read_ret == 0){
 		//peer close
-		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE);
+		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE, listenfd);
 		return -1;
 	}
 	else{ //if (sz < 0 ) 
@@ -239,59 +379,169 @@ static int _read_msg_error(dctcp_t * stcp, int fd, int read_ret){
 		if (errno != EAGAIN &&
 			errno != EWOULDBLOCK ){
 			//error
-			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_SYS_ERR);
+			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_SYS_ERR, listenfd);
 			return -2;
 		}
 		return -3;
 	}
 }
-static int _dispatch_msg(dctcp_t * stcp, int fd, msg_buffer_t * buffer){
+static inline int _dctcp_proto_msg_sz_length(int hsz, const char * buffer){
+	int length = 0;
+	switch (hsz){
+	case sizeof(uint8_t) :
+		length = *(uint8_t*)buffer;
+		break;
+	case sizeof(uint16_t) :
+		length = ntohs(*(uint16_t*)buffer);
+		break;
+	case sizeof(uint32_t) :
+		length = ntohl(*(uint32_t*)buffer);
+		break;
+	default:
+		assert("error dctcp hsz !" && false);
+		break;
+	}
+	return length;
+}
+static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * buffer,
+	int fd, int listenfd, dctcp_proto_dispatcher_t * proto_env, int hsz){
 	dctcp_event_t	sev;
 	sev.type = DCTCP_READ;
 	sev.fd = fd;
-	int nmsg = 0;
+	sev.listenfd = listenfd;
+	int nproc = 0;//proc msg num
+	bool need_normalize = true;
+	//need dispatching
+	//////////////////////////////////////////////////
 	int msg_buff_start = 0;
-	int total = ntohl(*(int32_t*)(buffer->buffer));
-    int msg_buff_total = buffer->valid_size;
-	while ( msg_buff_start + total <= buffer->valid_size ) {
-		dctcp_msg_t smsg(buffer->buffer + msg_buff_start + sizeof(int32_t),
-			total - sizeof(int32_t));
-		sev.msg = &smsg;
-		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
-		nmsg++;
-        msg_buff_start += total;
-        //the connection may be close , check fd
-        if (!_is_fd_ok(fd)){
-            GLOG_TRA("fd closed when procssing msg rest of msg size:%d buff total:%d msg unit:%d",
-                msg_buff_total - msg_buff_start, msg_buff_total, total);
-            return nmsg;
-        }
-        total = 0;
-		if (msg_buff_start + (int)sizeof(int32_t) <= buffer->valid_size){
-			total = ntohl(*(int32_t*)(buffer->buffer + msg_buff_start));
+	int msg_buff_valid = buffer->valid_size;
+	int msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
+	int msg_buff_total = buffer->valid_size;
+	while (msg_length > hsz) {
+		if (msg_length > buffer->max_size){
+			//errror msg , too big 
+			GLOG_ERR("dctcp read msg length:%d is too much than buffer max size:%d",
+				msg_length, buffer->max_size);
+			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR, listenfd);
+			return -1;
 		}
-		else{
+		if (msg_length > msg_buff_valid){
+			break;
+		}
+		dctcp_msg_t smsg(buffer->buffer + msg_buff_start + hsz, msg_length - hsz);
+		sev.msg = &smsg;
+		dctcp_event_dispatch(stcp, sev, proto_env);
+		++nproc;
+		msg_buff_start += msg_length;
+		msg_buff_valid -= msg_length;
+		//the connection may be close , check fd
+		if (!_is_fd_ok(fd)){
+			GLOG_TRA("fd closed when procssing msg rest of msg size:%d buff total:%d last msg unit size is :%d",
+				msg_buff_valid, msg_buff_total, msg_length);
+			need_normalize = false;
+			break;
+		}
+		msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
+	}
+	if (need_normalize && nproc > 0 && msg_buff_total > msg_buff_start){
+		memmove(buffer->buffer,
+			buffer->buffer + msg_buff_start,
+			msg_buff_total - msg_buff_start);
+		////////////////////////////////////////////////////////////////
+		buffer->valid_size -= msg_buff_start;
+	}
+	else if(need_normalize){
+		assert(buffer->valid_size == msg_buff_start);
+		assert(nproc == 0);
+	}
+	return nproc;
+}
+static inline int _dctcp_proto_dispatch_token(dctcp_t * stcp, msg_buffer_t * buffer, int fd, int listenfd,
+	dctcp_proto_dispatcher_t * proto_env){
+	dctcp_event_t	sev;
+	sev.type = DCTCP_READ;
+	sev.fd = fd;
+	sev.listenfd = listenfd;
+	int nproc = 0;//proc msg num
+	bool need_normalize = true;
+	//need dispatching
+	//////////////////////////////////////////////////
+	int msg_buff_start = 0;
+	int msg_buff_valid = buffer->valid_size;
+	int msg_buff_total = buffer->valid_size;
+	int msg_token_length = proto_env->token.length();
+	int msg_length = 0;
+	const char * ftok = strstr(buffer->buffer, proto_env->token.c_str());
+	if (ftok && ftok < buffer->buffer + msg_buff_total){
+		msg_length = ftok - buffer->buffer;
+	}
+	if (!ftok && buffer->valid_size == buffer->max_size){
+		//errror msg , too big 
+		GLOG_ERR("dctcp read msg length:%d is too much than buffer max size:%d",
+			msg_length, buffer->max_size);
+		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR, listenfd);
+		return -1;
+	}
+	while (msg_length > 0) {
+		dctcp_msg_t smsg(buffer->buffer + msg_buff_start, msg_length - msg_token_length);
+		sev.msg = &smsg;
+		dctcp_event_dispatch(stcp, sev, proto_env);
+		++nproc;
+		msg_buff_start += msg_length;
+		msg_buff_valid -= msg_length;
+		//the connection may be close , check fd
+		if (!_is_fd_ok(fd)){
+			GLOG_TRA("fd closed when procssing msg rest of msg size:%d buff total:%d last msg unit size is :%d",
+				msg_buff_valid, msg_buff_total, msg_length);
+			need_normalize = false;
+			break;
+		}
+		ftok = strstr(buffer->buffer + msg_buff_start, proto_env->token.c_str());
+		if (ftok && ftok < buffer->buffer + msg_buff_total){
+			msg_length = ftok - (buffer->buffer + msg_buff_start);
+		}
+		else {
 			break;
 		}
 	}
-	if (buffer->valid_size > msg_buff_start){
+
+	if (need_normalize && nproc > 0 && msg_buff_total > msg_buff_start){
 		memmove(buffer->buffer,
 			buffer->buffer + msg_buff_start,
-			buffer->valid_size - msg_buff_start);
-		GLOG_TRA("memmove size:%d", buffer->valid_size - msg_buff_start);
+			msg_buff_total - msg_buff_start);
+		////////////////////////////////////////////////////////////////
 		buffer->valid_size -= msg_buff_start;
 	}
-	else {
+	else if (need_normalize){
 		assert(buffer->valid_size == msg_buff_start);
-		buffer->valid_size = 0;
+		assert(nproc == 0);
 	}
-	return nmsg;
+	return nproc;
 }
-
-static int _read_tcp_socket(dctcp_t * stcp, int fd){
+static inline int _dctcp_proto_dispatch(dctcp_t * stcp, msg_buffer_t * buffer, 
+	int fd, int listenfd, dctcp_proto_dispatcher_t * proto_env){
+	switch (proto_env->fproto){
+	case DCTCP_PROTO_MSG_SZ32:
+		return _dctcp_proto_dispatch_msg_sz(stcp, buffer, fd, listenfd, proto_env, sizeof(uint32_t));
+	case DCTCP_PROTO_MSG_SZ16:
+		return _dctcp_proto_dispatch_msg_sz(stcp, buffer, fd, listenfd, proto_env, sizeof(uint16_t));
+	case DCTCP_PROTO_MSG_SZ8:
+		return _dctcp_proto_dispatch_msg_sz(stcp, buffer, fd, listenfd, proto_env, sizeof(uint8_t));
+	case DCTCP_PROTO_TOKEN:
+		return _dctcp_proto_dispatch_token(stcp, buffer, fd, listenfd, proto_env);
+	default:
+		return -1;
+	}
+	return -10;
+}
+static inline int _read_tcp_socket(dctcp_t * stcp, int fd, int listenfd){
 	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
 	if (!buffer) {
 		return -1;
+	}
+	dctcp_proto_dispatcher_t * proto_env = _dctcp_get_proto_dispatcher(stcp, fd, listenfd);
+	if (!proto_env){
+		return -2;
 	}
 	int nmsg = 0;
 	while (buffer->max_size > buffer->valid_size) {
@@ -303,30 +553,23 @@ static int _read_tcp_socket(dctcp_t * stcp, int fd){
 		else if (sz == -1 && errno == EINTR){
 			continue;
 		}
-		else if (_read_msg_error(stcp, fd, sz)){
-			return -1;
+		else if (_read_msg_error(stcp, fd, sz, listenfd)){
+			return -3;
 		}
+
 		//dispatch
-		if (buffer->valid_size > (int)sizeof(int32_t)){
-			int32_t total = ntohl(*(int32_t*)buffer->buffer);
-			if (total > buffer->max_size){
-				//errror msg , too big 
-				_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR);
-				return -2;
-			}
-			else if (total > buffer->valid_size){
-				//next time
-				return 0;
-			}
-			else{
-				//need dispatching
-				nmsg += _dispatch_msg(stcp, fd, buffer);
-			}
+		int ret = _dctcp_proto_dispatch(stcp, buffer, fd, listenfd, proto_env);
+		if (ret < 0){
+			GLOG_ERR("fd:%d listen:%d dispatch proto msg error = %d",fd, listenfd, ret);
+			return ret;
+		}
+		else if (ret >= 0){
+			nmsg += ret;
 		}
 	}
 	return nmsg;
 }
-static inline  int	_reconnect(dctcp_t* stcp, int fd, dctcp_connecting_t & cnx){
+static inline  int	_reconnect(dctcp_t* stcp, int fd, dctcp_connector_t & cnx){
     socklen_t addrlen = sizeof(cnx.connect_addr);
     int ret = connect(fd, (sockaddr*)&cnx.connect_addr, addrlen);
     if (ret && errno != EALREADY &&
@@ -336,12 +579,13 @@ static inline  int	_reconnect(dctcp_t* stcp, int fd, dctcp_connecting_t & cnx){
     }
     cnx.reconnect++;
     GLOG_TRA("tcp connect fd:%d tried:%d  ....", fd, cnx.reconnect);
-    return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
+	
+	return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
 }
 static inline void _connect_check(dctcp_t * stcp, int fd){
 	int error = 0;
-	auto it = stcp->connectings.find(fd);
-	if (it == stcp->connectings.end()){
+	auto it = stcp->connectors.find(fd);
+	if (it == stcp->connectors.end()){
 		//not connecting fd
 		return ;
 	}
@@ -352,7 +596,7 @@ static inline void _connect_check(dctcp_t * stcp, int fd){
 		sev.fd = fd;
 		if (0 == error){
 			sev.type = dctcp_event_type::DCTCP_CONNECTED;
-			stcp->event_cb(stcp, sev, stcp->event_cb_ud);
+			dctcp_event_dispatch(stcp, sev);
 			_op_poll(stcp, EPOLL_CTL_MOD, fd, EPOLLIN);
 			return;
 		}
@@ -364,35 +608,68 @@ static inline void _connect_check(dctcp_t * stcp, int fd){
             _reconnect(stcp, fd, cnx);
 		}
 		else{
-			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CONNECT_ERR);
+			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CONNECT_ERR, -1);
 		}
 	}
 }
 
 //write msg
-static int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, int sz){
+static inline int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, int sz){
 	//write app buffer ? write tcp socket directly ?
 	dctcp_event_t sev;
 	sev.fd = fd;
 	sev.type = dctcp_event_type::DCTCP_WRITE;
-
-	int total = sz + sizeof(int32_t);
-	if (total > stcp->conf.max_send_buff){
-		return -1;
-	}
+	sev.listenfd = _dctcp_get_fd_listenfd(stcp, fd);
+	dctcp_proto_dispatcher_t * proto_env = _dctcp_get_proto_dispatcher(stcp, fd, sev.listenfd);
 	msg_buffer_t* msgbuff = _get_sock_msg_buffer(stcp, fd, false);
 	if (!msgbuff){//no buffer		
-		return -2;
+		return -1;
 	}
-	*(int32_t*)(msgbuff->buffer) = htonl(total);
-	memcpy(msgbuff->buffer + sizeof(int32_t), msg, sz);
-	
+
+	size_t msg_buff_total = 0;
+	switch (proto_env->fproto){
+	case DCTCP_PROTO_MSG_SZ32:
+		msg_buff_total = sz + (int)sizeof(uint32_t);
+		if ((int)msg_buff_total > stcp->conf.max_send_buff ||
+			msg_buff_total > INT_MAX){
+			return -2;
+		}
+		memcpy(msgbuff->buffer + sizeof(uint32_t), msg, sz);
+		*(uint32_t*)(msgbuff->buffer) = htonl(msg_buff_total);
+		break;
+	case DCTCP_PROTO_MSG_SZ16:
+		msg_buff_total = sz + (int)sizeof(uint16_t);
+		if ((int)msg_buff_total > stcp->conf.max_send_buff ||
+			msg_buff_total > USHRT_MAX){
+			return -2;
+		}
+		memcpy(msgbuff->buffer + sizeof(uint16_t), msg, sz);
+		*(uint16_t*)(msgbuff->buffer) = htons((uint16_t)msg_buff_total);
+		break;
+	case DCTCP_PROTO_MSG_SZ8:
+		msg_buff_total = sz + (int)sizeof(uint8_t);
+		if ((int)msg_buff_total > stcp->conf.max_send_buff ||
+			msg_buff_total > UCHAR_MAX){
+			return -2;
+		}
+		memcpy(msgbuff->buffer + sizeof(uint8_t), msg, sz);
+		*(uint8_t*)(msgbuff->buffer) = msg_buff_total;
+		break;
+	case DCTCP_PROTO_TOKEN:
+		msg_buff_total = sz + proto_env->token.length();
+		if ((int)msg_buff_total > stcp->conf.max_send_buff){
+			return -2;
+		}
+		memcpy(msgbuff->buffer, msg, sz);
+		memcpy(msgbuff->buffer + sz, proto_env->token.c_str(), proto_env->token.length());
+		break;
+	}	
 RETRY_WRITE_MSG:
-	int ret = send(fd, msgbuff->buffer, total, MSG_DONTWAIT | MSG_NOSIGNAL);
-	if (ret == total){ //send ok
+	int ret = send(fd, msgbuff->buffer, msg_buff_total, MSG_DONTWAIT | MSG_NOSIGNAL);
+	if (ret == (int)msg_buff_total){ //send ok
 		dctcp_msg_t smsg = dctcp_msg_t(msg, sz);
 		sev.msg = &smsg;
-		stcp->event_cb(stcp, sev, stcp->event_cb_ud);
+		dctcp_event_dispatch(stcp, sev, proto_env);
 		return 0;
 	}
 	else {
@@ -404,35 +681,30 @@ RETRY_WRITE_MSG:
                 return -3; //giv up msg but not close it
             }
         }
-        _close_fd(stcp, fd, DCTCP_MSG_ERR); //error write 
+        _close_fd(stcp, fd, DCTCP_MSG_ERR, sev.listenfd); //error write 
         return -4;
     }
 	return -5;
 }
 
-inline bool _is_listenner(dctcp_t * stcp, int fd){
+static inline bool _is_listenner(dctcp_t * stcp, int fd){
 	return	stcp->listeners.find(fd) != stcp->listeners.end();
 }
-inline void _add_listenner(dctcp_t * stcp, int fd, const sockaddr_in & addr){
-	assert(stcp->listeners.find(fd) == stcp->listeners.end());
-	dctcp_listener_t listener;
-	listener.listenaddr = addr;
-	stcp->listeners[fd] = listener;
-}
-static void _proc(dctcp_t * stcp,const epoll_event & ev){
+static inline void _proc(dctcp_t * stcp, const epoll_event & ev){
 	//schedule
 	//error check
+	int listenfd = (ev.data.u64 >> 32);
 	if (ev.events & EPOLLRDHUP){
 		//peer close
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_PEER_CLOSE, listenfd);
 	}
 	else if (ev.events & EPOLLERR){
 		//error 
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_POLL_ERR);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_POLL_ERR, listenfd);
 	}
 	else if ((ev.events & EPOLLHUP)){
 		//before listen/connect  add in poll ?
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_INVAL_CALL);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_INVAL_CALL, listenfd);
 	}
 	else if (ev.events & EPOLLOUT){
 		_connect_check(stcp, ev.data.fd);
@@ -443,21 +715,21 @@ static void _proc(dctcp_t * stcp,const epoll_event & ev){
 			_new_connx(stcp, ev.data.fd);
 		}
 		else{
-			_read_tcp_socket(stcp, ev.data.fd);
+			_read_tcp_socket(stcp, ev.data.fd, listenfd);
 		}
 	}
 	else {
 		//error
-		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_SYS_ERR);
+		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_SYS_ERR, listenfd);
 	}
 }
 void			dctcp_close(dctcp_t * stcp, int fd){
-	_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CLOSE_ACTIVE);
+	_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CLOSE_ACTIVE, _dctcp_get_fd_listenfd(stcp, fd));
 }
 int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc){
 	PROFILE_FUNC();
 	if (stcp->listeners.empty() &&
-		stcp->connectings.empty()){
+		stcp->connectors.empty()){
 		return 0;
 	}
 	int ms = timeout_us / 1000;
@@ -485,7 +757,7 @@ int				dctcp_send(dctcp_t * stcp, int fd, const dctcp_msg_t & msg){
 	if (fd < 0) {return -1; }
 	return _write_tcp_socket(stcp, fd, msg.buff, msg.buff_sz);
 }
-int				dctcp_listen(dctcp_t * stcp, const string & addr){ //return a fd >= 0when success
+int				dctcp_listen(dctcp_t * stcp, const string & addr, const char * fproto , dctcp_event_cb_t evcb, void * ud){ //return a fd >= 0when success
     sockaddr_in addrin;
     int ret = dcsutil::socknetaddr(addrin, addr);
     if (ret){
@@ -505,11 +777,11 @@ int				dctcp_listen(dctcp_t * stcp, const string & addr){ //return a fd >= 0when
 	ret = epoll_ctl(stcp->epfd, EPOLL_CTL_ADD, fd, &evt);
 	if (ret) { close(fd); return -4; };
 
-	_add_listenner(stcp,fd, addrin);
+	_add_listenner(stcp, fd, addrin, fproto, evcb, ud);
 	return fd;
 }
 
-int             dctcp_connect(dctcp_t * stcp, const string & addr, int retry){
+int             dctcp_connect(dctcp_t * stcp, const string & addr, int retry, const char * fproto, dctcp_event_cb_t cb, void * ud ){
     sockaddr_in saddr;
     int ret = dcsutil::socknetaddr(saddr, addr);
     if (ret){
@@ -522,11 +794,7 @@ int             dctcp_connect(dctcp_t * stcp, const string & addr, int retry){
 	int on = 1;
 	_set_socket_opt(fd, SO_KEEPALIVE, &on, sizeof(on));
 	saddr.sin_family = AF_INET;
-	dctcp_connecting_t cnx;
-	cnx.max_reconnect = retry;
-	cnx.reconnect = 0;
-	cnx.connect_addr = saddr;
-	stcp->connectings[fd] = cnx;
-
+	//////////////////////////////////////////////////////////////////////////
+    dctcp_connector_t & cnx = _add_connector(stcp, fd, saddr, retry, fproto, cb, ud);
 	return _reconnect(stcp, fd, cnx);
 }

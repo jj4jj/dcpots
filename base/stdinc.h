@@ -130,3 +130,6 @@ using std::bitset;
 #define NS_BEGIN(ns)	namespace ns {
 #define NS_END()		};
 #endif
+
+
+

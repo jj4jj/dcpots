@@ -1,28 +1,32 @@
 #include "stdinc.h"
 #include "dcutils.hpp"
-#include "app.hpp"
+#include "msg_buffer.hpp"
+#include "msg_proto.hpp"
 #include "cmdline_opt.h"
 #include "eztimer.h"
 #include "logger.h"
 #include "dctcp.h"
 #include "dcsmq.h"
 #include "dcshm.h"
-#include "msg_buffer.hpp"
-#include "msg_proto.hpp"
 
+///////////////////////////////////////////////////
+#include "app.hpp"
 
 NS_BEGIN(dcsutil)
 
 struct AppImpl {
-    std::string  version { "0.0.1" };
+    std::string		version { "0.0.1" };
     cmdline_opt_t * cmdopt{ nullptr };
-    bool        stoping{ false };
-    bool        reloading{ false };
-	bool        restarting{ false };
-	dctcp_t		* stcp{ nullptr };
+    bool			stoping{ false };
+    bool			reloading{ false };
+	bool			restarting{ false };
+	dctcp_t		*   stcp{ nullptr };
 	std::unordered_map<uint32_t, App::timer_task_t>	task_pool;
-	uint32_t									task_id{ 0 };
-	int			console{ -1 };
+	uint32_t		task_id{ 0 };
+	int				console{ -1 };
+	int				interval { 1000 * 10 };
+	int				maxtps{ 500 };
+	uint64_t		next_tick_time{ 0 };
 };
 
 static App * s_app_instance{ nullptr };
@@ -34,7 +38,6 @@ static inline void _app_register(App * app){
 	}
 	s_app_instance = app;
 }
-
 App & App::instance(){
 	return *s_app_instance;
 }
@@ -231,16 +234,21 @@ static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
 	return 0;
 }
 static inline void app_tick_update(AppImpl * impl_){
-	eztimer_update();
-	dctcp_poll(impl_->stcp, 20);
+	uint64_t t_time_now = dcsutil::time_unixtime_us();
+	if (t_time_now > impl_->next_tick_time){
+		eztimer_update();
+		dctcp_poll(impl_->stcp, impl_->maxtps);
+		impl_->next_tick_time = t_time_now + impl_->interval;
+	}
 }
 
 int App::init(int argc, const char * argv[]){
     int ret = 0;
     impl_->cmdopt = new cmdline_opt_t(argc, argv);
-    string pattern;
+    string cmdopt_pattern;
 	const char * program_name = dcsutil::path_base(argv[0]);
-	strnprintf(pattern, 1024, ""
+	#define		MAX_CMD_OPT_OPTION_LEN	(1024*4)
+	size_t lpattern = strnprintf(cmdopt_pattern, 1024*4, ""
 		"console-shell:n::console shell;"
 		"start:n:S:start process normal mode;"
 		"stop:n:T:stop process normal mode;"
@@ -256,9 +264,14 @@ int App::init(int argc, const char * argv[]){
 		"pid-file:r::pid file for locking (eg./tmp/%s.pid);"
 		"console-listen:r::console command listen (tcp address);"
 		"shm:r::keep process state shm key/path;"
+		"tick-interval:r::tick update interval time (microseconds):10000;"
+		"tick-maxproc:r::tick proc times once:1000;"
 		"", program_name, program_name, program_name);
-    pattern += options();
-    impl_->cmdopt->parse(pattern.data(), impl_->version.c_str());
+
+	snprintf((char*)(cmdopt_pattern.data()+lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
+			"%s", options().c_str());
+
+    impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
     //////////////////////////////////////////////////////////////
 	const char * pidfile = cmdopt().getoptstr("pid-file");
 	//1.control command
@@ -356,7 +369,8 @@ int App::init(int argc, const char * argv[]){
 			return -5;
 		}
 	}
-
+	impl_->interval = cmdopt().getoptint("tick-interval");
+	impl_->maxtps = cmdopt().getoptint("tick-maxproc");
     return on_init(cmdopt().getoptstr("config"));
 }
 int App::run(){

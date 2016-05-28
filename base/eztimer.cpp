@@ -272,6 +272,7 @@ eztimer_id_t            eztimer_run_after(int time, uint32_t ud,const void * cb,
     time /= 10;
 	if (time == 0) {
         TI->dispather(ud, cb, sz);
+        return 0;
 	} else {
 		return (eztimer_id_t)(timer_add(TI, ud, cb, sz, time));
 	}
@@ -359,8 +360,7 @@ int eztimer_update()
 			// when cs > 0xffffffff(about 497 days), time rewind
 			TI->starttime += 0xffffffff / 100;
 		}
-		int i;
-		for (i=0;i<diff;i++) {
+		for (uint32_t i=0;i<diff;i++) {
 			timer_update_tick(TI);
 		}
 	}

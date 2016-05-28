@@ -54,7 +54,7 @@ LIBS = [
             'name': 'dcrpc',
             'subdir': 'dcrpc',
             'includes': [],
-            'src_dirs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/'],
+            'src_dirs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/','./dcrpc/share/dcrpc.pb.cc'],
         },
         {
             'name':'dcutil-mysql',
