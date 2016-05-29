@@ -73,6 +73,7 @@ void logfile_t::close(){
 int logfile_t::write(const char * logmsg, int max_roll, int max_file_size){
     if (!impl || !impl->pf) return -1;
     fputs(logmsg, impl->pf);
+    fflush(impl->pf);
     if (ftell(impl->pf) >= max_file_size){
         close();//current , open next
         string nextfile = impl->logfile + "." + std::to_string(impl->next_rollid);

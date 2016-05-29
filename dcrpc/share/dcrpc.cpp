@@ -2,7 +2,7 @@
 #include "dcrpc.h"
 using namespace google::protobuf;
 namespace dcrpc {
-    struct RpcValuesImpl : RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem > {
+    struct RpcValuesImpl : public RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem > {
     };
     int64_t RpcValues::geti(int idx) const {
         return data_->Get(idx).i();
@@ -97,5 +97,13 @@ namespace dcrpc {
     RpcValuesImpl * RpcValues::data(){
         return this->data_;
     }
+    const char *    RpcValues::debug(std::string & str) const {
+        str.clear();
+        for (int i = 0; i < this->length(); ++i){
+            str.append(this->data_->Get(i).ShortDebugString().c_str());
+        }
+        return str.c_str();
+    }
+
 
 }

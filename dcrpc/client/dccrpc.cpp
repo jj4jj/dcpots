@@ -17,8 +17,8 @@ typedef msgproto_t<RpcMsg>  dcrpc_msg_t;
 
 ////////////////////////////////////////////////////////////////////
 struct  RpcClientImpl {
-    dctcp_t * cli{ nullptr };
-    int fd{ -1 };
+    dctcp_t * stcp{ nullptr };
+    int cnnxfd{ -1 };
     std::unordered_map<uint64_t, RpcClient::RpcCallNotify>  rpcall_cbs;
     std::unordered_map<string, RpcClient::RpcCallNotify>    notify_cbs;
     //todo timer queue
@@ -27,6 +27,7 @@ struct  RpcClientImpl {
     int  connect_server_retry{ 3 };
     std::queue<dcrpc_msg_t>  sending_queue;
     int  queue_max_size{ 0 };
+    uint32_t    next_check_connx_time{ 0 };
 public:
     const string select_server(){
         return rpc_server_addrs[rand() % rpc_server_addrs.size()];
@@ -68,7 +69,7 @@ static inline void
 _distpach_remote_service_smsg(RpcClientImpl * impl, const char * buff, int ibuff){
     dcrpc_msg_t rpc_msg;
     if (!rpc_msg.Unpack(msg_buffer_t(buff, ibuff))){
-        GLOG_ERR("unpack rpc msg error ! buff:%64s len:%d", buff, ibuff);
+        GLOG_ERR("unpack rpc msg error ! buff:%s len:%d", buff, ibuff);
         return;
     }
     GLOG_TRA("recv [%s]", rpc_msg.Debug());
@@ -111,21 +112,21 @@ int RpcClient::init(const std::string & svraddrs, int queue_size){
     }
     impl = new RpcClientImpl;
     dctcp_config_t dctcp;
-    impl->cli = dctcp_create(dctcp);
-    if (!impl->cli){
+    impl->stcp = dctcp_create(dctcp);
+    if (!impl->stcp){
         return -2;
     }
     impl->queue_max_size = queue_size;
-    dctcp_event_cb(impl->cli, [](dctcp_t* dc, const dctcp_event_t & ev, void * ud)->int {
+    dctcp_event_cb(impl->stcp, [](dctcp_t* dc, const dctcp_event_t & ev, void * ud)->int {
+        UNUSED(dc);
         RpcClientImpl * impl = (RpcClientImpl *)ud;
         switch (ev.type){
         case DCTCP_CONNECTED:
-            impl->fd = ev.fd;
+            impl->cnnxfd = ev.fd;
             break;
         case DCTCP_CLOSED:
-            impl->fd = -1;
-            GLOG_TRA("connection closed [reason:%d] ! reconnecting ...", ev.reason);
-            dctcp_connect(dc, impl->select_server(), impl->connect_server_retry);
+            impl->cnnxfd = -2;
+            GLOG_TRA("connection closed [reason:%d] ! ", ev.reason);
             break;
         case DCTCP_READ:
             _distpach_remote_service_smsg(impl, ev.msg->buff, ev.msg->buff_sz);
@@ -136,15 +137,16 @@ int RpcClient::init(const std::string & svraddrs, int queue_size){
 		return 0;
     }, impl);
     dcsutil::strsplit(svraddrs, ",", impl->rpc_server_addrs);
-    return dctcp_connect(impl->cli, impl->select_server(), impl->connect_server_retry);
+    return dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry);
 }
 static inline int _send_directly(RpcClientImpl * impl, const dcrpc_msg_t & tosend_msg){
 	if (!tosend_msg.Pack(impl->send_msg_buff)){
 		GLOG_ERR("pack msg error when send msg to svc:%s", tosend_msg.path().c_str());
 		return -1;
 	}
-	int ret = dctcp_send(impl->cli, impl->fd, dctcp_msg_t(impl->send_msg_buff.buffer, impl->send_msg_buff.valid_size));
-	GLOG_TRA("send [%d] [%s] [%s]", ret, tosend_msg.path().c_str(), tosend_msg.Debug());
+	int ret = dctcp_send(impl->stcp, impl->cnnxfd, dctcp_msg_t(impl->send_msg_buff.buffer, impl->send_msg_buff.valid_size));
+    GLOG_TRA("send [%d] [sz:%d] [%s] [%s]", ret, impl->send_msg_buff.valid_size,
+                tosend_msg.path().c_str(), tosend_msg.Debug());
 	if (ret){
 		GLOG_SER("tcp send error = %d when send msg to svc:%s buff len:%d",
 			ret, tosend_msg.path().c_str(), impl->send_msg_buff.valid_size);
@@ -152,9 +154,23 @@ static inline int _send_directly(RpcClientImpl * impl, const dcrpc_msg_t & tosen
 	}
 	return 0;
 }
+#define  CHECK_CNNX_TIME_INTERVAL   (1)
+static inline void _check_connections(RpcClientImpl * impl){
+    if (!impl->stcp || impl->cnnxfd != -2){
+        return;
+    }
+    else {
+        uint32_t t_times_now = dcsutil::time_unixtime_s();
+        if (t_times_now > impl->next_check_connx_time){
+            impl->next_check_connx_time = t_times_now + CHECK_CNNX_TIME_INTERVAL;
+            GLOG_ERR("rpc connection lost reconnecting ...");
+            dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry);
+        }
+    }
+}
 static inline int _check_sending_queue(RpcClientImpl * impl){
 	int ret = 0;
-	while (impl->fd != -1 && !impl->sending_queue.empty()){
+	while (impl->cnnxfd != -1 && !impl->sending_queue.empty()){
 		const dcrpc_msg_t & tosend_msg = impl->sending_queue.front();
 		ret = _send_directly(impl, tosend_msg);
 		if (ret == 0 || ret == -1){ //directly or pack error
@@ -167,16 +183,17 @@ static inline int _check_sending_queue(RpcClientImpl * impl){
 	return ret;
 }
 int RpcClient::update(int tickus){
+    _check_connections(impl);
 	_check_sending_queue(impl);
-    int nproc = dctcp_poll(impl->cli, tickus, 100);
+    int nproc = dctcp_poll(impl->stcp, tickus, 100);
 	_check_sending_queue(impl);
 	return nproc;
 }
 int RpcClient::destroy(){
     if (impl){
-        if (impl->cli){
-            dctcp_destroy(impl->cli);
-            impl->cli = nullptr;
+        if (impl->stcp){
+            dctcp_destroy(impl->stcp);
+            impl->stcp = nullptr;
         }
         delete impl;
         impl = nullptr;
@@ -184,7 +201,7 @@ int RpcClient::destroy(){
 	return 0;
 }
 bool RpcClient::ready() const {
-    return impl->fd != -1;
+    return impl->cnnxfd >= 0;
 }
 
 int RpcClient::notify(const string & svc, RpcCallNotify cb){
@@ -192,12 +209,12 @@ int RpcClient::notify(const string & svc, RpcCallNotify cb){
     return 0;
 }
 static inline int _send_msg(RpcClientImpl * impl, const dcrpc_msg_t & rpc_msg){
-    if (impl->fd == -1 && (int)impl->sending_queue.size() >= impl->queue_max_size){
+    if (impl->cnnxfd < 0 && (int)impl->sending_queue.size() >= impl->queue_max_size){
         GLOG_ERR("connection not ready error send msg to svc:%s", rpc_msg.path().c_str());
         return -1;
     }
 	_check_sending_queue(impl); //checking queue
-	if (!impl->sending_queue.empty() || impl->fd == -1){ //not send all
+	if (!impl->sending_queue.empty() || impl->cnnxfd < 0){ //not send all
         impl->sending_queue.push(rpc_msg);
     }
 	else { //send all

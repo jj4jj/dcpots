@@ -344,6 +344,7 @@ static inline void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type rea
 static inline void _new_connx(dctcp_t * stcp, int listenfd){
 	struct sockaddr	addr;
 	socklen_t	len = sizeof(addr);
+    ACCEPT_:
 	int nfd = accept(listenfd, &addr, &len);
 	if (nfd >= 0){
         stcp->fd_map_listenfd[nfd] = listenfd;
@@ -357,7 +358,12 @@ static inline void _new_connx(dctcp_t * stcp, int listenfd){
 		dctcp_event_dispatch(stcp, sev);
 	}
 	else{		//error
-		GLOG_TRA("accept error listen fd:%d for:%s", listenfd, strerror(errno));
+        if (errno == EINTR){
+            goto ACCEPT_;
+        }
+        else if (errno != EAGAIN && errno != EWOULDBLOCK){
+            GLOG_SER("accept error listen fd:%d !", listenfd);
+        }
 	}
 }
 static inline int _dctcp_proto_msg_sz_length(int hsz, const char * buffer){
@@ -701,7 +707,7 @@ static inline void _proc(dctcp_t * stcp, const epoll_event & ev){
 		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_POLL_ERR, listenfd);
 	}
 	else if ((ev.events & EPOLLHUP)){
-		//before listen/connect  add in poll ?
+		//rst ?
 		_close_fd(stcp, ev.data.fd, dctcp_close_reason_type::DCTCP_INVAL_CALL, listenfd);
 	}
 	else if (ev.events & EPOLLOUT){

@@ -23,6 +23,7 @@ namespace dcrpc {
         void addb(const char * buff, int ibuf);
         RpcValuesImpl * data();
         const RpcValuesImpl * data() const ;
+        const char *    debug(std::string & str) const;
 
     public:
         RpcValues(const RpcValuesImpl & data);
