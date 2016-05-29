@@ -366,7 +366,10 @@ static inline void _new_connx(dctcp_t * stcp, int listenfd){
         }
 	}
 }
-static inline int _dctcp_proto_msg_sz_length(int hsz, const char * buffer){
+static inline int _dctcp_proto_msg_sz_length(int hsz, const char * buffer, int ibuff){
+    if (ibuff < hsz){
+        return 0;
+    }
 	int length = 0;
 	switch (hsz){
 	case sizeof(uint8_t) :
@@ -393,13 +396,10 @@ static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * bu
 	int nproc = 0;//proc msg num
 	//need dispatching
 	//////////////////////////////////////////////////
-    if (buffer->valid_size < hsz){
-        return 0;
-    }
-    int msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
     int msg_buff_start = 0;
     int msg_buff_rest = buffer->valid_size;
     int msg_buff_total = buffer->valid_size;
+    int msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer, msg_buff_rest);
 	while (msg_length > hsz) {
 		if (msg_length > buffer->max_size){
 			//errror msg , too big 
@@ -423,8 +423,8 @@ static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * bu
 				msg_buff_rest, msg_buff_total, msg_length);
             return nproc;
 		}
-		msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer + msg_buff_start);
-	}//
+        msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer + msg_buff_start, msg_buff_rest);
+    }//
     if (msg_buff_start > 0 && buffer->valid_size >= msg_buff_start){
 		memmove(buffer->buffer,
 			buffer->buffer + msg_buff_start,
@@ -460,7 +460,7 @@ static inline int _dctcp_proto_dispatch_token(dctcp_t * stcp, msg_buffer_t * buf
 		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR, listenfd);
 		return -1;
 	}
-	while (msg_length > 0) {
+	while (msg_length > msg_token_length) {
         *(buffer->buffer + msg_length - msg_token_length) = '\0';
 		dctcp_msg_t smsg(buffer->buffer + msg_buff_start, msg_length - msg_token_length);
 		sev.msg = &smsg;
