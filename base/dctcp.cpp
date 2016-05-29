@@ -295,7 +295,7 @@ static inline msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool f
 		auto it = stcp->sock_recv_buffer.find(fd);
 		if (it == stcp->sock_recv_buffer.end()){
 			msg_buffer_t buf;
-			if (buf.create(stcp->conf.max_recv_buff + 1)){
+			if (buf.create(stcp->conf.max_recv_buff + 8)){
 				return nullptr;
 			}
 			stcp->sock_recv_buffer[fd] = buf;
@@ -307,7 +307,7 @@ static inline msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool f
 		auto it = stcp->sock_send_buffer.find(fd);
 		if (it == stcp->sock_send_buffer.end()){
 			msg_buffer_t	buf;
-			if (buf.create(stcp->conf.max_send_buff + 1)){
+            if (buf.create(stcp->conf.max_send_buff + 8)){
 				return nullptr;
 			}
 			stcp->sock_send_buffer[fd] = buf;
@@ -393,15 +393,18 @@ static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * bu
 	int nproc = 0;//proc msg num
 	//need dispatching
 	//////////////////////////////////////////////////
-	int msg_buff_start = 0;
-	int msg_buff_rest = buffer->valid_size;
-	int msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
-	int msg_buff_total = buffer->valid_size;
+    if (buffer->valid_size < hsz){
+        return 0;
+    }
+    int msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
+    int msg_buff_start = 0;
+    int msg_buff_rest = buffer->valid_size;
+    int msg_buff_total = buffer->valid_size;
 	while (msg_length > hsz) {
 		if (msg_length > buffer->max_size){
 			//errror msg , too big 
-			GLOG_ERR("dctcp read msg length:%d is too much than buffer max size:%d",
-				msg_length, buffer->max_size);
+			GLOG_ERR("dctcp read msg length:%d is too much than buffer max size:%d hsz:%d rest:%d",
+				msg_length, buffer->max_size, hsz, msg_buff_rest);
 			_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR, listenfd);
 			return -1;
 		}
@@ -420,7 +423,7 @@ static inline int _dctcp_proto_dispatch_msg_sz(dctcp_t * stcp, msg_buffer_t * bu
 				msg_buff_rest, msg_buff_total, msg_length);
             return nproc;
 		}
-		msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer);
+		msg_length = _dctcp_proto_msg_sz_length(hsz, buffer->buffer + msg_buff_start);
 	}//
     if (msg_buff_start > 0 && buffer->valid_size >= msg_buff_start){
 		memmove(buffer->buffer,

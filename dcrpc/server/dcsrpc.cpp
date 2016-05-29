@@ -36,7 +36,7 @@ RpcServer::RpcServer(){
 RpcServer::~RpcServer(){
     destroy();
 }
-static inline int _send_msg(RpcServerImpl * impl, int id, const dcrpc_msg_t & rpc_msg ){
+static inline int _rpc_send_msg(RpcServerImpl * impl, int id, const dcrpc_msg_t & rpc_msg ){
     if (!rpc_msg.Pack(impl->send_buff)){
         GLOG_ERR("pack rpc reply msg error ! buff length:%d", rpc_msg.ByteSize());
         return -1;
@@ -110,7 +110,7 @@ int	   RpcServer::reply(RpcService *, uint64_t cookie, const RpcValues & result,
 		auto msg_result = rpc_msg.mutable_response()->mutable_result();
 		msg_result->CopyFrom(*(decltype(msg_result))result.data());
 		rpc_msg.clear_request();
-		ret = _send_msg(impl, ctx->fd, rpc_msg);
+		ret = _rpc_send_msg(impl, ctx->fd, rpc_msg);
 		async_rpc_resume_call(impl, cookie);
 		return ret;
 	}
@@ -140,7 +140,7 @@ static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, c
         GLOG_ERR("unpack rpc msg error ! buff length:%d", ibuff);
         return;
     }
-    GLOG_TRA("recv [%d] [%s] [%s]", fd, rpc_msg.path().c_str() , rpc_msg.Debug());
+    GLOG_TRA("recv [%d] [%s] [%s]", fd, rpc_msg.path().c_str() , rpc_msg.ShortDebugString().c_str());
     auto it = impl->dispatcher.find(rpc_msg.path());
     if (it == impl->dispatcher.end()){//not found
         rpc_msg.clear_request();
@@ -180,7 +180,7 @@ static inline void _distpach_remote_service_cmsg(RpcServerImpl * impl, int fd, c
 		}
     }
     if (rpc_msg.cookie().transaction() > 0){
-        _send_msg(impl, fd, rpc_msg);
+        _rpc_send_msg(impl, fd, rpc_msg);
     }
 }
 static int rpc_server_dispatch(dctcp_t*, const dctcp_event_t & ev, void * ud) {
@@ -259,7 +259,7 @@ int    RpcServer::push(const std::string & svc, int id, const RpcValues & vals){
     rpc_msg.set_status(RpcMsg_StatusCode_RPC_STATUS_SUCCESS);
     auto result = rpc_msg.mutable_notify()->mutable_result();
     result->CopyFrom(*(decltype(result))vals.data());
-    return _send_msg(impl, id, rpc_msg);
+    return _rpc_send_msg(impl, id, rpc_msg);
 }
 ///////////////////////////////////////////////////////////////////////////////////////
 struct RpcServiceImpl {

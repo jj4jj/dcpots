@@ -72,7 +72,7 @@ _distpach_remote_service_smsg(RpcClientImpl * impl, const char * buff, int ibuff
         GLOG_ERR("unpack rpc msg error ! buff:%s len:%d", buff, ibuff);
         return;
     }
-    GLOG_TRA("recv [%s]", rpc_msg.Debug());
+    GLOG_TRA("rpc recv [%s]", rpc_msg.Debug());
     uint64_t transid = rpc_msg.cookie().transaction();
     if (transid > 0){ //call back
         auto cb = impl->remove_callback(transid);
@@ -106,6 +106,26 @@ _distpach_remote_service_smsg(RpcClientImpl * impl, const char * buff, int ibuff
         }
     }
 }
+static int _rpc_client_stcp_dispatch(dctcp_t* dc, const dctcp_event_t & ev, void * ud){
+    RpcClientImpl * impl = (RpcClientImpl *)ud;
+    UNUSED(dc);
+    switch (ev.type){
+    case DCTCP_CONNECTED:
+        impl->cnnxfd = ev.fd;
+        break;
+    case DCTCP_CLOSED:
+        impl->cnnxfd = -2;
+        GLOG_TRA("connection closed [reason:%d] ! ", ev.reason);
+        break;
+    case DCTCP_READ:
+        GLOG_TRA("read rpc client fd:%d msg buff sz:%d", ev.fd, ev.msg->buff_sz);
+        _distpach_remote_service_smsg(impl, ev.msg->buff, ev.msg->buff_sz);
+        break;
+    default:
+        return -1;
+    }
+    return 0;
+}
 int RpcClient::init(const std::string & svraddrs, int queue_size){
     if (impl){
         return -1;
@@ -117,27 +137,9 @@ int RpcClient::init(const std::string & svraddrs, int queue_size){
         return -2;
     }
     impl->queue_max_size = queue_size;
-    dctcp_event_cb(impl->stcp, [](dctcp_t* dc, const dctcp_event_t & ev, void * ud)->int {
-        UNUSED(dc);
-        RpcClientImpl * impl = (RpcClientImpl *)ud;
-        switch (ev.type){
-        case DCTCP_CONNECTED:
-            impl->cnnxfd = ev.fd;
-            break;
-        case DCTCP_CLOSED:
-            impl->cnnxfd = -2;
-            GLOG_TRA("connection closed [reason:%d] ! ", ev.reason);
-            break;
-        case DCTCP_READ:
-            _distpach_remote_service_smsg(impl, ev.msg->buff, ev.msg->buff_sz);
-            break;
-        default:
-            return -1;
-        }
-		return 0;
-    }, impl);
     dcsutil::strsplit(svraddrs, ",", impl->rpc_server_addrs);
-    return dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry);
+    return dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry, "msg:sz32",
+        _rpc_client_stcp_dispatch, impl);
 }
 static inline int _send_directly(RpcClientImpl * impl, const dcrpc_msg_t & tosend_msg){
 	if (!tosend_msg.Pack(impl->send_msg_buff)){
@@ -154,7 +156,7 @@ static inline int _send_directly(RpcClientImpl * impl, const dcrpc_msg_t & tosen
 	}
 	return 0;
 }
-#define  CHECK_CNNX_TIME_INTERVAL   (1)
+#define  CHECK_CNNX_TIME_INTERVAL   (3)
 static inline void _check_connections(RpcClientImpl * impl){
     if (!impl->stcp || impl->cnnxfd != -2){
         return;
@@ -164,13 +166,15 @@ static inline void _check_connections(RpcClientImpl * impl){
         if (t_times_now > impl->next_check_connx_time){
             impl->next_check_connx_time = t_times_now + CHECK_CNNX_TIME_INTERVAL;
             GLOG_ERR("rpc connection lost reconnecting ...");
-            dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry);
+            impl->cnnxfd = -1;
+            dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry, "msg:sz32",
+                _rpc_client_stcp_dispatch, impl);
         }
     }
 }
 static inline int _check_sending_queue(RpcClientImpl * impl){
 	int ret = 0;
-	while (impl->cnnxfd != -1 && !impl->sending_queue.empty()){
+	while (impl->cnnxfd >= 0 && !impl->sending_queue.empty()){
 		const dcrpc_msg_t & tosend_msg = impl->sending_queue.front();
 		ret = _send_directly(impl, tosend_msg);
 		if (ret == 0 || ret == -1){ //directly or pack error
@@ -208,7 +212,7 @@ int RpcClient::notify(const string & svc, RpcCallNotify cb){
     impl->notify_cbs[svc]=cb;
     return 0;
 }
-static inline int _send_msg(RpcClientImpl * impl, const dcrpc_msg_t & rpc_msg){
+static inline int _rpc_send_msg(RpcClientImpl * impl, const dcrpc_msg_t & rpc_msg){
     if (impl->cnnxfd < 0 && (int)impl->sending_queue.size() >= impl->queue_max_size){
         GLOG_ERR("connection not ready error send msg to svc:%s", rpc_msg.path().c_str());
         return -1;
@@ -230,7 +234,7 @@ int RpcClient::push(const std::string & svc, const dcrpc::RpcValues & args){
     rpc_msg.set_path(svc);
     auto margs = (decltype(rpc_msg.mutable_request()->mutable_args()))const_cast<RpcValues&>(args).data();
     rpc_msg.mutable_request()->mutable_args()->CopyFrom(*margs);
-    return _send_msg(impl, rpc_msg);
+    return _rpc_send_msg(impl, rpc_msg);
 }
 int RpcClient::call(const string & svc, const RpcValues & args, RpcCallNotify result_cb){
     dcrpc_msg_t rpc_msg;
@@ -239,7 +243,7 @@ int RpcClient::call(const string & svc, const RpcValues & args, RpcCallNotify re
     auto margs = (decltype(rpc_msg.mutable_request()->mutable_args()))const_cast<RpcValues&>(args).data();
     rpc_msg.mutable_request()->mutable_args()->CopyFrom(*margs);
     ck.set_transaction(impl->append_callback(result_cb));
-    return _send_msg(impl, rpc_msg);
+    return _rpc_send_msg(impl, rpc_msg);
 }
 //int call(const std::string & svc, const char * buff, int ibuff, callback_result_t result_cb);
 //int call(const std::string & svc, const ::google::protobuf::Message & msg, callback_result_t result_cb);
