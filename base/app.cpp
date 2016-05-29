@@ -8,6 +8,7 @@
 #include "dctcp.h"
 #include "dcsmq.h"
 #include "dcshm.h"
+#include "dcdebug.h"
 
 ///////////////////////////////////////////////////
 #include "app.hpp"
@@ -217,9 +218,11 @@ static inline int
 app_stcp_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
     GLOG_TRA("app stcp listener ev.type:%d ev.fd:%d ev.listenfd:%d",
         ev.type, ev.fd, ev.listenfd);
-	AppImpl * app = (AppImpl*)ud;
+    AppImpl * impl = (AppImpl*)ud;
 	GLOG_ERR("stcp listen fd:%d no listener !", ev.listenfd);
-	return -1;
+    UNUSED(dc);
+    UNUSED(impl);
+    return -1;
 }
 
 static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
@@ -307,8 +310,7 @@ int App::init(int argc, const char * argv[]){
 	    }
         static void segv_crash(int signo, siginfo_t * info, void * ucontex){
 		    if (ucontex) {
-			    //ucontext_t *uc = (ucontext_t *)ucontex;
-			    GLOG_FTL("program crash info: \n"
+			    GLOG_ERR("program crash info: \n"
 				"info.si_signo = %d \n"
 				"info.si_errno = %d \n"
 				"info.si_code  = %d (%s) \n"
@@ -317,7 +319,14 @@ int App::init(int argc, const char * argv[]){
 				info->si_code,
 				(info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
 				info->si_addr);
+                /////////////////////////////////////////////////////////////////
+                //print stack info
+                ucontext_t *uc = (ucontext_t *)ucontex;
+                string strstack;
+                const char * stackinfo = dcsutil::stacktrace(strstack, 0, 16, uc);
+                GLOG_ERR("program crash stack info:\n%s", stackinfo);
 		    }
+            signalh_ignore(SIGSEGV);
 	    }
     };
 	dcsutil::signalh_push(SIGTERM, signalh_function::term_stop);

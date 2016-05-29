@@ -51,17 +51,18 @@ struct dctcp_listener_env_t {
 	dctcp_event_listener_t			cust_listener;
 };
 struct dctcp_t {
-	dctcp_config_t	conf;
-	int				epfd;	//epfd for poller
+    dctcp_config_t	conf;
+    int				epfd{ -1 };	//epfd for poller
 	std::unordered_map<int, dctcp_connector_t>		connectors;//client connecting
 	std::unordered_map<int, dctcp_listener_t>		listeners;//server listeners fd
 	///////////////////////////////////////////////////////////////
 	dctcp_listener_env_t							proto_listeners;
-	std::unordered_map<int, int>					fd_map_listenfd;
-	///////////////////////////////////////////////////////////////
-	epoll_event	*	events;
-	int				nproc;
-	int				nevts;
+    std::unordered_map<int, int>					fd_map_listenfd;
+    ///////////////////////////////////////////////////////////////
+    epoll_event	*	events{ nullptr };
+    int				nproc{ 0 };
+    int				nevts{ 0 };
+    uint64_t        next_evt_poll_time{ 0 };
 	//////////////////////////////fd<->send and recv//////////////
 	std::unordered_map<int, msg_buffer_t>	sock_recv_buffer;
 	std::unordered_map<int, msg_buffer_t>	sock_send_buffer;
@@ -729,25 +730,39 @@ int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc){
 		stcp->connectors.empty()){
 		return 0;
 	}
-	int ms = timeout_us / 1000;
-	int nproc = 0;
+    if (max_proc <= 0){
+        max_proc = INT_MAX;
+    }
+	int nproc = 0; //process left events
 	for (; stcp->nproc < stcp->nevts && nproc < max_proc; ++(stcp->nproc)){
 		++nproc;
 		_proc(stcp, stcp->events[stcp->nproc]);
 	}
-	if (stcp->nproc < stcp->nevts){
-		//busy
+	if (stcp->nproc < stcp->nevts){ //not over, busy for limit
 		return nproc;
 	}
-	else{
+	else { //poll over, clear
 		stcp->nproc = 0;
 		stcp->nevts = 0;
 	}
-	int n = epoll_wait(stcp->epfd, stcp->events, stcp->conf.max_client, ms);
-	for (int i = 0; i < n && nproc < max_proc; ++i){
-		nproc++;
-		_proc(stcp, stcp->events[i]);
-	}
+    //next call epoll wait time
+    ///////////////////////////////////////////////////////
+    if (nproc == 0){//it's idle state, so limit next poll time
+        uint64_t t_timeus_now = dcsutil::time_unixtime_us();
+        if (t_timeus_now < stcp->next_evt_poll_time){
+            return 0;
+        }
+        stcp->next_evt_poll_time = t_timeus_now + timeout_us;
+    }
+    ////////////////////////////////////////////////////////
+	int n = epoll_wait(stcp->epfd, stcp->events, stcp->conf.max_client, 0);
+    if (n > 0){
+        stcp->nevts = n;
+        for (int i = 0; i < n && nproc < max_proc; ++i){
+            nproc++;
+            _proc(stcp, stcp->events[i]);
+        }
+    }
 	return nproc;
 }
 int				dctcp_send(dctcp_t * stcp, int fd, const dctcp_msg_t & msg){

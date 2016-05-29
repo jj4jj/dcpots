@@ -52,7 +52,7 @@ struct dctcp_t *	dctcp_create(const dctcp_config_t & conf);
 void				dctcp_destroy(dctcp_t * );
 void				dctcp_event_cb(dctcp_t*, dctcp_event_cb_t cb, void *ud);
 //return proced events
-int					dctcp_poll(dctcp_t *, int timeout_us, int max_proc = 100);
+int					dctcp_poll(dctcp_t *, int timeout_us, int max_tick_proc = 100);
 //fproto:msg:sz32,msg:sz16,msg:sz8,token:xxx
 int					dctcp_listen(dctcp_t *, const std::string & addr, const char * fproto = "msg:sz32", dctcp_event_cb_t listener = nullptr, void * ud = nullptr); //return a fd >= 0when success
 int					dctcp_connect(dctcp_t *, const std::string & addr, int retry = 0, const char * fproto = "msg:sz32", dctcp_event_cb_t listener = nullptr, void * ud = nullptr);

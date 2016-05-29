@@ -166,9 +166,9 @@ static inline int _check_sending_queue(RpcClientImpl * impl){
 	}
 	return ret;
 }
-int RpcClient::update(){
+int RpcClient::update(int tickus){
 	_check_sending_queue(impl);
-	int nproc = dctcp_poll(impl->cli, 100);
+    int nproc = dctcp_poll(impl->cli, tickus, 100);
 	_check_sending_queue(impl);
 	return nproc;
 }

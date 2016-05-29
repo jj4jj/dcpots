@@ -4,7 +4,7 @@ DEBUG = 1    #0/1
 DEFS = []
 VERBOSE = 'on'    #on/off
 EXTRA_C_FLAGS = ''
-EXTRA_CXX_FLAGS = '-std=c++11'
+EXTRA_CXX_FLAGS = '--std=c++11'
 EXTRA_LD_FLAGS = '-ldl -lm -lrt -pthread'
 LIBS = [
         {
