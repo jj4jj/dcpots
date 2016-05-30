@@ -1,6 +1,8 @@
 #pragma  once
 //a general app framwork
 struct cmdline_opt_t;
+struct dctcp_t;
+
 namespace dcsutil {
 struct AppImpl;
 class App {
