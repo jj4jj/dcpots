@@ -589,9 +589,31 @@ static int uri_test(const char * arg){
     cout << buffer << endl;
     return 0;
 }
+#include "base/cmdline_opt.h"
 #include "base/app.hpp"
 static int app_test(int argc, const char * argv[]){
     struct TestApp : dcsutil::App {
+        string options(){
+            return ""
+                "crash:n::crash;"
+                "stack:n::log stack;";
+        }
+        int on_init(const char * config){
+            if (cmdopt().hasopt("crash")){
+                char * p = nullptr;
+                *p = 1;
+            }
+            if (cmdopt().hasopt("stack")){
+                GLOG_TRA("log test tra");
+                GLOG_DBG("log test dbg");
+                GLOG_IFO("log test ifo");
+                GLOG_WAR("log test war");
+                GLOG_ERR("log test err");
+                GLOG_FTL("log test ftl");
+                return 0;
+            }
+        }
+
     };
     TestApp app;
 	int ret = app.init(argc, argv);

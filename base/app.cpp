@@ -64,9 +64,11 @@ App::~App(){
 
 int App::on_init(const char  * config){
     UNUSED(config);
+    GLOG_WAR("process initialize !");
     return 0;
 }
 int App::on_exit(){
+    GLOG_WAR("process will exit !");
     return 0;
 }
 int  App::on_loop(){
@@ -75,15 +77,19 @@ int  App::on_loop(){
 void App::on_idle(){
 }
 bool App::on_stop(){
+    GLOG_WAR("process will stop ...");
     return true;
 }
 int App::on_reload(){
+    GLOG_WAR("process will reload config file:%p...", cmdopt().getoptstr("config"));
     return 0;
 }
 bool App::on_restart(){
+    GLOG_WAR("process will stop for restarting...");
     return true;
 }
 const char * App::on_control(const char * cmdline){
+    GLOG_IFO("process received a command line:%s", cmdline);
     return cmdline;
 }
 //typedef std::function<void()>   timer_task_t;
@@ -179,7 +185,6 @@ static inline int init_command(App & app, const char * pidfile){
 		delete console_buffer;
 		exit(0);
 	}
-
 	return 0;
 }
 static inline int 

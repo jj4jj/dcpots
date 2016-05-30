@@ -60,7 +60,7 @@ def generate(desc , root_path):
              '<extra_c_flags>': desc.EXTRA_C_FLAGS,
              '<extra_cxx_flags>': desc.EXTRA_CXX_FLAGS,
              '<verbose>': desc.VERBOSE,
-             '<extra_ld_flags>': desc.EXTRA_LD_FLAGS,
+             #'<extra_ld_flags>': desc.EXTRA_LD_FLAGS,
              '<add_subdirectory_area>': subdirs,
              '<project_version>': desc.VERSION})
 

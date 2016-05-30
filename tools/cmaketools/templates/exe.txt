@@ -20,7 +20,11 @@ ADD_EXECUTABLE(<exe_name> ${cur_SRCS})
 
 #assign custrom link lib
 target_link_libraries(<exe_name>
-<linklibs>)
+<linklibs>
+dl
+m
+rt
+pthread)
 
 #installing
 INSTALL(TARGETS <exe_name> DESTINATION bin/)

@@ -142,7 +142,7 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 		//append stack frame info
 		string strstack;
 		snprintf(&msg_start[n], available_size, "%s\n",
-			dcsutil::stacktrace(strstack, 1));
+			dcsutil::stacktrace(strstack, 2));
 	}
 
 	if (logger->logfile.write(msg_start, logger->conf.max_roll, logger->conf.max_file_size)){

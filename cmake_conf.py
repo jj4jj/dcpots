@@ -5,7 +5,6 @@ DEFS = []
 VERBOSE = 'on'    #on/off
 EXTRA_C_FLAGS = ''
 EXTRA_CXX_FLAGS = '--std=c++11'
-EXTRA_LD_FLAGS = '-ldl -lm -lrt -pthread'
 LIBS = [
         {
             'name':'dcbase',
@@ -118,7 +117,7 @@ EXES = [
                 'libprotobuf.a',
                 'mysqlclient',
                 'mongoc-1.0',
-                'bson-1.0'
+                'bson-1.0',
             ]
         },
         {
