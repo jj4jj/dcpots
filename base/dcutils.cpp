@@ -1122,6 +1122,23 @@ namespace dcsutil {
         return 0;
     }
 
+    bool   prime(size_t n){
+        for (int i = 2; i < n / 2; ++i){
+            if (n % i == 0){
+                return false;
+            }
+        }
+        return true;
+    }
+    size_t prime_next(size_t n){
+        while (true){
+            if (prime(n)){
+                return n;
+            }
+            ++n;
+        }
+    }
+
 
 
 
