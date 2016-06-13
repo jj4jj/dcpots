@@ -89,7 +89,7 @@ NS_BEGIN(dcsutil)
     const char          *strspack(std::string & str, const std::string & sep, const std::string & ks, ...);
     int                 strsunpack(const std::string & str, const std::string & sep, const std::string & k, ...);
     //todo variadic  ?
-    
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////
     int                 b64_encode(std::string & b64, const char * buff, int ibuff);
     int                 b64_decode(std::string & buff, const std::string & b64);
@@ -99,6 +99,54 @@ NS_BEGIN(dcsutil)
 
 
 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    int                 prime_n(std::vector<size_t> & pn);
+    size_t              prime_next();
+    bool                prime(size_t n);
+
+    ////////////////////////////////////////////////////////////////////////////
+    template<size_t n, size_t i>
+    struct multiple {
+        enum { value = (n % i) ? 0 : 1 };
+    };
+
+    template<size_t n, size_t i>
+    struct is_prime_loop_i {
+        enum {
+            value = (multiple<n, i>::value == 1) ? 0 : is_prime_loop_i<n, i - 1>::value,
+        };
+    };
+
+    template<size_t n>
+    struct is_prime_loop_i<n, 2> {
+        enum { value = n % 2, };
+    };
+
+
+    template<size_t n>
+    struct is_prime {
+        enum {
+            value = is_prime_loop_i<n, n / 2>::value,
+        };
+    };
+
+    template<size_t n>
+    struct next_prime {
+        enum { value = is_prime<n + 1>::value ? n + 1 : next_prime<n + 1>::value };
+    };
+
+    template<size_t n, size_t m>
+    struct n_next_prime_sum {
+        enum {
+            value = next_prime<n>::value +
+            n_next_prime_sum< next_prime<n>::value, m - 1>::value,
+        };
+    };
+    template<size_t n>
+    struct n_next_prime_sum<n, 0> {
+        enum { value = 0 };
+    };
+    ////////////////////////////////////////////////////////////////////////////
 
 
 
