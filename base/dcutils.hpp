@@ -67,7 +67,7 @@ NS_BEGIN(dcsutil)
 	sah_handler			signalh_pop(int sig);
 	void				signalh_clear(int sig);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
-    int					lockpidfile(const std::string & pidfile, int kill_other_sig = 0, bool nb = true, int * plockfd = nullptr);
+    int					lockpidfile(const std::string & pidfile, int kill_other_sig = 0, bool nb = true, int * plockfd = nullptr, bool notify=false);
     //return fd
     int                 lockfile(const std::string & file, bool nb = true);
     int                 unlockfile(int fd);

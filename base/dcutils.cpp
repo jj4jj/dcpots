@@ -758,7 +758,7 @@ namespace dcsutil {
         close(fd);
         return ret;
     }
-    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd){
+    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd, bool notify){
         int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
         if (fd == -1) {
             GLOG_ERR("open file:%s error ", file.c_str());
@@ -782,7 +782,14 @@ namespace dcsutil {
                 }
             }
             if (pid > 0 && kill_other_sig > 0){
-                if (kill(pid, kill_other_sig) && errno == ESRCH){
+		int ret = kill(pid, kill_other_sig);
+		if (ret == 0){
+	            if(notify){
+                    	GLOG_WAR("send the pidfile locker:%d by signal:%d", pid, kill_other_sig);
+                    	return pid;
+		    }	
+		}
+                if (ret && errno == ESRCH){
                     GLOG_WAR("killed the pidfile locker:%d by signal:%d", pid, kill_other_sig);
                     break;
                 }

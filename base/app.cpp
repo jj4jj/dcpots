@@ -75,6 +75,7 @@ int  App::on_loop(){
     return 0;
 }
 void App::on_idle(){
+    usleep(1000*10);
 }
 bool App::on_stop(){
     GLOG_WAR("process will stop ...");
@@ -128,7 +129,7 @@ static inline int init_command(App & app, const char * pidfile){
 			fprintf(stderr, "lacking command line option pid-file ...\n");
 			return -1;
 		}
-		int killpid = lockpidfile(pidfile, SIGTERM, false);
+		int killpid = lockpidfile(pidfile, SIGTERM, true);
 		fprintf(stderr, "stoped process with normal stop mode [%d]\n", killpid);
 		exit(0);
 	}
@@ -137,7 +138,7 @@ static inline int init_command(App & app, const char * pidfile){
 			fprintf(stderr, "lacking command line option pid-file ...\n");
 			return -1;
 		}
-		int killpid = lockpidfile(pidfile, SIGUSR1, false);
+		int killpid = lockpidfile(pidfile, SIGUSR1, true);
 		fprintf(stderr, "stoped process with restart mode [%d]\n", killpid);
 		exit(0);
 	}
@@ -146,7 +147,7 @@ static inline int init_command(App & app, const char * pidfile){
 			fprintf(stderr, "lacking command line option pid-file ...\n");
 			return -1;
 		}
-		int killpid = lockpidfile(pidfile, SIGUSR2, false);
+		int killpid = lockpidfile(pidfile, SIGUSR2, true, nullptr, true);
 		fprintf(stderr, "reloaded process [%d]\n", killpid);
 		exit(0);
 	}
