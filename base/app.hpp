@@ -39,6 +39,17 @@ protected:
 	AppImpl * impl_{ nullptr};
 };
 
+template <class CAPP>
+int AppMain(int argc, const char * argv[]){
+    CAPP app;
+    int ret = app.init(argc, argv);
+    if (ret){
+        GLOG_ERR("App(%s) init error:%d ", typeid(CAPP).name(), ret);
+        return ret;
+    }
+    return app.run();
+}
+
 };
 
 

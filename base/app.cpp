@@ -293,7 +293,7 @@ int App::init(int argc, const char * argv[]){
 
 	//"start:n:S:start process normal mode;"
 	if (!cmdopt().hasopt("start")){
-		exit(0);
+		exit(-1);
 	}
 	//2.daemonlization and pid running checking
 	if (cmdopt().hasopt("daemon")){
@@ -437,5 +437,6 @@ dctcp_t       * App::stcp(){
 cmdline_opt_t & App::cmdopt(){
     return *impl_->cmdopt;
 }
+
 
 NS_END()

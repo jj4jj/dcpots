@@ -165,7 +165,7 @@ static inline void _check_connections(RpcClientImpl * impl){
         uint32_t t_times_now = dcsutil::time_unixtime_s();
         if (t_times_now > impl->next_check_connx_time){
             impl->next_check_connx_time = t_times_now + CHECK_CNNX_TIME_INTERVAL;
-            GLOG_ERR("rpc connection lost reconnecting ...");
+            GLOG_ERR("rpc connection lost , reconnecting ...");
             impl->cnnxfd = -1;
             dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry, "msg:sz32",
                 _rpc_client_stcp_dispatch, impl);

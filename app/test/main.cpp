@@ -596,7 +596,8 @@ static int app_test(int argc, const char * argv[]){
         string options(){
             return ""
                 "crash:n::crash;"
-                "stack:n::log stack;";
+                "stack:n::log stack;"
+                "log:n::log test;";
         }
         int on_init(const char * config){
             if (cmdopt().hasopt("crash")){
@@ -612,16 +613,23 @@ static int app_test(int argc, const char * argv[]){
                 GLOG_FTL("log test ftl");
                 return 0;
             }
+            if (cmdopt().hasopt("log")){
+                logger_config_t lgconf;
+                lgconf.max_file_size = 10485760;
+                lgconf.max_roll = 20;
+                lgconf.pattern = "dctest";
+                global_logger_init(lgconf);
+                std::string ds;
+                while (true){
+                    GLOG_DBG("%s",dcsutil::strcharsetrandom(ds, 1024));
+                    usleep(1000*10);
+                }
+            }
+            return 0;
         }
 
     };
-    TestApp app;
-	int ret = app.init(argc, argv);
-	if (ret){
-		GLOG_ERR("app init error:%d ", ret);
-		return -1;
-	}
-    return app.run();
+    return AppMain<TestApp>(argc, argv);
 }
 
 int main(int argc, const char* argv[])

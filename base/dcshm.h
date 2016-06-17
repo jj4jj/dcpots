@@ -3,7 +3,7 @@
 
 struct dcshm_config_t {
 	string	shm_path;
-	int		shm_size;
+	size_t	shm_size;
 	bool	attach; //just attach , no create
 };
 struct sshm_t;

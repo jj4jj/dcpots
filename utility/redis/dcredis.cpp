@@ -64,8 +64,13 @@ static void default_disconnectCallback(const redisAsyncContext *c, int status) {
     }
 }
 static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn = nullptr, redisDisconnectCallback ondisconn = nullptr){
-#warning "todo change the ip by config param impl"
-    redisAsyncContext * ctx = redisAsyncConnect("127.0.0.1", 6379);
+    std::vector<std::string> vs;
+    dcsutil::strsplit(impl->addrs, ":", vs);
+    if (vs.size() != 2){
+        GLOG_ERR("error redis address :%s", impl->addrs.c_str());
+        return nullptr;
+    }
+    redisAsyncContext * ctx = redisAsyncConnect(vs[0].c_str(), std::stoi(vs[1]));
     if (!ctx){
         GLOG_SER("redis connect error !");
         return nullptr;
@@ -149,11 +154,13 @@ int	RedisAsyncAgent::destroy(){
 	if (impl){
 		if (impl->rc){
 			redisAsyncFree(impl->rc);
-            for (int i = 0; i < (int)impl->subscribers.size(); ++i){
-                redisAsyncFree(impl->subscribers[i]);
-            }
 			impl->rc = nullptr;
 		}
+        for (int i = 0; i < (int)impl->subscribers.size(); ++i){
+            redisAsyncFree(impl->subscribers[i]);
+        }
+        impl->subscribers.clear();
+
 		delete impl;
 		impl = nullptr;
 	}
