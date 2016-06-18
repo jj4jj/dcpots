@@ -2,9 +2,10 @@
 #include "stdinc.h"
 
 struct dcshm_config_t {
-	string	shm_path;
-	size_t	shm_size;
-	bool	attach; //just attach , no create
+    string	shm_path;
+    size_t	shm_size{ 0 };
+    bool	attach{ false }; //just attach , no create
+    uint8_t proj_id { 1 };
 };
 struct sshm_t;
 enum dcshm_error_type {

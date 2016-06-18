@@ -9,7 +9,7 @@
 #include "dcsmq.h"
 #include "dcshm.h"
 #include "dcdebug.h"
-
+#include "dcshmobj.hpp"
 ///////////////////////////////////////////////////
 #include "app.hpp"
 
@@ -28,6 +28,7 @@ struct AppImpl {
 	int				interval { 1000 * 10 };
 	int				maxtps{ 500 };
 	uint64_t		next_tick_time{ 0 };
+    dcshmobj_pool   shm_pool;
 };
 
 static App * s_app_instance{ nullptr };
@@ -123,6 +124,10 @@ void App::shedule(timer_task_t task, int ms){
 std::string App::options(){
     return "";
 }
+std::vector<dcshmobj_user_t*>   App::shm_users() {
+    return std::vector<dcshmobj_user_t*>();
+}
+
 static inline int init_command(App & app, const char * pidfile){
 	if (app.cmdopt().hasopt("stop")){
 		if (!pidfile){
@@ -253,137 +258,156 @@ int App::init(int argc, const char * argv[]){
     int ret = 0;
     impl_->cmdopt = new cmdline_opt_t(argc, argv);
     string cmdopt_pattern;
-	const char * program_name = dcsutil::path_base(argv[0]);
-	#define		MAX_CMD_OPT_OPTION_LEN	(1024*4)
-	size_t lpattern = strnprintf(cmdopt_pattern, 1024*4, ""
-		"console-shell:n::console shell;"
-		"start:n:S:start process normal mode;"
-		"stop:n:T:stop process normal mode;"
-		"restart:n:R:stop process with restart mode;"
-		"name:r:n:set process name:%s;"
-		"daemon:n:D:daemonlize start mode;"
-		"log-dir:r::log dir settings:/tmp;"
-		"log-file:r::log file pattern settings:%s;"
-		"log-level:r::log level settings:INFO;"
-		"log-size:r::log single file max size settings:20480000;"
-		"log-roll:r::log max rolltation count settings:20;"
-		"config:o:C:config file path;"
-		"pid-file:r::pid file for locking (eg./tmp/%s.pid);"
-		"console-listen:r::console command listen (tcp address);"
-		"shm:r::keep process state shm key/path;"
-		"tick-interval:r::tick update interval time (microseconds):10000;"
-		"tick-maxproc:r::tick proc times once:1000;"
-		"", program_name, program_name, program_name);
+    const char * program_name = dcsutil::path_base(argv[0]);
+#define		MAX_CMD_OPT_OPTION_LEN	(1024*4)
+    size_t lpattern = strnprintf(cmdopt_pattern, 1024 * 4, ""
+        "console-shell:n::console shell;"
+        "start:n:S:start process normal mode;"
+        "stop:n:T:stop process normal mode;"
+        "restart:n:R:stop process with restart mode;"
+        "name:r:n:set process name:%s;"
+        "daemon:n:D:daemonlize start mode;"
+        "log-dir:r::log dir settings:/tmp;"
+        "log-file:r::log file pattern settings:%s;"
+        "log-level:r::log level settings:INFO;"
+        "log-size:r::log single file max size settings:20480000;"
+        "log-roll:r::log max rolltation count settings:20;"
+        "config:o:C:config file path;"
+        "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
+        "console-listen:r::console command listen (tcp address);"
+        "shm:r::keep process state shm key/path;"
+        "tick-interval:r::tick update interval time (microseconds):10000;"
+        "tick-maxproc:r::tick proc times once:1000;"
+        "", program_name, program_name, program_name);
 
-	snprintf((char*)(cmdopt_pattern.data()+lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
-			"%s", options().c_str());
+    snprintf((char*)(cmdopt_pattern.data() + lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
+        "%s", options().c_str());
 
     impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
     //////////////////////////////////////////////////////////////
-	const char * pidfile = cmdopt().getoptstr("pid-file");
-	//1.control command
-	//"start:n:S:start process normal mode;"
-	//"stop:n:T:stop process normal mode;"
-	//"restart:n:R:stop process with restart mode;"
-	ret = init_command(*this, pidfile);
-	if (ret){
-		GLOG_ERR("control command init error !");
-		return -1;
-	}
+    const char * pidfile = cmdopt().getoptstr("pid-file");
+    //1.control command
+    //"start:n:S:start process normal mode;"
+    //"stop:n:T:stop process normal mode;"
+    //"restart:n:R:stop process with restart mode;"
+    ret = init_command(*this, pidfile);
+    if (ret){
+        GLOG_ERR("control command init error !");
+        return -1;
+    }
 
-	//"start:n:S:start process normal mode;"
-	if (!cmdopt().hasopt("start")){
-		exit(-1);
-	}
-	//2.daemonlization and pid running checking
-	if (cmdopt().hasopt("daemon")){
-		daemonlize(1, 0, pidfile);
-	}	
-	if (pidfile && getpid() != dcsutil::lockpidfile(pidfile)){
-		fprintf(stderr, "process should be unique running ...");
-		return -2;
-	}
-	dcsutil::signalh_ignore(SIGPIPE);
+    //"start:n:S:start process normal mode;"
+    if (!cmdopt().hasopt("start")){
+        exit(-1);
+    }
+    //2.daemonlization and pid running checking
+    if (cmdopt().hasopt("daemon")){
+        daemonlize(1, 0, pidfile);
+    }
+    if (pidfile && getpid() != dcsutil::lockpidfile(pidfile)){
+        fprintf(stderr, "process should be unique running ...");
+        return -2;
+    }
+    dcsutil::signalh_ignore(SIGPIPE);
     struct signalh_function {
         static void term_stop(int, siginfo_t *, void *){
-		    App::instance().stop();
-	    }
+            App::instance().stop();
+        }
         static void usr1_restart(int, siginfo_t *, void *){
-		    App::instance().restart();
-	    }
+            App::instance().restart();
+        }
         static void usr2_reload(int, siginfo_t *, void *){
-		    App::instance().reload();
-	    }
+            App::instance().reload();
+        }
         static void segv_crash(int signo, siginfo_t * info, void * ucontex){
-		    if (ucontex) {
-			    GLOG_ERR("program crash info: \n"
-				"info.si_signo = %d \n"
-				"info.si_errno = %d \n"
-				"info.si_code  = %d (%s) \n"
-				"info.si_addr  = %p\n",
-				signo, info->si_errno,
-				info->si_code,
-				(info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
-				info->si_addr);
+            if (ucontex) {
+                GLOG_ERR("program crash info: \n"
+                    "info.si_signo = %d \n"
+                    "info.si_errno = %d \n"
+                    "info.si_code  = %d (%s) \n"
+                    "info.si_addr  = %p\n",
+                    signo, info->si_errno,
+                    info->si_code,
+                    (info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
+                    info->si_addr);
                 /////////////////////////////////////////////////////////////////
                 //print stack info
                 ucontext_t *uc = (ucontext_t *)ucontex;
                 string strstack;
                 const char * stackinfo = dcsutil::stacktrace(strstack, 0, 16, uc);
                 GLOG_ERR("program crash stack info:\n%s", stackinfo);
-		    }
+            }
             signalh_ignore(SIGSEGV);
-	    }
+        }
     };
-	dcsutil::signalh_push(SIGTERM, signalh_function::term_stop);
-	dcsutil::signalh_push(SIGUSR1, signalh_function::usr1_restart);
-	dcsutil::signalh_push(SIGUSR2, signalh_function::usr2_reload);
-	dcsutil::signalh_push(SIGSEGV, signalh_function::segv_crash);
+    dcsutil::signalh_push(SIGTERM, signalh_function::term_stop);
+    dcsutil::signalh_push(SIGUSR1, signalh_function::usr1_restart);
+    dcsutil::signalh_push(SIGUSR2, signalh_function::usr2_reload);
+    dcsutil::signalh_push(SIGSEGV, signalh_function::segv_crash);
 
-	//////////////////////////////////////////////////////////////
-	//3.global logger
-	logger_config_t lconf;
-	lconf.dir = cmdopt().getoptstr("log-dir");
-	lconf.pattern = cmdopt().getoptstr("log-file");
-	lconf.lv = INT_LOG_LEVEL(cmdopt().getoptstr("log-level"));
-	lconf.max_file_size = cmdopt().getoptint("log-size");
-	lconf.max_roll = cmdopt().getoptint("log-roll");
-	ret = global_logger_init(lconf);
-	if (ret){
-		fprintf(stderr, "logger init error = %d", ret);
-		return -2;
-	}
+    //////////////////////////////////////////////////////////////
+    //3.global logger
+    logger_config_t lconf;
+    lconf.dir = cmdopt().getoptstr("log-dir");
+    lconf.pattern = cmdopt().getoptstr("log-file");
+    lconf.lv = INT_LOG_LEVEL(cmdopt().getoptstr("log-level"));
+    lconf.max_file_size = cmdopt().getoptint("log-size");
+    lconf.max_roll = cmdopt().getoptint("log-roll");
+    ret = global_logger_init(lconf);
+    if (ret){
+        fprintf(stderr, "logger init error = %d", ret);
+        return -2;
+    }
     //init timer
     ret = eztimer_init();
     if (ret){
         GLOG_ERR("eztimer init error :%d", ret);
         return -3;
     }
-	eztimer_set_dispatcher(app_timer_dispatch);
+    eztimer_set_dispatcher(app_timer_dispatch);
 
-	dctcp_config_t dconf;
-	dconf.max_send_buff = 1024 * 1024;
-	dconf.max_recv_buff = 1024 * 1024;
-	dconf.max_tcp_send_buff_size = 1024 * 1024 * 4;
-	dconf.max_tcp_recv_buff_size = 1024 * 1024 * 4;
-	impl_->stcp = dctcp_create(dconf);
-	if (!impl_->stcp){
-		GLOG_SER("stcp init error !");
-		return -4;
-	}
-	dctcp_event_cb(impl_->stcp, app_stcp_listener, impl_);
-	//control
-	const char * console_listen = cmdopt().getoptstr("console-listen");
-	if (console_listen){
-		impl_->console = dctcp_listen(impl_->stcp, console_listen, "token:\r\n\r\n",
+    dctcp_config_t dconf;
+    dconf.max_send_buff = 1024 * 1024;
+    dconf.max_recv_buff = 1024 * 1024;
+    dconf.max_tcp_send_buff_size = 1024 * 1024 * 4;
+    dconf.max_tcp_recv_buff_size = 1024 * 1024 * 4;
+    impl_->stcp = dctcp_create(dconf);
+    if (!impl_->stcp){
+        GLOG_SER("stcp init error !");
+        return -4;
+    }
+    dctcp_event_cb(impl_->stcp, app_stcp_listener, impl_);
+    //control
+    const char * console_listen = cmdopt().getoptstr("console-listen");
+    if (console_listen){
+        impl_->console = dctcp_listen(impl_->stcp, console_listen, "token:\r\n\r\n",
             app_console_listener, impl_);
-		if (impl_->console < 0){
-			GLOG_SER("console init listen error : %d!", impl_->console);
-			return -5;
-		}
-	}
-	impl_->interval = cmdopt().getoptint("tick-interval");
-	impl_->maxtps = cmdopt().getoptint("tick-maxproc");
+        if (impl_->console < 0){
+            GLOG_SER("console init listen error : %d!", impl_->console);
+            return -5;
+        }
+    }
+    impl_->interval = cmdopt().getoptint("tick-interval");
+    impl_->maxtps = cmdopt().getoptint("tick-maxproc");
+    //////////////////////////////////////////////////////////////////////////////////
+    std::vector<dcshmobj_user_t*>   shmusers = this->shm_users();
+    if (!shmusers.empty()){
+        const char * shmkey = cmdopt().getoptstr("shm");
+        if (!shmkey){
+            GLOG_ERR("not config shm key path setting !");
+            return -6;
+        }
+        for (size_t i = 0; i < shmusers.size(); ++i){
+            impl_->shm_pool.regis(shmusers[i]);
+        }
+
+        ret = impl_->shm_pool.start(shmkey);
+        if (ret){
+            GLOG_ERR("shm pool start error ret:%d shm path:%s !", ret, shmkey);
+            return -7;
+        }
+    }
+    //////////////////////////////////////////////////////////////////////////////////
     return on_init(cmdopt().getoptstr("config"));
 }
 int App::run(){
@@ -417,6 +441,10 @@ int App::run(){
         if (iret == 0){
             on_idle();
         }
+    }
+    iret = impl_->shm_pool.stop();
+    if (iret){
+        GLOG_ERR("shm pool stop error ret:%d", iret);
     }
     return on_exit();
 }

@@ -25,7 +25,7 @@ int _shm_stat(key_t k, size_t size = 0, int ioflag = 0){
 	}
 }
 int			dcshm_create(const dcshm_config_t & conf, void ** p, bool & attached){
-	key_t key = ftok(conf.shm_path.c_str(), 1);
+	key_t key = ftok(conf.shm_path.c_str(), conf.proj_id);
 	if (key < 0){
 		return SHM_REF_ERRNO + errno;
 	}

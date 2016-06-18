@@ -2,50 +2,24 @@
 
 #include <vector>
 #include <string>
-#include "dcshm.h"
-//any pod struct , can allocate a memory with shm
-//auto init , auto recover .
+#include <type_traits>
 
-#pragma pack(1)
-struct dcshmobj_pool_mm_fmt {
-    enum {
-        MAX_OBJECT_TYPE_NAME_LEN = 32,
-        MAX_OBJECT_TYPE_COUNT = 128,
-        BODY_CHUNK_BLOCK_SIZE = 8,
-    };
-    struct _head_t {
-        uint16_t        objects_count;
-        struct {
-            uint32_t    block_offset;
-            uint32_t    block_count;
-            char        name[32];
-        } objects[MAX_OBJECT_TYPE_COUNT];
-    } head;
-    struct _body_t {
-        uint8_t         blocks[1][BODY_CHUNK_BLOCK_SIZE];
-    } body;
-};
-#pragma pack()
 
 struct dcshmobj_user_t {
-    virtual const char * name() const {
-        return "shmobj_user";
-    }
-    virtual void on_created(void * data) {
-    }
-    virtual int  on_attached(){
-        return 0;
-    }
-    virtual size_t  size(){
-        return 0;
-    }
+    virtual const char *    name() const;
+    virtual size_t          size() const;
+    virtual int             on_alloced(void * udata, bool attached);
+    ////////////////////////////////////////////////////////////////////////////////////
+    virtual size_t          pack_size(void * udata) const;
+    virtual bool            pack(void * buff, size_t buff_sz, const void * udata) const;
+    virtual bool            unpack(void * udata, const void * buff, size_t buff_sz);
 };
-
 
 template<class U>
 struct dcshmobj_t : public dcshmobj_user_t {
     U             * data;
     dcshmobj_t():data(nullptr){
+        static_assert(std::is_pod<U>::value, "dcobject data must be a pod struct !");
     }
     virtual const char * name() const {
         return typeid(U).name();
@@ -53,95 +27,51 @@ struct dcshmobj_t : public dcshmobj_user_t {
     virtual size_t size() const {
         return sizeof(U);
     }
-    virtual void on_created(void * pv) {
+    virtual int on_rebuild(){
+        return 0;
+    }
+    virtual int on_alloced(void * pv, bool attached) {
         assert(!this->data);
-        this->data = new(pv)U();
-    }
-};
-
-struct dcshmobj_pool {
-    dcshmobj_pool_mm_fmt *            shm{ nullptr };    
-    std::vector<dcshmobj_user_t*>     shm_users;
-    //list[magic][size_t*8][next][chunk][magic]
-    int     regis(dcshmobj_user_t * user){
-        std::string strname;
-        strname = user->name();
-        for (dcshmobj_user_t * u : this->shm_users){
-            if (strname == u->name()){
-                return -1;
-            }
-        }
-        shm_users.push_back(user);
-        return 0;
-    }
-    static size_t  alien_size(size_t sz){
-        return (sz + dcshmobj_pool_mm_fmt::BODY_CHUNK_BLOCK_SIZE - 1) / dcshmobj_pool_mm_fmt::BODY_CHUNK_BLOCK_SIZE * dcshmobj_pool_mm_fmt::BODY_CHUNK_BLOCK_SIZE;
-    }
-    size_t  total_size(){
-        size_t sz = alien_size(sizeof(dcshmobj_pool_mm_fmt));
-        for (auto u : shm_users){
-            sz += alien_size(u->size());
-        }
-        return sz;
-    }
-    int     check_valid(){
-        return 0;
-    }
-    dcshmobj_user_t * find_user(const char * name){
-        return nullptr;
-    }
-    int     start(const char * keypath){
-        size_t total_size = total_size();
-        dcshm_config_t & shconf;
-        shconf.shm_path = keypath;
-        shconf.shm_size = total_size;
-        shconf.attach = false;
-        void * p = NULL;
-        bool attached = false;
-        int	ret = dcshm_create(shconf, &shm, attached);
-        if (ret){
-            GLOG_SER("shm create error alloc size:%zu ret:%d", total_size, ret);
-            return -1;
-        }
-        assert(shm);
         if (attached){
-            //check states , verify data
-            ret = check_valid();
-            if (ret){
-                GLOG_ERR("check shm valid error :%d", ret);
-                return -2;
-            }
-            for (size_t i = 0; i < shm->head.objects_count; ++i){
-                const char * objname = shm->head.objects[i].name;
-                dcshmobj_user_t * user = find_user(objname);
-                assert(user);
-                user->on_created(&shm->body.blocks[shm->head.objects[i].block_offset][0]);
-                user->on_attached();
-            }
+            this->data = pv;
         }
         else {
-            //create
-            for (int i = 0; i < this->shm_users.size(); ++i){
-                for (size_t i = 0; i < shm->head.objects_count; ++i){
-                    const char * objname = shm->head.objects[i].name;
-                    dcshmobj_user_t * user = find_user(objname);
-                    assert(user);
-                    user->on_created(&shm->body.blocks[shm->head.objects[i].block_offset][0]);
-                }
-            }
-            //check recover shm
-            //if there exists a backup data , recover them
-
+            this->data = new(pv)U();
+            return on_rebuild();
         }
-
-        //key 1 : list block (flat space)
-        //key 2 : dump compress  (narrow space)
-        //if key 1 space ok attach
-        //else using key 2 //else fail
+        return 0;
     }
-    int     stop(){
-        //for all , dumps to key 2
-        //
-
+    virtual size_t          pack_size(void * udata) const {
+        return static_cast<U*>(udata)->dumps_size();
     }
+    virtual bool            pack(void * buff, size_t buff_sz, const void * udata) const {
+        assert(udata == data);
+        int ret = static_cast<U*>(udata)->dumps(buff, buff_sz);
+        if (ret){
+            return false;
+        }
+        return true;
+    }
+    virtual bool            unpack(void * udata, const void * buff, size_t buff_sz) {
+        int ret = static_cast<U*>(udata)->loads(buff, buff_sz);
+        if (ret){
+            return false;
+        }
+        return true;
+    }
+
+
+};
+
+struct dcshmobj_pool_impl;
+struct dcshmobj_pool {
+    int               regis(dcshmobj_user_t * user);
+    int               start(const char * keypath);
+    int               stop();
+    /////////////////////////////////////////////////
+public:
+    dcshmobj_pool();
+    ~dcshmobj_pool();
+private:
+    dcshmobj_pool_impl * impl_{ nullptr };
 };

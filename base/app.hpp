@@ -2,7 +2,7 @@
 //a general app framwork
 struct cmdline_opt_t;
 struct dctcp_t;
-
+struct dcshmobj_user_t;
 namespace dcsutil {
 struct AppImpl;
 class App {
@@ -18,6 +18,11 @@ public:
     virtual bool			on_restart();//true is ok
     virtual int				on_exit();//once
     virtual const char *	on_control(const char * cmdline);
+
+public:
+    //using shm enable
+    virtual std::vector<dcshmobj_user_t*>   shm_users();
+
 public:
     int			init(int argc, const char * argv[]);
     int			run();

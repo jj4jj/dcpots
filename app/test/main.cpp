@@ -591,6 +591,7 @@ static int uri_test(const char * arg){
 }
 #include "base/cmdline_opt.h"
 #include "base/app.hpp"
+#include "base/dcshmobj.hpp"
 static int app_test(int argc, const char * argv[]){
     struct TestApp : dcsutil::App {
         string options(){
@@ -598,6 +599,29 @@ static int app_test(int argc, const char * argv[]){
                 "crash:n::crash;"
                 "stack:n::log stack;"
                 "log:n::log test;";
+        }
+        std::vector<dcshmobj_user_t*>   shm_users() {
+            std::vector<dcshmobj_user_t*>   users;
+            struct TestShm : public dcshmobj_user_t {
+                char    *test;//[1024];
+                virtual const char *    name() const {
+                    return "TestShm";
+                }
+                virtual size_t          size() const {
+                    return 1024;
+                }
+                virtual int             on_alloced(void * udata, bool attached){
+                    test = (char*)udata;
+                    GLOG_IFO("is attached :%d data:%s", attached, test);
+                    if (!attached){
+                        strcpy(test, "hsflsafllgetset");
+                    }
+                    return 0;
+                }
+            };
+            static TestShm ts;
+            users.push_back(&ts);
+            return users;
         }
         int on_init(const char * config){
             if (cmdopt().hasopt("crash")){
