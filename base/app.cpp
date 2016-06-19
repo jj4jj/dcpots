@@ -191,6 +191,29 @@ static inline int init_command(App & app, const char * pidfile){
 		delete console_buffer;
 		exit(0);
 	}
+    ///////////////////////////////////////////////////////////////////
+    const char * shm_keypath = app.cmdopt().getoptstr("shm");
+    bool need_exit = false;
+    do {
+        bool clear_shm_recover = app.cmdopt().hasopt("shm-clear-recover");
+        bool clear_shm_backup = app.cmdopt().hasopt("shm-clear-backup");
+        if (!shm_keypath && (clear_shm_recover || clear_shm_backup)){
+            GLOG_ERR("not found shm path param for clearing shm!");
+            return -1;
+        }
+        if (clear_shm_recover){
+            dcshm_set_delete(dcshm_path_key(shm_keypath, 1));
+            need_exit = true;
+        }
+        if (clear_shm_backup){
+            dcshm_set_delete(dcshm_path_key(shm_keypath, 2));
+            need_exit = true;
+        }
+    } while (false);
+
+    if (need_exit){
+        exit(0);
+    }
 	return 0;
 }
 static inline int 
@@ -253,6 +276,9 @@ static inline void app_tick_update(AppImpl * impl_){
 		impl_->next_tick_time = t_time_now + impl_->interval;
 	}
 }
+const   char *  App::name() const {
+    return const_cast<App*>(this)->cmdopt().getoptstr("name");
+}
 
 int App::init(int argc, const char * argv[]){
     int ret = 0;
@@ -261,18 +287,21 @@ int App::init(int argc, const char * argv[]){
     const char * program_name = dcsutil::path_base(argv[0]);
 #define		MAX_CMD_OPT_OPTION_LEN	(1024*4)
     size_t lpattern = strnprintf(cmdopt_pattern, 1024 * 4, ""
-        "console-shell:n::console shell;"
+        "console-shell:n::console shell(connect with --console-listen);"
         "start:n:S:start process normal mode;"
         "stop:n:T:stop process normal mode;"
         "restart:n:R:stop process with restart mode;"
-        "name:r:n:set process name:%s;"
+        "reload:n:l:reload process config and some settings;"
+        "shm-clear-recover:n::clear the master share memory for recover;"
+        "shm-clear-backup:n::clear the backup share memory for recover;"
+        "name:r:N:set process name:%s;"
         "daemon:n:D:daemonlize start mode;"
         "log-dir:r::log dir settings:/tmp;"
         "log-file:r::log file pattern settings:%s;"
         "log-level:r::log level settings:INFO;"
         "log-size:r::log single file max size settings:20480000;"
         "log-roll:r::log max rolltation count settings:20;"
-        "config:o:C:config file path;"
+        "config:o:c:config file path;"
         "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
         "console-listen:r::console command listen (tcp address);"
         "shm:r::keep process state shm key/path;"
@@ -287,9 +316,6 @@ int App::init(int argc, const char * argv[]){
     //////////////////////////////////////////////////////////////
     const char * pidfile = cmdopt().getoptstr("pid-file");
     //1.control command
-    //"start:n:S:start process normal mode;"
-    //"stop:n:T:stop process normal mode;"
-    //"restart:n:R:stop process with restart mode;"
     ret = init_command(*this, pidfile);
     if (ret){
         GLOG_ERR("control command init error !");
@@ -310,13 +336,15 @@ int App::init(int argc, const char * argv[]){
     }
     dcsutil::signalh_ignore(SIGPIPE);
     struct signalh_function {
-        static void term_stop(int, siginfo_t *, void *){
+        static void term_stop(int sig, siginfo_t *, void *){
             App::instance().stop();
+            dcsutil::signalh_ignore(sig);
         }
-        static void usr1_restart(int, siginfo_t *, void *){
+        static void usr1_restart(int sig, siginfo_t *, void *){
             App::instance().restart();
+            dcsutil::signalh_ignore(sig);
         }
-        static void usr2_reload(int, siginfo_t *, void *){
+        static void usr2_reload(int , siginfo_t *, void *){
             App::instance().reload();
         }
         static void segv_crash(int signo, siginfo_t * info, void * ucontex){
@@ -337,7 +365,7 @@ int App::init(int argc, const char * argv[]){
                 const char * stackinfo = dcsutil::stacktrace(strstack, 0, 16, uc);
                 GLOG_ERR("program crash stack info:\n%s", stackinfo);
             }
-            signalh_ignore(SIGSEGV);
+            dcsutil::signalh_default(signo);
         }
     };
     dcsutil::signalh_push(SIGTERM, signalh_function::term_stop);

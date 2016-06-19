@@ -545,17 +545,16 @@ static int _name_smq_maping_shm_create(dcnode_t * dc, bool  owner){
 	if (dc->smq_name_mapping_shm || !dc->smq){
 		return 0;
 	}
-	dcshm_config_t shm_conf;
-	shm_conf.attach = !owner;
-	shm_conf.shm_path = dc->addr.msgq_sharekey;
+    int shmkey = dcshm_path_key(dc->addr.msgq_sharekey.c_str());
+    size_t shm_size = 0;
+	bool shm_attach = true;
 	if (owner){
-		shm_conf.shm_size = sizeof(dcnode_name_map_t);
-	}
-	else {
-		shm_conf.shm_size = 0;
-	}
-	if (dcshm_create(shm_conf, (void **)&dc->smq_name_mapping_shm, shm_conf.attach)){
-        GLOG_ERR("attach shm error attach:%d !", shm_conf.attach);
+        shm_size = sizeof(dcnode_name_map_t);
+        shm_attach = false;
+    }
+    dc->smq_name_mapping_shm = (dcnode_name_map_t*)dcshm_open(shmkey, shm_attach, shm_size);
+	if (!dc->smq_name_mapping_shm){
+        GLOG_ERR("attach shm error !");
         return -1;
 	}
 	return 0;
@@ -943,7 +942,7 @@ void      dcnode_destroy(dcnode_t* dc){
 		dc->smq = nullptr;
 	}
 	if (dc->smq_name_mapping_shm){
-		dcshm_destroy(dc->smq_name_mapping_shm);
+		dcshm_close(dc->smq_name_mapping_shm);
 	}
     //=================================
     _dcnode_clear_send_queue(dc);

@@ -100,9 +100,10 @@ NS_BEGIN(dcsutil)
 
 
     ///////////////////////////////////////////////////////////////////////////////////////
-    int                 prime_n(std::vector<size_t> & pn);
-    size_t              prime_next();
-    bool                prime(size_t n);
+    size_t              prime_n(std::vector<size_t> & pn);
+    size_t              prime_next(size_t n);
+    size_t              prime_prev(size_t n);
+    bool                is_a_prime(size_t n);
 
     ////////////////////////////////////////////////////////////////////////////
     template<size_t n, size_t i>

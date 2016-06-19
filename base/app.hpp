@@ -24,6 +24,9 @@ public:
     virtual std::vector<dcshmobj_user_t*>   shm_users();
 
 public:
+    const   char *  name() const;
+
+public:
     int			init(int argc, const char * argv[]);
     int			run();
     void		stop();

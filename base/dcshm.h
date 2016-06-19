@@ -1,24 +1,9 @@
 #pragma once
-#include "stdinc.h"
 
-struct dcshm_config_t {
-    string	shm_path;
-    size_t	shm_size{ 0 };
-    bool	attach{ false }; //just attach , no create
-    uint8_t proj_id { 1 };
-};
-struct sshm_t;
-enum dcshm_error_type {
-	SHM_OK = 0,
-	SHM_EXIST = 1,
-	SHM_NOT_EXIST = 2,
-	SHM_SIZE_NOT_MATCH = 3,
-	SHM_ERR_PERM = 4,
-	SHM_REF_ERRNO = 0x7FFF, //+errno
-};
-
-int			dcshm_create(const dcshm_config_t & conf, void ** p, bool & attached);
-void		dcshm_destroy(void *);
+int         dcshm_path_key(const char * path, unsigned char proj_id = 1);
+void	 *	dcshm_open(int k, bool & attach, size_t sz = 0);
+void		dcshm_close(void * p, int shmkey_set_delete = -1);
+void 		dcshm_set_delete(int k);
 
 
 

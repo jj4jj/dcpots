@@ -782,13 +782,13 @@ namespace dcsutil {
                 }
             }
             if (pid > 0 && kill_other_sig > 0){
-		int ret = kill(pid, kill_other_sig);
-		if (ret == 0){
-	            if(notify){
-                    	GLOG_WAR("send the pidfile locker:%d by signal:%d", pid, kill_other_sig);
-                    	return pid;
-		    }	
-		}
+		        int ret = kill(pid, kill_other_sig);
+		        if (ret == 0){
+	                    if(notify){
+                    	        GLOG_WAR("send the pidfile locker:%d by signal:%d", pid, kill_other_sig);
+                    	        return pid;
+		            }	
+		        }
                 if (ret && errno == ESRCH){
                     GLOG_WAR("killed the pidfile locker:%d by signal:%d", pid, kill_other_sig);
                     break;
@@ -1128,22 +1128,38 @@ namespace dcsutil {
         }
         return 0;
     }
-
-    bool   prime(size_t n){
-        for (int i = 2; i < n / 2; ++i){
+    //////////////////////////////////////////////////////////////////////////////
+    size_t              prime_n(std::vector<size_t> & pn){
+        return pn.size();
+    }
+    bool   is_a_prime(size_t n){
+        if (n < 2){ return false; }
+        for (size_t i = 2; i < n / 2; ++i){
             if (n % i == 0){
                 return false;
             }
         }
         return true;
     }
+    size_t prime_prev(size_t n){
+        --n;
+        while (n >= 2){
+            if (is_a_prime(n)){
+                return n;
+            }
+            --n;
+        }
+        return 2;
+    }
     size_t prime_next(size_t n){
-        while (true){
-            if (prime(n)){
+        ++n;
+        while (n != 0){
+            if (is_a_prime(n)){
                 return n;
             }
             ++n;
         }
+        return 2;
     }
 
 

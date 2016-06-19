@@ -1,83 +1,71 @@
+#include "stdinc.h"
+#include "logger.h"
 #include "dcshm.h"
 
-
-#pragma pack(1)
-struct sshm_header_t {
-	size_t		size;
-};
-struct sshm_t {
-	sshm_header_t	head;
-	char			data[1];
-};
-#pragma pack()
-
-int _shm_stat(key_t k, size_t size = 0, int ioflag = 0){
-	int id = shmget(k, size, IPC_CREAT | IPC_EXCL | ioflag);
-	if (id == -1) {
-		if (errno == EEXIST) return SHM_EXIST;
-		else if (errno == EACCES) return SHM_ERR_PERM;
-		else if (errno == EINVAL) return SHM_SIZE_NOT_MATCH;
-		else return (SHM_REF_ERRNO + errno);
-	}
-	else {
-		shmctl(id, IPC_RMID, NULL);
-		return SHM_OK;
-	}
+static inline bool _shm_exists(key_t k, size_t sz = 0, int ioflag = 0){
+    int id = shmget(k, sz, IPC_CREAT | IPC_EXCL | ioflag);
+    if (id == -1 && errno == EEXIST){
+        return true;
+    }
+    if (id != -1){
+        shmctl(id, IPC_RMID, NULL);
+    }
+    return false;
 }
-int			dcshm_create(const dcshm_config_t & conf, void ** p, bool & attached){
-	key_t key = ftok(conf.shm_path.c_str(), conf.proj_id);
-	if (key < 0){
-		return SHM_REF_ERRNO + errno;
-	}
+static inline void _shm_delete(int key){
+    int id = shmget(key, 0, 0);
+    if (id == -1){
+        GLOG_SER("shm get error from key:%u", key);
+    }
+    else {
+        shmctl(id, IPC_RMID, NULL);
+    }
+}
+int             dcshm_path_key(const char * path, unsigned char proj_id){
+    key_t key = ftok(path, proj_id);
+    if (key < 0){
+        GLOG_SER("ftoken error path = %s proj id:%d", path, proj_id);
+        return -1;
+    }
+    return key;
+}
+void *			dcshm_open(int key, bool & attach, size_t size){
+    if (key < 0){
+        GLOG_ERR("open shm with error key:%d size:%d attach:%d", key, size, attach);
+        return nullptr;
+    }
 	int ioflag = 0666;
-	size_t realsize = 0;
-	if (conf.shm_size > 0){
-		realsize = conf.shm_size + sizeof(sshm_header_t); //not aligend
-	}
-	int err = _shm_stat(key, realsize, ioflag);
-    //if conf.attach , shm must be exist
-	if (err == SHM_EXIST){
-		attached = true;
-	}
+    if (_shm_exists(key, size, ioflag)){
+        attach = true;
+    }
 	else { //not exist . create one
-		if (err != SHM_OK){
-			//error log err
-			return err;
-		}
-		attached = false;
-		if (conf.attach){ //must attach 
-			return SHM_NOT_EXIST;
-		}
+        if (attach){
+            GLOG_WAR("shm attach error [path key:%u shm not exist !]", key);
+            return nullptr;
+        }
 	}
 	int flags = IPC_CREAT | ioflag;
-	int id = shmget(key, realsize, flags);
+    int id = shmget(key, size, flags);
 	if (id < 0){ //create error
-		return SHM_REF_ERRNO + errno;
+        GLOG_SER("shm get error ! key=%u size:%zu flags:%d", key, size, flags);
+        return nullptr;
 	}
-	void *ap = shmat(id, NULL, ioflag);
+	void * ap = shmat(id, NULL, ioflag);
 	if (ap == (void*)(-1)){
 		//attach error
-		shmctl(id, IPC_RMID, NULL);
-		return SHM_REF_ERRNO + errno;
+        GLOG_SER("shm address attach error id:%u!", id);
+        return nullptr;
 	}
-	sshm_t * shmp = (sshm_t*)(ap);
-	if (attached){ //attach checking
-		if (realsize > 0 &&
-			realsize != shmp->head.size){ //check size
-			//error attach
-			dcshm_destroy(shmp);
-			return SHM_SIZE_NOT_MATCH;
-		}
-	}
-	else {
-		shmp->head.size = realsize;
-	}
-	*p = &(shmp->data[0]);
-	return SHM_OK;
+	return ap;
 }
-void	 dcshm_destroy(void * p){
+void	 dcshm_close(void * p, int key){
 	if (p){
-		sshm_t * shmp = (sshm_t*)((char*)p - sizeof(sshm_header_t));
-		shmdt(shmp);
+		shmdt(p);
 	}
+    if (key != -1){
+        _shm_delete(key);
+    }
+}
+void	dcshm_set_delete(int key){
+    _shm_delete(key);
 }

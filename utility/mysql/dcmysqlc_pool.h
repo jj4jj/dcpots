@@ -7,15 +7,16 @@ NS_BEGIN(dcsutil)
 struct mysqlclient_pool_t {
     struct command_t {
         std::string     sql;
-        std::string     full_msg_type_name;;
         msg_buffer_t    cbdata;
         bool            need_result;
+		/////////////////////////need to del/////
         int64_t         opaque;
         string          src;
         bool            flatmode;
-		/////////////////////////for select
-		int				offset;
+        std::string     full_msg_type_name;;
+        int				offset;
 		int				limit;
+        ////////////////////////////////////////
         command_t() :need_result(0), opaque(0), flatmode(false), offset(0), limit(0){}
 	};
     struct result_t {
