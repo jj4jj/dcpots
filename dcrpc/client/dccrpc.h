@@ -17,8 +17,6 @@ public:
 public:
     int    call(const std::string & svc, const dcrpc::RpcValues & args, RpcCallNotify result_cb);
     int    push(const std::string & svc, const dcrpc::RpcValues & args);
-    //int call(const std::string & svc, const char * buff, int ibuff, callback_result_t result_cb);
-    //int call(const std::string & svc, const ::google::protobuf::Message & msg, callback_result_t result_cb);
 private:
     RpcClientImpl * impl { nullptr };
 };
