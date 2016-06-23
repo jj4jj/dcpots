@@ -5,6 +5,7 @@ DEFS = []
 VERBOSE = 'on'    #on/off
 EXTRA_C_FLAGS = ''
 EXTRA_CXX_FLAGS = '--std=c++11'
+EXTRA_INCLUDES = ['/home/gsgame/u1/server/ex/protobuf/include']
 LIBS = [
         {
             'name':'dcbase',

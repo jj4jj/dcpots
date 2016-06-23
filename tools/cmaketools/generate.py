@@ -63,13 +63,14 @@ def generate(desc , root_path):
              #'<extra_ld_flags>': desc.EXTRA_LD_FLAGS,
              '<add_subdirectory_area>': subdirs,
              '<project_version>': desc.VERSION})
-
     for lib in desc.LIBS:
+        extra_includes = getattr(desc, 'EXTRA_INCLUDES', None) or []
         subf=os.path.join(root_path,lib['subdir'],'CMakeLists.txt')
 
         includes = ''
         if lib.has_key('includes') and len(lib['includes']) > 0:
-            includes = '\n'.join(map(path_fixing,lib['includes']))
+            extra_includes.extend(lib['includes'])
+        includes = '\n'.join(map(path_fixing,extra_includes))
 
         linkpaths = ''
         if lib.has_key('linkpaths') and len(lib['linkpaths']) > 0:
@@ -101,11 +102,11 @@ def generate(desc , root_path):
 
     for exe in desc.EXES:
         subf=os.path.join(root_path,exe['subdir'],'CMakeLists.txt')
-
+        extra_includes = getattr(desc, 'EXTRA_INCLUDES', None) or []
         includes = ''
         if exe.has_key('includes') and len(exe['includes']) > 0:
-            includes = '\n'.join(map(path_fixing,exe['includes']))
-
+            extra_includes.extend(exe['includes'])
+        includes = '\n'.join(map(path_fixing,extra_includes))
 
         linkpats = ''
         if exe.has_key('linkpaths') and len(exe['linkpaths']) > 0:

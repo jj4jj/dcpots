@@ -35,6 +35,7 @@ clean()
     echo "make clean"
     cd build && make clean
     echo "clean shm and msg queue"
+	cd -
     sh tools/clean.sh
 }
 
