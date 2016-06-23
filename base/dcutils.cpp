@@ -210,20 +210,19 @@ namespace dcsutil {
     int			writefile(const std::string & file, const char * buffer, size_t sz){
         FILE * fp = fopen(file.c_str(), "w");
         if (!fp){
-            GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
+            GLOG_SER("open file %s e!", file.c_str());
             return -1;
         }
         if (sz == 0){
             sz = strlen(buffer);
         }
         size_t tsz = fwrite(buffer, 1, sz, fp);
+		fclose(fp);
         if (tsz == sz){
-			fclose(fp);
 			return tsz;
         }
         else {
             GLOG_SER("write file:%s writed:%zu error :%d total sz:%zu", file.c_str(), tsz, errno, sz);
-			fclose(fp);
 			return -2;
         }
     }
