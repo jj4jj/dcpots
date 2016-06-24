@@ -76,7 +76,7 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
 	if (!mysql_real_connect(conn, conf.ip.c_str(), conf.uname.c_str(),
 		conf.passwd.c_str(), NULL, conf.port,
 		conf.unisock.c_str(), conf.cliflag)){
-		LOG_S("mysql_real_connectn error ");
+		LOG_S("mysql_real_connect error ");
 		goto FAIL_CONN;
 	}
 
@@ -91,14 +91,21 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
     ////////////////////////////////////////////////
 	_THIS_HANDLE->conf = conf;
 	_THIS_HANDLE->mysql_conn = conn;
-	if (!conf.dbname.empty()){
-		string select_db = "USE ";
+    if (!conf.dbname.empty()) {
+        if (mysql_select_db(_THIS_HANDLE->mysql_conn, _THIS_HANDLE->conf.dbname.c_str())) {
+            LOG_S("select db :%s error ", _THIS_HANDLE->conf.dbname.c_str());
+            goto FAIL_CONN;
+        }
+        /*
+        string select_db = "USE ";
         select_db.append(conf.dbname.c_str());
         select_db.append(";");
-		execute(select_db);
+        execute(select_db);
+        */
 	}
 	return 0;
 FAIL_CONN:
+    GLOG_ERR("mysql init error:%s !", this->err_msg());
 	mysql_close(conn);
 	return -2;
 }
@@ -144,14 +151,21 @@ int		mysqlclient_t::ping(){
 	LOCK_MYSQL();
 	int ret = mysql_ping(_THIS_HANDLE->mysql_conn);
 	if (ret){
-		LOG_S("mysql server ping error !");
+        LOG_S("ping error !");
+        GLOG_ERR(" mysql ping error:%s !", this->err_msg());
 		UNLOCK_MYSQL();
 		return -1;
 	}
 	UNLOCK_MYSQL();
 	unsigned long mtid2 = mysql_thread_id(_THIS_HANDLE->mysql_conn);
     if (mtid2 != mtid1)	{
-        LOG_S("mysql reconnected !");
+        GLOG_ERR("mysql reconnected !");
+        if (!(_THIS_HANDLE->conf.dbname.empty())) {
+            if (mysql_select_db(_THIS_HANDLE->mysql_conn, _THIS_HANDLE->conf.dbname.c_str())) {
+                LOG_S("select db :%s error ", _THIS_HANDLE->conf.dbname.c_str());
+                GLOG_ERR("mysql select error:%s!", this->err_msg());
+            }
+        }
         return 1;
     }
 	return 0;
