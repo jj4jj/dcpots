@@ -781,20 +781,24 @@ namespace dcsutil {
                 }
             }
             if (pid > 0 && kill_other_sig > 0){
-		        int ret = kill(pid, kill_other_sig);
-		        if (ret == 0){
-	                    if(notify){
-                    	        GLOG_WAR("send the pidfile locker:%d by signal:%d", pid, kill_other_sig);
-                    	        return pid;
-		            }	
-		        }
-                if (ret && errno == ESRCH){
+                int ret = kill(pid, kill_other_sig);
+                if (ret == 0){
+                    if(notify){
+                        GLOG_WAR("send the pidfile locker:%d by signal:%d", pid, kill_other_sig);
+                        return pid;
+                    }
+                    else {
+                        usleep(1000 * 100);//100ms
+                    }
+                }
+                if (ret && errno == ESRCH){ //killed process
                     GLOG_WAR("killed the pidfile locker:%d by signal:%d", pid, kill_other_sig);
                     break;
                 }
             }
-            else { //pid > 0 && not kill
+            else { //pid > 0 && error
                 close(fd);
+                GLOG_SWR("kill process error !");
                 return pid;
             }
         }
