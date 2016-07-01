@@ -40,15 +40,16 @@ static std::unordered_map<const redisAsyncContext *, RedisAsyncAgentImpl*>  s_re
 static void disconnectCallback(const redisAsyncContext *c, int status);
 static void connectCallback(const redisAsyncContext *c, int status);
 static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn = nullptr, redisDisconnectCallback ondisconn = nullptr);
-static inline int redis_reconnect(RedisAsyncAgentImpl* impl, bool connect_imidiately = true) {
+static inline void redis_clear_context(RedisAsyncAgentImpl* impl) {
     if (impl->rc) {
-        redisAsyncFree(impl->rc);
+        redisAsyncContext * trc = impl->rc;
         s_redis_context_map_impl.erase(impl->rc);
         impl->rc = nullptr;
+        redisAsyncFree(trc);
     }
-    if (!connect_imidiately) {
-        return 0;
-    }
+}
+static inline int redis_reconnect(RedisAsyncAgentImpl* impl) {
+    redis_clear_context(impl);
     impl->rc = redis_create_context(impl, connectCallback, disconnectCallback);
     if (!impl->rc) {
         return -1;
@@ -62,7 +63,7 @@ static void connectCallback(const redisAsyncContext *c, int status) {
 		GLOG_ERR("redis connect Error: %s", c->errstr);
         s_redis_context_map_impl[c]->connected = false;
         //reconnect
-        redis_reconnect(s_redis_context_map_impl[c], false);
+        redis_clear_context(s_redis_context_map_impl[c]);
     }
 	else {
 		GLOG_IFO("redis Connected...");
@@ -161,9 +162,9 @@ static inline void redis_check_time_expired_callback(RedisAsyncAgentImpl * impl)
 }
 int RedisAsyncAgent::update(){
     uint32_t time_now = dcsutil::time_unixtime_s();
-    if (time_now > impl->last_reconnect_time + 10) {
+    if (impl->rc == nullptr && time_now > impl->last_reconnect_time + 10) {
         impl->last_reconnect_time = time_now;
-        redis_reconnect(impl, true);
+        redis_reconnect(impl);
     }
 	ev_loop(EV_DEFAULT_ EVRUN_NOWAIT);
 	redis_check_time_expired_callback(impl);
@@ -173,8 +174,9 @@ int	RedisAsyncAgent::destroy(){
 	if (impl){
         impl->stop = true;
 		if (impl->rc){
-			redisAsyncFree(impl->rc);
-			impl->rc = nullptr;
+            redisAsyncContext * trc = impl->rc;
+            impl->rc = nullptr;
+			redisAsyncFree(trc);
 		}
         for (int i = 0; i < (int)impl->subscribers.size(); ++i){
             redisAsyncFree(impl->subscribers[i]);

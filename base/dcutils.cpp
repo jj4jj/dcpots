@@ -774,7 +774,9 @@ namespace dcsutil {
                 int n = readfile(file, szpid, sizeof(szpid));
                 if (n > 0){
                     pid = strtol(szpid, NULL, 10);
-                    GLOG_ERR("lock pidfile:%s fail , the file is held by pid %d", file.c_str(), pid);
+                    if (kill_other_sig == 0) {
+                        GLOG_ERR("lock pidfile:%s fail , the file is held by pid %d", file.c_str(), pid);
+                    }
                 }
                 else {
                     GLOG_ERR("lock pidfile:%s fail but read pid from file error !", file.c_str());
