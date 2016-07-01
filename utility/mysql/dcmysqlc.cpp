@@ -96,12 +96,7 @@ int		mysqlclient_t::init(const mysqlclient_t::cnnx_conf_t & conf){
             LOG_S("select db :%s error ", _THIS_HANDLE->conf.dbname.c_str());
             goto FAIL_CONN;
         }
-        /*
-        string select_db = "USE ";
-        select_db.append(conf.dbname.c_str());
-        select_db.append(";");
-        execute(select_db);
-        */
+        
 	}
 	return 0;
 FAIL_CONN:

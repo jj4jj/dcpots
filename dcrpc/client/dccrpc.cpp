@@ -147,8 +147,8 @@ static inline int _send_directly(RpcClientImpl * impl, const dcrpc_msg_t & tosen
 		return -1;
 	}
 	int ret = dctcp_send(impl->stcp, impl->cnnxfd, dctcp_msg_t(impl->send_msg_buff.buffer, impl->send_msg_buff.valid_size));
-    GLOG_TRA("send [%d] [sz:%d] [%s] [%s]", ret, impl->send_msg_buff.valid_size,
-                tosend_msg.path().c_str(), tosend_msg.Debug());
+    GLOG_TRA("send [%d] [%p:%d] [%s]", ret, impl->send_msg_buff.buffer, impl->send_msg_buff.valid_size,
+                tosend_msg.Debug());
 	if (ret){
 		GLOG_SER("tcp send error = %d when send msg to svc:%s buff len:%d",
 			ret, tosend_msg.path().c_str(), impl->send_msg_buff.valid_size);

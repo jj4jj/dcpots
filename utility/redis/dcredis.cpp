@@ -32,14 +32,38 @@ struct RedisAsyncAgentImpl {
     bool                 connected{ false };
     int                  retry_connect{ 0 };
     std::vector<redisAsyncContext *> subscribers;
+    bool                 stop { false };
+    uint32_t             last_reconnect_time = 0;
 };
 
 static std::unordered_map<const redisAsyncContext *, RedisAsyncAgentImpl*>  s_redis_context_map_impl;
 static void disconnectCallback(const redisAsyncContext *c, int status);
+static void connectCallback(const redisAsyncContext *c, int status);
+static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn = nullptr, redisDisconnectCallback ondisconn = nullptr);
+static inline int redis_reconnect(RedisAsyncAgentImpl* impl, bool connect_imidiately = true) {
+    if (impl->rc) {
+        redisAsyncFree(impl->rc);
+        s_redis_context_map_impl.erase(impl->rc);
+        impl->rc = nullptr;
+    }
+    if (!connect_imidiately) {
+        return 0;
+    }
+    impl->rc = redis_create_context(impl, connectCallback, disconnectCallback);
+    if (!impl->rc) {
+        return -1;
+    }
+    ///////////////////////////////////////////////////////////////
+    s_redis_context_map_impl[impl->rc] = impl;
+    return 0;
+}
 static void connectCallback(const redisAsyncContext *c, int status) {
 	if (status != REDIS_OK) {
 		GLOG_ERR("redis connect Error: %s", c->errstr);
-	}
+        s_redis_context_map_impl[c]->connected = false;
+        //reconnect
+        redis_reconnect(s_redis_context_map_impl[c], false);
+    }
 	else {
 		GLOG_IFO("redis Connected...");
         s_redis_context_map_impl[c]->connected = true;
@@ -63,7 +87,7 @@ static void default_disconnectCallback(const redisAsyncContext *c, int status) {
         GLOG_WAR("redis Disconnected...");
     }
 }
-static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn = nullptr, redisDisconnectCallback ondisconn = nullptr){
+static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn, redisDisconnectCallback ondisconn){
     std::vector<std::string> vs;
     dcsutil::strsplit(impl->addrs, ":", vs);
     if (vs.size() != 2){
@@ -95,20 +119,6 @@ static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redi
     }
     return ctx;
 }
-static inline int redis_reconnect(RedisAsyncAgentImpl* impl){
-    if (impl->rc){
-        redisAsyncFree(impl->rc);
-        s_redis_context_map_impl.erase(impl->rc);
-        impl->rc = nullptr;
-    }
-    impl->rc = redis_create_context(impl, connectCallback, disconnectCallback);
-    if (!impl->rc){
-        return -1;
-    }
-    ///////////////////////////////////////////////////////////////
-    s_redis_context_map_impl[impl->rc] = impl;
-    return 0;
-}
 static void disconnectCallback(const redisAsyncContext *c, int status) {
     RedisAsyncAgentImpl * impl = s_redis_context_map_impl[c];
     impl->connected = false;
@@ -118,6 +128,9 @@ static void disconnectCallback(const redisAsyncContext *c, int status) {
 	else {
 		GLOG_WAR("redis Disconnected...");
 	}
+    if (impl->stop) {
+        return;
+    }
     ++impl->retry_connect;
     GLOG_IFO("redis reconnecting times:%d....", impl->retry_connect);
     redis_reconnect(impl);
@@ -128,6 +141,7 @@ int	RedisAsyncAgent::init(const string & addrs){
 	}
 	impl = new RedisAsyncAgentImpl();
     impl->addrs = addrs;
+    impl->stop = false;
     return redis_reconnect(impl);
 }
 static inline void redis_check_time_expired_callback(RedisAsyncAgentImpl * impl){
@@ -146,12 +160,18 @@ static inline void redis_check_time_expired_callback(RedisAsyncAgentImpl * impl)
 	}
 }
 int RedisAsyncAgent::update(){
+    uint32_t time_now = dcsutil::time_unixtime_s();
+    if (time_now > impl->last_reconnect_time + 10) {
+        impl->last_reconnect_time = time_now;
+        redis_reconnect(impl, true);
+    }
 	ev_loop(EV_DEFAULT_ EVRUN_NOWAIT);
 	redis_check_time_expired_callback(impl);
 	return 0;
 }
 int	RedisAsyncAgent::destroy(){
 	if (impl){
+        impl->stop = true;
 		if (impl->rc){
 			redisAsyncFree(impl->rc);
 			impl->rc = nullptr;
@@ -206,7 +226,7 @@ static inline int _command(RedisAsyncAgentImpl * impl, redisAsyncContext* ctx, i
     GLOG_DBG("redis command create param :%p", param);
     int r = redisvAsyncCommand(ctx, _command_callback, param, fmt, ap);
     if (r != REDIS_OK){
-        GLOG_ERR("redis command execute error = %d free :%p ", r, param);
+        GLOG_ERR("redis command execute error = %d free :%p command:%s", r, param, fmt);
         delete param;
         return -1;
     }
@@ -240,6 +260,10 @@ int RedisAsyncAgent::psubscribe(CommandCallBack cb, const char * channel){
 int RedisAsyncAgent::command(CommandCallBack cb, const char * fmt, ...){
     va_list ap;
     va_start(ap, fmt);
+    if (!impl->connected) {
+        GLOG_ERR("redis not connected when excute command:%s", fmt);
+        return -1;
+    }
     int r = _command(impl, impl->rc, 0, cb, fmt, ap);
 	va_end(ap);
 	return r;

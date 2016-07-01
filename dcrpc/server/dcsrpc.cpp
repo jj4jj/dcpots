@@ -42,7 +42,7 @@ static inline int _rpc_send_msg(RpcServerImpl * impl, int id, const dcrpc_msg_t 
         return -1;
     }
     int ret = dctcp_send(impl->stcp_looper, id, dctcp_msg_t(impl->send_buff.buffer, impl->send_buff.valid_size));
-    GLOG_TRA("send [%d] [%d] [%s] [%s] [%p:%d]", ret, id, rpc_msg.path().c_str(),
+    GLOG_TRA("send [%d] [%d] [%s] [%s] [%p:%d]", ret, id, rpc_msg.Debug(),
         rpc_msg.Debug(), impl->send_buff.buffer, impl->send_buff.valid_size);
     if (ret){
         GLOG_SER("rpc reply msg [%s] error:%d !", rpc_msg.Debug(), ret);
