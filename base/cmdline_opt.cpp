@@ -226,4 +226,8 @@ const char *
 cmdline_opt_t::usage(){
 	return _THIS_HANDLE->usage.c_str();
 }
+const std::multimap<std::string, std::string>  &
+cmdline_opt_t::options() const {
+    return _THIS_HANDLE->dict_opts;
+}
 

@@ -6,6 +6,7 @@
 #include<net/if.h>
 #include<arpa/inet.h>
 #include<netinet/in.h>
+#include <dlfcn.h>
 //#include <libgen.h>
 
 namespace {
@@ -41,18 +42,18 @@ namespace {
 };
 
 namespace dcsutil {
-    uint64_t	time_unixtime_us(){
+    uint64_t	time_unixtime_us() {
         timeval tv;
         gettimeofday(&tv, NULL);
         return tv.tv_sec * 1000000 + tv.tv_usec;
     }
 
-    int			daemonlize(int closestd, int chrootdir, const char * pidfile){
+    int			daemonlize(int closestd, int chrootdir, const char * pidfile) {
         //1.try lock file
         int lockfd = -1;
-        if (pidfile){
+        if (pidfile) {
             lockfd = lockfile(pidfile);
-            if (lockfd == -1){
+            if (lockfd == -1) {
                 GLOG_ERR("try lock file:%s error ...", pidfile);
                 exit(-1);
             }
@@ -67,15 +68,15 @@ namespace dcsutil {
         assert("not implement in this platform , using nohup & launch it ?")
             ret = -404;//todo 
 #endif
-        if (pidfile){
+        if (pidfile) {
             int pidget = lockpidfile(pidfile);
-            if (pidget != getpid()){
+            if (pidget != getpid()) {
                 GLOG_ERR("error daemonlization when lockpidfile:%s ret=%d ... errno:%d (%s)",
-                    pidfile, pidget, errno, strerror(errno));
+                         pidfile, pidget, errno, strerror(errno));
                 exit(-2);
             }
         }
-        if (ret){
+        if (ret) {
             GLOG_ERR("error daemonlization ... errno:%d (%s)", errno, strerror(errno));
             exit(ret);
         }
@@ -83,102 +84,108 @@ namespace dcsutil {
     }
     typedef  std::unordered_map<int, std::stack<sah_handler> >	signalh_stacks_t;
     static signalh_stacks_t	s_sigh_stacks;
-    int					signalh_ignore(int sig){
-        return signalh_push(sig, (sah_handler)SIG_DFL);
+    int					signalh_ignore(int sig) {
+        return signalh_set(sig, (sah_handler)SIG_DFL);
     }
-    int					signalh_default(int sig){
-        return signalh_push(sig, (sah_handler)SIG_DFL);
+    int					signalh_default(int sig) {
+        return signalh_set(sig, (sah_handler)SIG_DFL);
     }
-    void				signalh_clear(int sig){
-        if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
+    void				signalh_clear(int sig) {
+        if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()) {
             return;
         }
-        while (!s_sigh_stacks[sig].empty()){
+        while (!s_sigh_stacks[sig].empty()) {
             s_sigh_stacks[sig].pop();
         }
+        signalh_default(sig);
     }
     ////////////////////////////////////////////////////////////////////////
     //typedef void(*sah_handler)(int sig, siginfo_t * sig_info, void * ucontex);
-    int					signalh_push(int sig, sah_handler sah, int sah_flags){
-        if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()){
-            s_sigh_stacks[sig] = std::stack<sah_handler>();
-        }
-        s_sigh_stacks[sig].push((sah_handler)SIG_IGN);
+    int                 signalh_set(int sig, sah_handler sah, int sah_flags) {
         struct sigaction act;
         memset(&act, 0, sizeof(act));
-        act.sa_flags = sah_flags;
         act.sa_sigaction = sah;
         //act.sa_mask = sah_mask;
         act.sa_flags = sah_flags | SA_SIGINFO;
         return sigaction(sig, &act, NULL);
     }
-    sah_handler			signalh_pop(int sig){
+    int					signalh_push(int sig, sah_handler sah, int sah_flags) {
+        if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()) {
+            s_sigh_stacks[sig] = std::stack<sah_handler>();
+        }        
+        int ret = signalh_set(sig, sah, sah_flags);
+        if (ret) {
+            return ret;
+        }
+        s_sigh_stacks[sig].push((sah_handler)sah);
+        return 0;
+    }
+    sah_handler			signalh_pop(int sig) {
         if (s_sigh_stacks.find(sig) == s_sigh_stacks.end() ||
-            s_sigh_stacks[sig].empty()){
+            s_sigh_stacks[sig].empty()) {
             return (sah_handler)SIG_DFL;
-            //s_sigh_stacks[sig] = std::stack<sah_handler>();
         }
         sah_handler sah = s_sigh_stacks[sig].top();
         s_sigh_stacks[sig].pop();
         return sah;
     }
-	bool		file_exists(const std::string & file){
-		FILE * fp = fopen(file.c_str(), "r");
-		fclose(fp);
-		return fp != nullptr;
-	}
-	int			readfile(std::string & content, const std::string & file){
-		char filebuff[512];
-		content.clear();
-		content.reserve(1024 * 8);
-		FILE * fp = fopen(file.c_str(), "r");
-		if (!fp){
-			GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
-			return -1;
-		}
-		while (true){
-			int tsz = fread(filebuff, 1, sizeof(filebuff), fp);
-			if (tsz == sizeof(filebuff)){
-				content.append(filebuff, tsz);
-			}
-			else if (feof(fp)){
-				content.append(filebuff, tsz);
-				fclose(fp);
-				return content.length();
-			}
-			else {
-				GLOG_SER("read file:%s ret:%zd error :%d ", file.c_str(), tsz, errno);
-				fclose(fp);
-				return -2;
-			}
-		}
-		return -3;
-	}
-    int			readfile(const std::string & file, char * buffer, size_t sz){
-		FILE * fp = fopen(file.c_str(), "r");
-        if (!fp){
+    bool		file_exists(const std::string & file) {
+        FILE * fp = fopen(file.c_str(), "r");
+        fclose(fp);
+        return fp != nullptr;
+    }
+    int			readfile(std::string & content, const std::string & file) {
+        char filebuff[512];
+        content.clear();
+        content.reserve(1024 * 8);
+        FILE * fp = fopen(file.c_str(), "r");
+        if (!fp) {
             GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
             return -1;
         }
-		if (sz == 0 || !buffer){
-			fclose(fp);
-			return 0; //file exists
-		}
-		size_t tsz = fread(buffer, 1, sz, fp);
-		if (feof(fp)){
-			if (tsz < sz){
-				buffer[tsz] = 0;
-			}
-			fclose(fp);
-			return tsz;
-		} 
-		GLOG_SER("read file:%s error :%d total sz:%zu", file.c_str(), errno, tsz);
-		fclose(fp);
-		return -2;
-	}
-    size_t      filesize(const std::string & file){
+        while (true) {
+            int tsz = fread(filebuff, 1, sizeof(filebuff), fp);
+            if (tsz == sizeof(filebuff)) {
+                content.append(filebuff, tsz);
+            }
+            else if (feof(fp)) {
+                content.append(filebuff, tsz);
+                fclose(fp);
+                return content.length();
+            }
+            else {
+                GLOG_SER("read file:%s ret:%zd error :%d ", file.c_str(), tsz, errno);
+                fclose(fp);
+                return -2;
+            }
+        }
+        return -3;
+    }
+    int			readfile(const std::string & file, char * buffer, size_t sz) {
         FILE * fp = fopen(file.c_str(), "r");
-        if (!fp){
+        if (!fp) {
+            GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
+            return -1;
+        }
+        if (sz == 0 || !buffer) {
+            fclose(fp);
+            return 0; //file exists
+        }
+        size_t tsz = fread(buffer, 1, sz, fp);
+        if (feof(fp)) {
+            if (tsz < sz) {
+                buffer[tsz] = 0;
+            }
+            fclose(fp);
+            return tsz;
+        }
+        GLOG_SER("read file:%s error :%d total sz:%zu", file.c_str(), errno, tsz);
+        fclose(fp);
+        return -2;
+    }
+    size_t      filesize(const std::string & file) {
+        FILE * fp = fopen(file.c_str(), "r");
+        if (!fp) {
             return 0;//not exist 
         }
         fseek(fp, 0L, SEEK_END);
@@ -186,10 +193,7 @@ namespace dcsutil {
         fclose(fp);
         return sz;
     }
-    const char *		path_base(const char * path){
-        //#define MAX_PATH_LENGTH	 256
-        //char path_buff[MAX_PATH_LENGTH] = { 0 };
-        //strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
+    const char *		path_base(const char * path) {
         return basename(path);
     }
 #if 0
@@ -207,158 +211,158 @@ namespace dcsutil {
         return dirname(path_buff);
     }
 #endif
-    int			writefile(const std::string & file, const char * buffer, size_t sz){
+    int			writefile(const std::string & file, const char * buffer, size_t sz) {
         FILE * fp = fopen(file.c_str(), "w");
-        if (!fp){
+        if (!fp) {
             GLOG_SER("open file %s e!", file.c_str());
             return -1;
         }
-        if (sz == 0){
+        if (sz == 0) {
             sz = strlen(buffer);
         }
         size_t tsz = fwrite(buffer, 1, sz, fp);
-		fclose(fp);
-        if (tsz == sz){
-			return tsz;
+        fclose(fp);
+        if (tsz == sz) {
+            return tsz;
         }
         else {
             GLOG_SER("write file:%s writed:%zu error :%d total sz:%zu", file.c_str(), tsz, errno, sz);
-			return -2;
+            return -2;
         }
     }
-	//write size , return > 0 wirte size, <= 0 error
-	static inline	int  _writefd(int fd, const char * buffer, size_t sz, int timeout_ms){
-		if (fd < 0 || sz == 0){ return -1; }
-		size_t tsz = 0;
-		int n = 0;
-		while (sz > tsz && (n = write(fd, buffer + tsz, sz - tsz))){
-			if (n > 0){
-				tsz += n;
-			}
-			else  if (errno != EINTR){
-				if (errno == EAGAIN || errno == EWOULDBLOCK){
-					if (waitfd_writable(fd, timeout_ms)){
-						GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
-						return -1;
-					}
-				}
-				else {
-					GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
-					return -2;
-				}
-			}
-		}
-		return tsz;
-	}
-	//file://<path>
+    //write size , return > 0 wirte size, <= 0 error
+    static inline	int  _writefd(int fd, const char * buffer, size_t sz, int timeout_ms) {
+        if (fd < 0 || sz == 0) { return -1; }
+        size_t tsz = 0;
+        int n = 0;
+        while (sz > tsz && (n = write(fd, buffer + tsz, sz - tsz))) {
+            if (n > 0) {
+                tsz += n;
+            }
+            else  if (errno != EINTR) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    if (waitfd_writable(fd, timeout_ms)) {
+                        GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
+                        return -1;
+                    }
+                }
+                else {
+                    GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
+                    return -2;
+                }
+            }
+        }
+        return tsz;
+    }
+    //file://<path>
     //tcp://<ip:port>
     //udp://<ip:port>
-	//mode:r:listen/w:connect
-    int                 openfd(const std::string & uri, const char * mode, int timeout_ms){
-        if (uri.find("file://") == 0){ //+7
+    //mode:r:listen/w:connect
+    int                 openfd(const std::string & uri, const char * mode, int timeout_ms) {
+        if (uri.find("file://") == 0) { //+7
             int fd = open(uri.substr(7).c_str(), O_CREAT | O_RDWR);
-            if (fd >= 0){
+            if (fd >= 0) {
                 nonblockfd(fd, true);
             }
             return fd;
         }
-		else if (uri.find("tcp://") == 0){//+6
-			const char * skaddr = uri.substr(6).c_str();
-			sockaddr_in iaddr;
-			int ret = socknetaddr(iaddr, skaddr);
-			if (ret){
-				GLOG_ERR("error tcp address:%s", skaddr);
-				return -1;
-			}
-			int fd = socket(AF_INET, SOCK_STREAM, 0);
-			if (fd < 0){
-				GLOG_SER("create sock stream error !");
-				return -2;
-			}
-			socklen_t len = sizeof(sockaddr_in);
-			nonblockfd(fd, true);
-			if (strcmp(mode, "w") == 0){
-				ret = connect(fd, (struct sockaddr*)&iaddr, len);
-				if (ret){
-					if (errno == EINPROGRESS){
-						ret = waitfd_writable(fd, timeout_ms);
-					}
-					if (ret){
-						GLOG_SER("connect addr:%s error !", skaddr);
-						close(fd);
-						return -3;
-					}
-				}
-			}
-			else {
-				ret = bind(fd, (struct sockaddr*)&iaddr, len);
-				if (ret){
-					GLOG_SER("bind addr:%s error !", skaddr);
-					close(fd);
-					return -4;
-				}
-				ret = listen(fd, 1024);
-				if (ret){
-					GLOG_SER("listen addr:%s error !", skaddr);
-					close(fd);
-					return -5;
-				}
-			}
-            return fd;
-        }
-        else if (uri.find("udp://") == 0){//+6
-            const char * connaddr = uri.substr(6).c_str();
+        else if (uri.find("tcp://") == 0) {//+6
+            const char * skaddr = uri.substr(6).c_str();
             sockaddr_in iaddr;
-            int ret = socknetaddr(iaddr, connaddr);
-            if (ret){
-                GLOG_ERR("error net udp address:%s", connaddr);
+            int ret = socknetaddr(iaddr, skaddr);
+            if (ret) {
+                GLOG_ERR("error tcp address:%s", skaddr);
                 return -1;
             }
-            int fd = socket(AF_INET, SOCK_DGRAM, 0);
-            if (fd < 0){
+            int fd = socket(AF_INET, SOCK_STREAM, 0);
+            if (fd < 0) {
                 GLOG_SER("create sock stream error !");
                 return -2;
             }
             socklen_t len = sizeof(sockaddr_in);
             nonblockfd(fd, true);
-			if (strcmp(mode, "w") == 0){
-				ret = connect(fd, (struct sockaddr*)&iaddr, len);
-				if (ret){
-					GLOG_SER("udp bind addr:%s error !", connaddr);
-					close(fd);
-					return -3;
-				}
-			}
-			else {
-				ret = bind(fd, (struct sockaddr*)&iaddr, len);
-				if (ret){
-					GLOG_SER("udp bind addr:%s error !", connaddr);
-					close(fd);
-					return -4;
-				}
-			}
+            if (strcmp(mode, "w") == 0) {
+                ret = connect(fd, (struct sockaddr*)&iaddr, len);
+                if (ret) {
+                    if (errno == EINPROGRESS) {
+                        ret = waitfd_writable(fd, timeout_ms);
+                    }
+                    if (ret) {
+                        GLOG_SER("connect addr:%s error !", skaddr);
+                        close(fd);
+                        return -3;
+                    }
+                }
+            }
+            else {
+                ret = bind(fd, (struct sockaddr*)&iaddr, len);
+                if (ret) {
+                    GLOG_SER("bind addr:%s error !", skaddr);
+                    close(fd);
+                    return -4;
+                }
+                ret = listen(fd, 1024);
+                if (ret) {
+                    GLOG_SER("listen addr:%s error !", skaddr);
+                    close(fd);
+                    return -5;
+                }
+            }
             return fd;
         }
-        else if (uri.find("http://") == 0){//7
+        else if (uri.find("udp://") == 0) {//+6
+            const char * connaddr = uri.substr(6).c_str();
+            sockaddr_in iaddr;
+            int ret = socknetaddr(iaddr, connaddr);
+            if (ret) {
+                GLOG_ERR("error net udp address:%s", connaddr);
+                return -1;
+            }
+            int fd = socket(AF_INET, SOCK_DGRAM, 0);
+            if (fd < 0) {
+                GLOG_SER("create sock stream error !");
+                return -2;
+            }
+            socklen_t len = sizeof(sockaddr_in);
+            nonblockfd(fd, true);
+            if (strcmp(mode, "w") == 0) {
+                ret = connect(fd, (struct sockaddr*)&iaddr, len);
+                if (ret) {
+                    GLOG_SER("udp bind addr:%s error !", connaddr);
+                    close(fd);
+                    return -3;
+                }
+            }
+            else {
+                ret = bind(fd, (struct sockaddr*)&iaddr, len);
+                if (ret) {
+                    GLOG_SER("udp bind addr:%s error !", connaddr);
+                    close(fd);
+                    return -4;
+                }
+            }
+            return fd;
+        }
+        else if (uri.find("http://") == 0) {//7
             std::vector<string> vs;
             strsplit(uri.substr(7), "/", vs, true, 2);
-            if (vs.empty()){
+            if (vs.empty()) {
                 GLOG_ERR("uri path is error :%s", uri.c_str());
                 return -1;
             }
             std::vector<string> tcpvs;
             strsplit(vs[0], ":", tcpvs);
             string tcpuri = "tcp://" + vs[0];
-            if (tcpvs.size() < 2){
+            if (tcpvs.size() < 2) {
                 tcpuri += ":80";//default
             }
             int fd = openfd(tcpuri, "w", timeout_ms);
-            if (fd < 0){
+            if (fd < 0) {
                 GLOG_ERR("open tcp uri error:%s http uri:%s", tcpuri.c_str(), uri.c_str());
                 return -2;
             }
             string httpget = "GET /";
-            if (vs.size() == 2){
+            if (vs.size() == 2) {
                 httpget += vs[1];
             }
             httpget += " HTTP/1.1\r\n";
@@ -367,7 +371,7 @@ namespace dcsutil {
             httpget += tcpvs[0];
             httpget += "\r\n\r\n";
             int ret = _writefd(fd, httpget.data(), httpget.length(), timeout_ms);
-            if (ret != (int)httpget.length()){
+            if (ret != (int)httpget.length()) {
                 GLOG_ERR("write http get request:%s error ret:%d", httpget.c_str(), ret);
                 closefd(fd);
                 return -3;
@@ -380,16 +384,16 @@ namespace dcsutil {
         }
         return -2;
     }
-    static inline int _readfd(int fd, char * buffer, size_t sz, int timeout_ms){
+    static inline int _readfd(int fd, char * buffer, size_t sz, int timeout_ms) {
         int n = 0;
         size_t tsz = 0;
-        while ((sz > tsz) && (n = read(fd, buffer + tsz, sz - tsz))){
-            if (n > 0){
+        while ((sz > tsz) && (n = read(fd, buffer + tsz, sz - tsz))) {
+            if (n > 0) {
                 tsz += n;
             }
-            else if (errno != EINTR){
-                if (errno == EAGAIN || errno == EWOULDBLOCK){//
-                    if (waitfd_readable(fd, timeout_ms)){
+            else if (errno != EINTR) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {//
+                    if (waitfd_readable(fd, timeout_ms)) {
                         GLOG_ERR("read fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
                         return -1;
                     }
@@ -403,63 +407,63 @@ namespace dcsutil {
         return tsz;
     }
     //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
-	int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms){
-        if (sz == 0 || !buffer || fd < 0 ||!mode){
+    int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms) {
+        if (sz == 0 || !buffer || fd < 0 || !mode) {
             return 0;
         }
-        if (strstr(mode, "size") == mode){
+        if (strstr(mode, "size") == mode) {
             //just read sz or end
             size_t tsz = _readfd(fd, buffer, sz, timeout_ms);
-            if (sz != tsz){
+            if (sz != tsz) {
                 GLOG_ERR("read fd:%d size sz:%zd tsz:%zd not match !", fd, sz, tsz);
                 return -1;
             }
             return tsz;
         }
-        else if (strstr(mode, "end")){
+        else if (strstr(mode, "end")) {
             return _readfd(fd, buffer, sz, timeout_ms);
         }
-        else if (strstr(mode, "msg:")){
+        else if (strstr(mode, "msg:")) {
             //read 32
             int    nrsz = 0;
             int szlen = 0;
-            if (strstr(mode, ":sz32")){
+            if (strstr(mode, ":sz32")) {
                 szlen = sizeof(uint32_t);
             }
-            else if (strstr(mode, ":sz16")){
+            else if (strstr(mode, ":sz16")) {
                 szlen = sizeof(uint16_t);
             }
-            else if (strstr(mode, ":sz8")){
+            else if (strstr(mode, ":sz8")) {
                 szlen = sizeof(uint8_t);
             }
             else {
                 GLOG_ERR("read fd:%d error mode:%s", fd, mode);
                 return -1;
             }
-            if (_readfd(fd, (char *)&nrsz, szlen, timeout_ms) != szlen){
+            if (_readfd(fd, (char *)&nrsz, szlen, timeout_ms) != szlen) {
                 GLOG_ERR("read fd:%d size16 head error !", fd);
                 return -2;
             }
-            if (szlen == 16){
+            if (szlen == 16) {
                 nrsz = ntohs(nrsz);
             }
-            else if (szlen == 32){
+            else if (szlen == 32) {
                 nrsz = ntohl(nrsz);
             }
-			nrsz -= szlen;
-            if ((int)sz < nrsz){
+            nrsz -= szlen;
+            if ((int)sz < nrsz) {
                 GLOG_ERR("read fd:%d buffer size:%d not enough %zd  ", fd, nrsz, sz);
                 return -3;
             }
-            if (_readfd(fd, buffer, nrsz, timeout_ms) != nrsz){
+            if (_readfd(fd, buffer, nrsz, timeout_ms) != nrsz) {
                 GLOG_ERR("read fd:%d buffer data erorr size:%d", fd, nrsz);
                 return -4;
             }
             return nrsz + szlen;
         }
-        else if (strstr(mode, "token:") == mode){
+        else if (strstr(mode, "token:") == mode) {
             const char * sep = mode + 6;
-            if (!*sep){ //blocksz == 0
+            if (!*sep) { //blocksz == 0
                 GLOG_ERR("error mode:%s", mode);
                 return -1;
             }
@@ -468,22 +472,22 @@ namespace dcsutil {
             int blocksz = strlen(sep);
             int rdz = 0;
             int matchnum = 0;
-            while (true){
+            while (true) {
                 rdz = _readfd(fd, buffer + nrsz, blocksz, timeout_ms);
-                if (rdz < 0){
+                if (rdz < 0) {
                     GLOG_ERR("read fd:%d ret:%d error !", fd, rdz);
                     return rdz;
                 }
                 nrsz += rdz;
                 //=============
-                if (rdz == 0){
+                if (rdz == 0) {
                     return nrsz;
                 }
                 matchnum = 0; //matched num
-                while (matchnum < seplen && *(buffer + nrsz - rdz + matchnum) == *(sep + matchnum)){
+                while (matchnum < seplen && *(buffer + nrsz - rdz + matchnum) == *(sep + matchnum)) {
                     ++matchnum;
                 }
-                if (matchnum == seplen){ //matched all
+                if (matchnum == seplen) { //matched all
                     return nrsz;
                 }
                 blocksz = seplen - matchnum;
@@ -495,118 +499,118 @@ namespace dcsutil {
         }
     }
 
-	//mode: msg:sz32/16/8, token:\r\n\r\n , return > 0 write size, = 0 end, < 0 error
-	int         writefd(int fd, const char * buffer, size_t sz, const char * mode, int timeout_ms){
-		if (fd < 0){ return -1; }
-		if (sz == 0){
-			sz = strlen(buffer);
-		}
-		if (strstr(mode, "msg:") == mode){
-			//read 32
-			size_t nwsz = sz;
-			int szlen = 0;
-			if (strstr(mode, ":sz32")){
-				szlen = sizeof(uint32_t);
-				nwsz = UINT_MAX;
-			}
-			else if (strstr(mode, ":sz16")){
-				szlen = sizeof(uint16_t);
-				nwsz = USHRT_MAX;
-			}
-			else if (strstr(mode, ":sz8")){
-				szlen = sizeof(uint8_t);
-				nwsz = UCHAR_MAX;
-			}
-			else {
-				GLOG_ERR("write fd:%d error mode:%s", fd, mode);
-				return -1;
-			}
-			if (sz > nwsz){
-				GLOG_ERR("write fd:%d buffer size:%d not enough %zd  ", fd, nwsz, sz);
-				return -3;
-			}
+    //mode: msg:sz32/16/8, token:\r\n\r\n , return > 0 write size, = 0 end, < 0 error
+    int         writefd(int fd, const char * buffer, size_t sz, const char * mode, int timeout_ms) {
+        if (fd < 0) { return -1; }
+        if (sz == 0) {
+            sz = strlen(buffer);
+        }
+        if (strstr(mode, "msg:") == mode) {
+            //read 32
+            size_t nwsz = sz;
+            int szlen = 0;
+            if (strstr(mode, ":sz32")) {
+                szlen = sizeof(uint32_t);
+                nwsz = UINT_MAX;
+            }
+            else if (strstr(mode, ":sz16")) {
+                szlen = sizeof(uint16_t);
+                nwsz = USHRT_MAX;
+            }
+            else if (strstr(mode, ":sz8")) {
+                szlen = sizeof(uint8_t);
+                nwsz = UCHAR_MAX;
+            }
+            else {
+                GLOG_ERR("write fd:%d error mode:%s", fd, mode);
+                return -1;
+            }
+            if (sz > nwsz) {
+                GLOG_ERR("write fd:%d buffer size:%d not enough %zd  ", fd, nwsz, sz);
+                return -3;
+            }
 
-			nwsz = szlen + sz;
-			if (szlen == 16){
-				nwsz = htons(nwsz);
-			}
-			else if (szlen == 32){
-				nwsz = htonl(nwsz);
-			}
-			int n = _writefd(fd, (const char *)&nwsz, szlen, timeout_ms);
-			if (n != szlen){
-				GLOG_ERR("write fd:%d buffer head size:%d write sz error ret:%d",
-					fd, szlen, n);
-				return -4;
-			}
-			n = _writefd(fd, buffer, sz, timeout_ms);
-			if ((size_t)n != sz){
-				GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
-					fd, sz, n);
-				return -5;
-			}
-			return szlen + sz;
-		}
-		else if (strstr(mode, "token:") == mode){
-			const char * sep = mode + 6;
-			if (!*sep){ //blocksz == 0
-				GLOG_ERR("write fd:%d error mode:%s",fd, mode);
-				return -1;
-			}
-			int n = _writefd(fd, buffer, sz, timeout_ms);
-			if ((size_t)n != sz){
-				GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
-					fd, sz, n);
-				return -2;
-			}
-			int seplen = strlen(sep);
-			n = _writefd(fd, sep, seplen, timeout_ms);
-			if (n != seplen){
-				GLOG_ERR("write fd:%d buffer token size:%d write sz error ret:%d",
-					fd, sz, n);
-				return -3;
-			}
-			return seplen + sz;
-		}
-		else {
-			return _writefd(fd, buffer, sz, timeout_ms);
-		}
-	}
-    int        closefd(int fd){
+            nwsz = szlen + sz;
+            if (szlen == 16) {
+                nwsz = htons(nwsz);
+            }
+            else if (szlen == 32) {
+                nwsz = htonl(nwsz);
+            }
+            int n = _writefd(fd, (const char *)&nwsz, szlen, timeout_ms);
+            if (n != szlen) {
+                GLOG_ERR("write fd:%d buffer head size:%d write sz error ret:%d",
+                         fd, szlen, n);
+                return -4;
+            }
+            n = _writefd(fd, buffer, sz, timeout_ms);
+            if ((size_t)n != sz) {
+                GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
+                         fd, sz, n);
+                return -5;
+            }
+            return szlen + sz;
+        }
+        else if (strstr(mode, "token:") == mode) {
+            const char * sep = mode + 6;
+            if (!*sep) { //blocksz == 0
+                GLOG_ERR("write fd:%d error mode:%s", fd, mode);
+                return -1;
+            }
+            int n = _writefd(fd, buffer, sz, timeout_ms);
+            if ((size_t)n != sz) {
+                GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
+                         fd, sz, n);
+                return -2;
+            }
+            int seplen = strlen(sep);
+            n = _writefd(fd, sep, seplen, timeout_ms);
+            if (n != seplen) {
+                GLOG_ERR("write fd:%d buffer token size:%d write sz error ret:%d",
+                         fd, sz, n);
+                return -3;
+            }
+            return seplen + sz;
+        }
+        else {
+            return _writefd(fd, buffer, sz, timeout_ms);
+        }
+    }
+    int        closefd(int fd) {
         int ret = close(fd);
-        if (ret){
+        if (ret) {
             GLOG_ERR("close fd:%d error !", fd);
         }
         return ret;
     }
-    bool        isnonblockfd(int fd){
+    bool        isnonblockfd(int fd) {
         int flags = fcntl(fd, F_GETFL, 0);
-        if (flags < 0){
+        if (flags < 0) {
             return false;
         }
-        if (flags & O_NONBLOCK){
+        if (flags & O_NONBLOCK) {
             return true;
         }
         return false;
     }
-    int         nonblockfd(int fd, bool nonblock){
+    int         nonblockfd(int fd, bool nonblock) {
         int flags = fcntl(fd, F_GETFL, 0);
-        if (flags < 0){
+        if (flags < 0) {
             return -1;
         }
-        if (nonblock){
+        if (nonblock) {
             flags |= O_NONBLOCK;
         }
-        else{
+        else {
             flags &= ~(O_NONBLOCK);
         }
-        if (fcntl(fd, F_SETFL, flags) < 0){
+        if (fcntl(fd, F_SETFL, flags) < 0) {
             return -1;
         }
         return 0;
     }
     //return 0: readable , other error occurs
-    int         waitfd_readable(int fd, int timeout_ms){
+    int         waitfd_readable(int fd, int timeout_ms) {
         fd_set fdset;
         FD_ZERO(&fdset);
         FD_SET(fd, &fdset);
@@ -614,40 +618,40 @@ namespace dcsutil {
         tv.tv_sec = timeout_ms / 1000;
         tv.tv_usec = (timeout_ms % 1000) * 1000;
         int ret = select(fd + 1, &fdset, NULL, NULL, &tv);
-        if (ret > 0){
+        if (ret > 0) {
             assert(FD_ISSET(fd, &fdset));
             return 0;
         }
         return -1;
     }
-    int         socknetaddr(sockaddr_in & addr, const std::string & saddr){
+    int         socknetaddr(sockaddr_in & addr, const std::string & saddr) {
         memset(&addr, 0, sizeof(addr));
         addr.sin_addr.s_addr = 0;
         addr.sin_family = AF_INET;
         addr.sin_port = 0;
         std::vector<string> vs;
         strsplit(saddr, ":", vs);
-        if (strisint(vs[0])){
+        if (strisint(vs[0])) {
             addr.sin_addr.s_addr = stol(vs[0]);
         }
         uint32_t a, b, c, d;
-        if (sscanf(vs[0].c_str(), "%u.%u.%u.%u", &a, &b, &c, &d) == 4){
+        if (sscanf(vs[0].c_str(), "%u.%u.%u.%u", &a, &b, &c, &d) == 4) {
             //net order = big endia order 
             addr.sin_addr.s_addr = a | (b << 8) | (c << 16) | (d << 24);
         }
         else { //must be a domainname
             int num = 1;
-            if (ipfromhostname(&addr.sin_addr.s_addr, num, vs[0])){
+            if (ipfromhostname(&addr.sin_addr.s_addr, num, vs[0])) {
                 GLOG_ERR("get host name error first name:%s hostname:%s", vs[0].c_str(), saddr.c_str());
                 return -1;
             }
         }
-        if (vs.size() == 2){
+        if (vs.size() == 2) {
             addr.sin_port = htons(stoi(vs[1]));
         }
         return 0;
     }
-    int         ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const std::string & hostname){
+    int         ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const std::string & hostname) {
         int nmaxip = ipnum;
         ipnum = 0;
         struct hostent hosts;
@@ -655,74 +659,74 @@ namespace dcsutil {
         int h_errnop;
         char buffer[512];
         int ret = gethostbyname_r(hostname.c_str(),
-            &hosts, buffer, sizeof(buffer),
-            &result, &h_errnop);
-        if (ret){
+                                  &hosts, buffer, sizeof(buffer),
+                                  &result, &h_errnop);
+        if (ret) {
             GLOG_ERR("gethost by name error :%s ", hstrerror(h_errnop));
             return -1;
         }
-        while (ipnum < nmaxip && result->h_addr_list[ipnum]){
+        while (ipnum < nmaxip && result->h_addr_list[ipnum]) {
             *ip = *(uint32_t*)result->h_addr_list[ipnum];
             ++ipnum;
         }
         return 0;
     }
-    uint32_t    localhost_getipv4(const char * nic){
+    uint32_t    localhost_getipv4(const char * nic) {
         struct ifreq _temp;
         struct sockaddr_in *soaddr;
         int fd = 0;
         int ret = -1;
         strcpy(_temp.ifr_name, nic);
-        if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0){
+        if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
             return 0;
         }
         ret = ioctl(fd, SIOCGIFADDR, &_temp);
         close(fd);
-        if (ret < 0){
+        if (ret < 0) {
             return 0;
         }
         soaddr = (struct sockaddr_in *)&(_temp.ifr_addr);
         return soaddr->sin_addr.s_addr;
     }
-    string      stripfromu32v4(uint32_t ip){
+    string      stripfromu32v4(uint32_t ip) {
         char tmpbuff[64] = { 0 };
-        if (nullptr == inet_ntop(AF_INET, &ip, tmpbuff, sizeof(tmpbuff))){
+        if (nullptr == inet_ntop(AF_INET, &ip, tmpbuff, sizeof(tmpbuff))) {
             return "";
         }
         return string(tmpbuff);
     }
-    uint32_t    u32fromstripv4(const string & ip){
+    uint32_t    u32fromstripv4(const string & ip) {
         uint32_t uip;
-        if (1 == inet_pton(AF_INET, ip.c_str(), &uip)){
+        if (1 == inet_pton(AF_INET, ip.c_str(), &uip)) {
             return uip;
         }
         return 0;
     }
-    string      host_getmac(const char * nic){
+    string      host_getmac(const char * nic) {
         struct ifreq _temp;
         char mac_addr[64] = { 0 };
         int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0){
+        if (sockfd < 0) {
             return "";
         }
         memset(&_temp, 0, sizeof(struct ifreq));
         strncpy(_temp.ifr_name, nic, sizeof(_temp.ifr_name) - 1);
-        if ((ioctl(sockfd, SIOCGIFHWADDR, &_temp)) < 0){
+        if ((ioctl(sockfd, SIOCGIFHWADDR, &_temp)) < 0) {
             close(sockfd);
             return "";
         }
         close(sockfd);
         snprintf(mac_addr, sizeof(mac_addr)-1, "%02x%02x%02x%02x%02x%02x",
-            (unsigned char)_temp.ifr_hwaddr.sa_data[0],
-            (unsigned char)_temp.ifr_hwaddr.sa_data[1],
-            (unsigned char)_temp.ifr_hwaddr.sa_data[2],
-            (unsigned char)_temp.ifr_hwaddr.sa_data[3],
-            (unsigned char)_temp.ifr_hwaddr.sa_data[4],
-            (unsigned char)_temp.ifr_hwaddr.sa_data[5]);
+                 (unsigned char)_temp.ifr_hwaddr.sa_data[0],
+                 (unsigned char)_temp.ifr_hwaddr.sa_data[1],
+                 (unsigned char)_temp.ifr_hwaddr.sa_data[2],
+                 (unsigned char)_temp.ifr_hwaddr.sa_data[3],
+                 (unsigned char)_temp.ifr_hwaddr.sa_data[4],
+                 (unsigned char)_temp.ifr_hwaddr.sa_data[5]);
         return mac_addr;
     }
 
-    int         waitfd_writable(int fd, int timeout_ms){
+    int         waitfd_writable(int fd, int timeout_ms) {
         fd_set fdset;
         FD_ZERO(&fdset);
         FD_SET(fd, &fdset);
@@ -730,49 +734,49 @@ namespace dcsutil {
         tv.tv_sec = timeout_ms / 1000;
         tv.tv_usec = (timeout_ms % 1000) * 1000;
         int ret = select(fd + 1, NULL, &fdset, NULL, &tv);
-        if (ret > 0){
+        if (ret > 0) {
             assert(FD_ISSET(fd, &fdset));
             return 0;
         }
         return -1;
     }
-    int                 lockfile(const std::string & file, bool nb){
+    int                 lockfile(const std::string & file, bool nb) {
         int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
         if (fd == -1) {
             GLOG_ERR("open file:%s error ", file.c_str());
             return -1;
         }
         int flags = LOCK_EX;
-        if (nb){
+        if (nb) {
             flags |= LOCK_NB;
         }
-        if (flock(fd, flags)){
+        if (flock(fd, flags)) {
             close(fd);
             return -1;
         }
         return fd;
     }
-    int                 unlockfile(int fd){
+    int                 unlockfile(int fd) {
         int ret = flock(fd, LOCK_UN);
         close(fd);
         return ret;
     }
-    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd, bool notify){
+    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd, bool notify) {
         int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
         if (fd == -1) {
             GLOG_ERR("open file:%s error ", file.c_str());
             return -1;
         }
         int flags = LOCK_EX;
-        if (nb){
+        if (nb) {
             flags |= LOCK_NB;
         }
         char szpid[16] = { 0 };
         int pid = 0;
         while (flock(fd, flags) == -1) {
-            if (pid == 0){ //just read once
+            if (pid == 0) { //just read once
                 int n = readfile(file, szpid, sizeof(szpid));
-                if (n > 0){
+                if (n > 0) {
                     pid = strtol(szpid, NULL, 10);
                     if (kill_other_sig == 0) {
                         GLOG_ERR("lock pidfile:%s fail , the file is held by pid %d", file.c_str(), pid);
@@ -782,10 +786,10 @@ namespace dcsutil {
                     GLOG_ERR("lock pidfile:%s fail but read pid from file error !", file.c_str());
                 }
             }
-            if (pid > 0 && kill_other_sig > 0){
+            if (pid > 0 && kill_other_sig > 0) {
                 int ret = kill(pid, kill_other_sig);
-                if (ret == 0){
-                    if(notify){
+                if (ret == 0) {
+                    if (notify) {
                         GLOG_WAR("send the pidfile locker:%d by signal:%d", pid, kill_other_sig);
                         return pid;
                     }
@@ -793,7 +797,7 @@ namespace dcsutil {
                         usleep(1000 * 100);//100ms
                     }
                 }
-                if (ret && errno == ESRCH){ //killed process
+                if (ret && errno == ESRCH) { //killed process
                     GLOG_WAR("killed the pidfile locker:%d by signal:%d", pid, kill_other_sig);
                     break;
                 }
@@ -807,8 +811,43 @@ namespace dcsutil {
         pid = getpid();
         snprintf(szpid, sizeof(szpid), "%d", pid);
         writefile(file, szpid);
-        if (pfd){ *pfd = fd; }
+        if (pfd) { *pfd = fd; }
         return pid;
+    }
+    static inline size_t hash_dbj2(const char * str, size_t n) {
+        size_t hash = 5381;
+        int c;
+        if (n > 0) {
+            while ((c = *str++) && n--)
+                hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+        }
+        else {
+            while ((c = *str++))
+                hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+        }
+        return hash;
+    }
+    static inline size_t hash_sdbm(const char * str, size_t n) {
+        size_t hash = 0;
+        int c;
+        if (n > 0) {
+            while ((c = *str++) && n--)
+                hash = c + (hash << 6) + (hash << 16) - hash;
+        }
+        else {
+            while ((c = *str++))
+                hash = c + (hash << 6) + (hash << 16) - hash;
+        }
+        return hash;
+    }
+
+    size_t      strhash(const std::string & buff, str_hash_strategy st) {
+        switch (st) {
+        case hash_str_sdbm:
+        return hash_sdbm(buff.data(), buff.length());
+        default:
+        return hash_dbj2(buff.data(), buff.length());
+        }
     }
     int			strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs,
         bool ignore_empty, int maxsplit, int beg_, int end_){
@@ -1133,6 +1172,34 @@ namespace dcsutil {
         }
         return 0;
     }
+    /*
+
+       void *dlopen(const char *filename, int flag);
+
+       char *dlerror(void);
+
+       void *dlsym(void *handle, const char *symbol);
+
+       int dlclose(void *handle);
+    */
+    //////////////////////////////////////////////////////////////////////////////
+    void    *           dllopen(const char * file, int flag) {
+        if (flag == 0) {
+            flag = RTLD_LAZY;
+        }
+        return dlopen(file, flag);
+    }
+    void    *           dllsym(void * dll, const char * sym) {
+        return dlsym(dll, sym);
+    }
+    int                 dllclose(void * dll) {
+        return dlclose(dll);
+    }
+    const char *        dllerror() {
+        return dlerror();
+    }
+
+
     //////////////////////////////////////////////////////////////////////////////
     size_t              prime_n(std::vector<size_t> & pn){
         return pn.size();

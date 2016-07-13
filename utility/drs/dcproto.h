@@ -28,6 +28,8 @@ google::protobuf::Message *
 void            protobuf_free_msg(google::protobuf::Message *);
 const google::protobuf::Descriptor *
                 protobuf_find_desc(const std::string & full_name);
+void            protobuf_msg_fill_default(google::protobuf::Message *);
+
 
 typedef void(*sax_event_cb_t)(const string & name, const google::protobuf::Message & msg, int idx, int level, void *ud, protobuf_sax_event_type evt);
 void			protobuf_msg_sax(const string & name, const google::protobuf::Message & msg, sax_event_cb_t fn, void *ud, int level = 0, bool default_init = true);
@@ -44,8 +46,12 @@ int             protobuf_msg_to_json_string(const google::protobuf::Message & ms
 int             protobuf_msg_from_json_string(google::protobuf::Message & msg, const std::string & json, std::string & error);
 
 
+int             protobuf_msg_to_msgb_file(const google::protobuf::Message & msg, const std::string & jsonfile);
+int             protobuf_msg_from_msgb_file(google::protobuf::Message & msg, const std::string & jsonfile);
+
 std::string		protobuf_msg_field_get_value(const google::protobuf::Message & msg, const string & name, int idx);
 int				protobuf_msg_field_set_value(google::protobuf::Message & msg, const string & name, int idx, const string & value, string & error);
+int				protobuf_msg_field_path_set_value(google::protobuf::Message & msg, const string & name, int idx, const string & value, string & error);
 
 ////////////////////////////////////////////////////////////////
 NS_END()

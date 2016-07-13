@@ -1,9 +1,9 @@
 #pragma once
-#include "3rd/rapidjson/document.h"
-#include "3rd/rapidjson/filereadstream.h"
-#include "3rd/rapidjson/filewritestream.h"
-#include "3rd/rapidjson/error/en.h"
-#include "3rd/rapidjson/stringbuffer.h"
+#include "../../3rd/rapidjson/document.h"
+#include "../../3rd/rapidjson/filereadstream.h"
+#include "../../3rd/rapidjson/filewritestream.h"
+#include "../../3rd/rapidjson/error/en.h"
+#include "../../3rd/rapidjson/stringbuffer.h"
 #include "../../3rd/rapidjson/prettywriter.h"
 #include "../../3rd/rapidjson/reader.h"
 #include "../../3rd/rapidjson/pointer.h"	//getter,setter by path(pointer)

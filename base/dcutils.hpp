@@ -1,8 +1,5 @@
 #pragma  once
 #include "stdinc.h"
-//#include "dcobjects.hpp"
-//#include "noncopyable.h"
-
 NS_BEGIN(dcsutil)
     //-----------------lock-------------------------------
     template<bool threadsafe>
@@ -66,6 +63,7 @@ NS_BEGIN(dcsutil)
 	int					signalh_push(int sig, sah_handler sah, int sah_flags = 0);
 	sah_handler			signalh_pop(int sig);
 	void				signalh_clear(int sig);
+    int                 signalh_set(int sig, sah_handler sah, int sah_flags = 0);
 	//-1:open file error , getpid():lock ok , 0:lock error but not known peer, >0: the locker pid.
     int					lockpidfile(const std::string & pidfile, int kill_other_sig = 0, bool nb = true, int * plockfd = nullptr, bool notify=false);
     //return fd
@@ -73,6 +71,11 @@ NS_BEGIN(dcsutil)
     int                 unlockfile(int fd);
 
 	///////////str////////////////////////////////////////////////////////////////////////////////
+    enum str_hash_strategy {
+        hash_str_dbj2,
+        hash_str_sdbm,
+    };
+    size_t              strhash(const std::string & buff, str_hash_strategy st = hash_str_sdbm);
 	int					strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs, bool ignore_empty = true, int maxsplit = 0, int beg = 0, int end = 0);
 	size_t				strprintf(std::string & str, const char * format, ...);
 	size_t				strnprintf(std::string & str, size_t max_sz, const char * format, ...);
@@ -97,7 +100,11 @@ NS_BEGIN(dcsutil)
     int                 bin2hex(std::string & hex, const char * buff, int ibuff);
 
 
-
+    //////////////////////////////////////////////////////////////////////////////////////
+    void    *           dllopen(const char * file, int flag = 0);
+    void    *           dllsym(void * dll, const char * sym);
+    int                 dllclose(void * dll);
+    const char *        dllerror();
 
     ///////////////////////////////////////////////////////////////////////////////////////
     size_t              prime_n(std::vector<size_t> & pn);

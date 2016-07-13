@@ -10,18 +10,13 @@
 NS_BEGIN(dcsutil)
 typedef dcsutil::sequence_number_t<>	redis_evsn;
 
-struct command_callback_argument {
-	RedisAsyncAgentImpl* impl{ nullptr };
-	uint64_t			 sn{ 0 };
-    int32_t              opt{ 0 };
-};
 enum CommandOptions {
     COMMAND_FLAG_NO_EXPIRED = 1,
 };
 struct RedisCallBackPoolItem {
 	RedisAsyncAgent::CommandCallBack cb{ 0 };
 	uint32_t                         timestamp{ 0 };
-    command_callback_argument * param{ nullptr };
+    int32_t                          opt{ 0 };
 };
 struct RedisAsyncAgentImpl {
 	redisAsyncContext * rc{ nullptr };
@@ -32,26 +27,31 @@ struct RedisAsyncAgentImpl {
     bool                 connected{ false };
     int                  retry_connect{ 0 };
     std::vector<redisAsyncContext *> subscribers;
-    bool                 stop { false };
-    uint32_t             last_reconnect_time = 0;
+    bool                 stop{ false };
+    uint32_t             last_reconnect_time{ 0 };
 };
+
 
 static std::unordered_map<const redisAsyncContext *, RedisAsyncAgentImpl*>  s_redis_context_map_impl;
 static void disconnectCallback(const redisAsyncContext *c, int status);
 static void connectCallback(const redisAsyncContext *c, int status);
-static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn = nullptr, redisDisconnectCallback ondisconn = nullptr);
-static inline void redis_clear_context(RedisAsyncAgentImpl* impl) {
+static redisAsyncContext * _create_redis_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn = nullptr, redisDisconnectCallback ondisconn = nullptr);
+static inline void _clear_redis_context(RedisAsyncAgentImpl* impl) {
+    GLOG_WAR("clear redis context impl:%p main ctx:%p", impl, impl->rc);
     if (impl->rc) {
-        redisAsyncContext * trc = impl->rc;
         s_redis_context_map_impl.erase(impl->rc);
+        redisAsyncContext * trc = impl->rc;
         impl->rc = nullptr;
         redisAsyncFree(trc);
     }
 }
-static inline int redis_reconnect(RedisAsyncAgentImpl* impl) {
-    redis_clear_context(impl);
-    impl->rc = redis_create_context(impl, connectCallback, disconnectCallback);
+static inline int _connect_redis(RedisAsyncAgentImpl* impl) {
+    assert("redis reconnect must cleared !" && impl->rc == nullptr);
+    ++impl->retry_connect;
+    GLOG_IFO("redis reconnecting times:%d ...", impl->retry_connect);
+    impl->rc = _create_redis_context(impl, connectCallback, disconnectCallback);
     if (!impl->rc) {
+        GLOG_SER("redis reconnecting error retry times:%d ...", impl->retry_connect);
         return -1;
     }
     ///////////////////////////////////////////////////////////////
@@ -59,19 +59,20 @@ static inline int redis_reconnect(RedisAsyncAgentImpl* impl) {
     return 0;
 }
 static void connectCallback(const redisAsyncContext *c, int status) {
+    auto fit = s_redis_context_map_impl.find(c);
+    assert("redis connect callback must has a context" && fit != s_redis_context_map_impl.end());
 	if (status != REDIS_OK) {
-		GLOG_ERR("redis connect Error: %s", c->errstr);
-        s_redis_context_map_impl[c]->connected = false;
-        //reconnect
-        redis_clear_context(s_redis_context_map_impl[c]);
+		GLOG_ERR("redis (ctx:%p -> impl:%p)connect Error: %s",c, fit->second, c->errstr);
+        fit->second->connected = false;
+        _clear_redis_context(fit->second);
     }
 	else {
 		GLOG_IFO("redis Connected...");
-        s_redis_context_map_impl[c]->connected = true;
+        fit->second->connected = true;
 	}
 }
 static void default_connectCallback(const redisAsyncContext *c, int status) {
-    GLOG_IFO("redis connection connected c:%p", c);
+    GLOG_IFO("redis default_connectCallback connect c:%p status:%d", c, status);
     if (status != REDIS_OK) {
         GLOG_ERR("redis connect Error: %s", c->errstr);
     }
@@ -80,7 +81,7 @@ static void default_connectCallback(const redisAsyncContext *c, int status) {
     }
 }
 static void default_disconnectCallback(const redisAsyncContext *c, int status) {
-    GLOG_ERR("redis disconnected c:%p", c);
+    GLOG_IFO("redis default_disconnectCallback c:%p status:%d", c, status);
     if (status != REDIS_OK) {
         GLOG_ERR("redis diconnect Error: %s", c->errstr);
     }
@@ -88,7 +89,7 @@ static void default_disconnectCallback(const redisAsyncContext *c, int status) {
         GLOG_WAR("redis Disconnected...");
     }
 }
-static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn, redisDisconnectCallback ondisconn){
+static redisAsyncContext * _create_redis_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn, redisDisconnectCallback ondisconn){
     std::vector<std::string> vs;
     dcsutil::strsplit(impl->addrs, ":", vs);
     if (vs.size() != 2){
@@ -121,7 +122,12 @@ static redisAsyncContext * redis_create_context(RedisAsyncAgentImpl * impl, redi
     return ctx;
 }
 static void disconnectCallback(const redisAsyncContext *c, int status) {
-    RedisAsyncAgentImpl * impl = s_redis_context_map_impl[c];
+    auto fit = s_redis_context_map_impl.find(c);
+    if (fit == s_redis_context_map_impl.end()) {
+        GLOG_ERR("redis connection disconnect status:%d not found context:%p !", status, c);
+        return;
+    }
+    RedisAsyncAgentImpl * impl = fit->second;
     impl->connected = false;
     if (status != REDIS_OK) {
         GLOG_ERR("redis diconnect Error: %s", c->errstr);
@@ -132,9 +138,7 @@ static void disconnectCallback(const redisAsyncContext *c, int status) {
     if (impl->stop) {
         return;
     }
-    ++impl->retry_connect;
-    GLOG_IFO("redis reconnecting times:%d....", impl->retry_connect);
-    redis_reconnect(impl);
+    _clear_redis_context(impl);
 }
 int	RedisAsyncAgent::init(const string & addrs){
 	if (impl){
@@ -143,41 +147,38 @@ int	RedisAsyncAgent::init(const string & addrs){
 	impl = new RedisAsyncAgentImpl();
     impl->addrs = addrs;
     impl->stop = false;
-    return redis_reconnect(impl);
+    return _connect_redis(impl);
 }
 static inline void redis_check_time_expired_callback(RedisAsyncAgentImpl * impl){
 	auto it = impl->callback_pool.begin();
 	uint32_t now = dcsutil::time_unixtime_s();
 	while (it != impl->callback_pool.end()){
 		auto nowit = it++;
-        if (!(nowit->second.param->opt & COMMAND_FLAG_NO_EXPIRED) &&
+        if (!(nowit->second.opt & COMMAND_FLAG_NO_EXPIRED) &&
             nowit->second.timestamp + impl->time_max_expired < now){
 			nowit->second.cb(-1, nullptr);
-            GLOG_DBG("update check expired callback free :%p", nowit->second.param);
-			delete nowit->second.param;
-			nowit->second.param = nullptr;
+            GLOG_DBG("update check expired callback event sn :%lu", nowit->first);
 			impl->callback_pool.erase(nowit);
 		}
 	}
 }
 int RedisAsyncAgent::update(){
     uint32_t time_now = dcsutil::time_unixtime_s();
-    if (impl->rc == nullptr && time_now > impl->last_reconnect_time + 10) {
+    if (impl->rc == nullptr && 
+        (time_now > impl->last_reconnect_time + 10)) {
         impl->last_reconnect_time = time_now;
-        redis_reconnect(impl);
+        _connect_redis(impl);
     }
-	ev_loop(EV_DEFAULT_ EVRUN_NOWAIT);
+    if (impl->rc) {
+        ev_loop(EV_DEFAULT_ EVRUN_NOWAIT);
+    }
 	redis_check_time_expired_callback(impl);
 	return 0;
 }
 int	RedisAsyncAgent::destroy(){
 	if (impl){
         impl->stop = true;
-		if (impl->rc){
-            redisAsyncContext * trc = impl->rc;
-            impl->rc = nullptr;
-			redisAsyncFree(trc);
-		}
+        _clear_redis_context(impl);
         for (int i = 0; i < (int)impl->subscribers.size(); ++i){
             redisAsyncFree(impl->subscribers[i]);
         }
@@ -192,58 +193,56 @@ bool RedisAsyncAgent::ready(){
     return impl->connected;
 }
 static void _command_callback(redisAsyncContext * c, void *r, void *privdata){
-    command_callback_argument* param = (command_callback_argument*)privdata;
-    uint64_t sn = param->sn;
-    RedisAsyncAgentImpl * impl = param->impl;
-    bool erase_callback = false;
-    if (!(param->opt & COMMAND_FLAG_NO_EXPIRED)){
-        GLOG_DBG("callback free redis param:%p", privdata);
-        delete param;
-        erase_callback = true;
+    uint64_t sn = (uint64_t)privdata;
+    auto iit =  s_redis_context_map_impl.find(c);
+    if (iit == s_redis_context_map_impl.end()) {
+        GLOG_FTL("redis context impl not found by ctx:%p - event sn:%lu", c, sn);
+        return;
     }
+    RedisAsyncAgentImpl * impl = iit->second;
     auto cpit = impl->callback_pool.find(sn);
-    if (cpit == impl->callback_pool.end()){
-        GLOG_ERR("redis callback not found by sn:%lu param c:%p reply:%p impl:%p(%s)", 
+    if (cpit == impl->callback_pool.end()) {
+        GLOG_ERR("redis callback not found by event sn:%lu c:%p reply:%p impl:%p(%s)",
+                 sn, c, r, impl, impl->addrs.c_str());
+        return;
+    }
+
+    if (!c || !r){
+        GLOG_ERR("redis callback error param event sn:%lu (c:%p, reply:%p) impl:%p(%s)",
             sn, c, r, impl, impl->addrs.c_str());
         return;
     }
-	auto cb = cpit->second.cb; 
-    if (!c || !r){
-        GLOG_ERR("redis callback error param -> privdata:%p c:%p reply:%p impl:%p(%s)",
-            privdata, c, r, impl, impl->addrs.c_str());
-        return;
-    }
-	cb(0, (redisReply*)r);
-    if (erase_callback){
-        impl->callback_pool.erase(sn);
+    cpit->second.cb(0, (redisReply*)r);
+    if (!(cpit->second.opt & COMMAND_FLAG_NO_EXPIRED)) {
+        GLOG_DBG("callback free redis event sn:%lu", sn);
+        impl->callback_pool.erase(cpit);
     }
 }
 static inline int _command(RedisAsyncAgentImpl * impl, redisAsyncContext* ctx, int opt,
             RedisAsyncAgent::CommandCallBack cb, const char * fmt, va_list ap){
     uint64_t sn = redis_evsn::next();
-    auto param = new command_callback_argument;
-    param->impl = impl;
-    param->sn = sn;
-    param->opt = opt;
-    GLOG_DBG("redis command create param :%p", param);
-    int r = redisvAsyncCommand(ctx, _command_callback, param, fmt, ap);
+    GLOG_DBG("redis command create event ctx:%p sn :%lu", ctx, sn);
+    int r = redisvAsyncCommand(ctx, _command_callback, (void*)sn, fmt, ap);
     if (r != REDIS_OK){
-        GLOG_ERR("redis command execute error = %d free :%p command:%s", r, param, fmt);
-        delete param;
+        GLOG_ERR("redis command execute error = %d event sn :%lu command:%s", r, sn, fmt);
         return -1;
     }
+
     impl->callback_pool[sn].cb = cb;
     impl->callback_pool[sn].timestamp = dcsutil::time_unixtime_s();
-    impl->callback_pool[sn].param = param;
+    impl->callback_pool[sn].opt = opt;
+
     return 0;
 }
 static inline int _subscribe(RedisAsyncAgentImpl * impl, RedisAsyncAgent::CommandCallBack cb, const string & command){
-    redisAsyncContext * ctx = redis_create_context(impl);
+    redisAsyncContext * ctx = _create_redis_context(impl);
     if (!ctx){
         GLOG_ERR("create redis async context error !");
         return -1;
     }
     impl->subscribers.push_back(ctx);
+    s_redis_context_map_impl[ctx] = impl;
+    GLOG_IFO("redis subscribe context impl:%p ctx:%p count:%zd command:%s", impl, ctx, impl->subscribers.size(), command.c_str());
     va_list ap;
     int r = _command(impl, ctx, COMMAND_FLAG_NO_EXPIRED, cb, command.c_str(), ap);
     return r;

@@ -54,6 +54,103 @@ const google::protobuf::Descriptor *
 protobuf_find_desc(const std::string & full_name){
      return google::protobuf::DescriptorPool::internal_generated_pool()->FindMessageTypeByName(full_name);
 }
+void      protobuf_msg_fill_default(google::protobuf::Message * msgp) {
+    const Reflection* reflection = msgp->GetReflection();
+    for (int i = 0; i < msgp->GetDescriptor()->field_count(); ++i) {
+        const FieldDescriptor * field = msgp->GetDescriptor()->field(i);
+        if (field->is_repeated()) {
+            switch (field->cpp_type()) {
+            case FieldDescriptor::CPPTYPE_INT32:     // TYPE_INT32, TYPE_SINT32, TYPE_SFIXED32
+            reflection->AddInt32(msgp, field, field->default_value_int32());
+            break;
+            case FieldDescriptor::CPPTYPE_INT64:     // TYPE_INT64, TYPE_SINT64, TYPE_SFIXED64
+            reflection->AddInt64(msgp, field, field->default_value_int64());
+            break;
+            case FieldDescriptor::CPPTYPE_UINT32:     // TYPE_UINT32, TYPE_FIXED32
+            reflection->AddUInt32(msgp, field, field->default_value_uint32());
+            break;
+            case FieldDescriptor::CPPTYPE_UINT64:     // TYPE_UINT64, TYPE_FIXED64
+            reflection->AddUInt64(msgp, field, field->default_value_uint64());
+            break;
+
+            case FieldDescriptor::CPPTYPE_DOUBLE:     // TYPE_DOUBLE
+            reflection->AddDouble(msgp, field, field->default_value_double());
+            break;
+
+            case FieldDescriptor::CPPTYPE_FLOAT:     // TYPE_FLOAT
+            reflection->AddFloat(msgp, field, field->default_value_float());
+            break;
+
+            case FieldDescriptor::CPPTYPE_BOOL:     // TYPE_BOOL
+            reflection->AddBool(msgp, field, field->default_value_bool());
+            break;
+
+            case FieldDescriptor::CPPTYPE_ENUM:     // TYPE_ENUM
+            reflection->AddEnum(msgp, field, field->default_value_enum());
+            break;
+
+            case FieldDescriptor::CPPTYPE_STRING:     // TYPE_STRING, TYPE_BYTES
+            reflection->AddString(msgp, field, field->default_value_string());
+            break;
+
+            case FieldDescriptor::CPPTYPE_MESSAGE:    // TYPE_MESSAGE, TYPE_GROUP
+            if (true) {
+                ::google::protobuf::Message * pFieldMsg = reflection->AddMessage(msgp, field);
+                protobuf_msg_fill_default(pFieldMsg);
+            }
+            break;
+            default:
+            break;
+            }
+        }
+        else {
+            switch (field->cpp_type()) {
+            case FieldDescriptor::CPPTYPE_INT32:     // TYPE_INT32, TYPE_SINT32, TYPE_SFIXED32
+            reflection->SetInt32(msgp, field, field->default_value_int32());
+            break;
+            case FieldDescriptor::CPPTYPE_INT64:     // TYPE_INT64, TYPE_SINT64, TYPE_SFIXED64
+            reflection->SetInt64(msgp, field, field->default_value_int64());
+            break;
+            case FieldDescriptor::CPPTYPE_UINT32:     // TYPE_UINT32, TYPE_FIXED32
+            reflection->SetUInt32(msgp, field, field->default_value_uint32());
+            break;
+            case FieldDescriptor::CPPTYPE_UINT64:     // TYPE_UINT64, TYPE_FIXED64
+            reflection->SetUInt64(msgp, field, field->default_value_uint64());
+            break;
+
+            case FieldDescriptor::CPPTYPE_DOUBLE:     // TYPE_DOUBLE
+            reflection->SetDouble(msgp, field, field->default_value_double());
+            break;
+
+            case FieldDescriptor::CPPTYPE_FLOAT:     // TYPE_FLOAT
+            reflection->SetFloat(msgp, field, field->default_value_float());
+            break;
+
+            case FieldDescriptor::CPPTYPE_BOOL:     // TYPE_BOOL
+            reflection->SetBool(msgp, field, field->default_value_bool());
+            break;
+
+            case FieldDescriptor::CPPTYPE_ENUM:     // TYPE_ENUM
+            reflection->SetEnum(msgp, field, field->default_value_enum());
+            break;
+
+            case FieldDescriptor::CPPTYPE_STRING:     // TYPE_STRING, TYPE_BYTES
+            reflection->SetString(msgp, field, field->default_value_string());
+            break;
+
+            case FieldDescriptor::CPPTYPE_MESSAGE:    // TYPE_MESSAGE, TYPE_GROUP
+            if (true) {
+                ::google::protobuf::Message * pFieldMsg = reflection->MutableMessage(msgp, field);
+                protobuf_msg_fill_default(pFieldMsg);
+            }
+            break;
+            default:
+            break;
+            }
+        }
+    }
+}
+
 std::string 
 protobuf_msg_field_get_value(const Message & msg, const string & name, int idx){
 	const Reflection* reflection = msg.GetReflection();
@@ -114,6 +211,27 @@ protobuf_msg_field_get_value(const Message & msg, const string & name, int idx){
 			return "";
 		}
 	}
+}
+int				
+protobuf_msg_field_path_set_value(google::protobuf::Message & msg, const string & name, int idx, const string & value, string & error) {
+#if 0
+    //todo
+    google::protobuf::Message * msgp = &msg;
+    const Reflection* reflection = msg.GetReflection();
+    const 
+    std::vector<std::string>    vs;
+    dcsutil::strsplit(name, ".", vs);
+    google::protobuf::Message * msgp 
+    for (int i = 0; i < vs.size() ++i) {
+        field = msgp->GetDescriptor()->FindFieldByName(vs[i]);
+        if (!reflection || !field) {
+            strnprintf(error, 64, "not found field :%s", name.c_str());
+            return -1;
+        }
+
+    }
+#endif
+    return 0;
 }
 int
 protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
@@ -493,11 +611,42 @@ protobuf_msg_to_json_file(const google::protobuf::Message & msg, const std::stri
     protobuf_msg_to_json_string(msg, msg_buffer);
     int sz = dcsutil::writefile(jsonfile, msg_buffer.data(), msg_buffer.length());
     if (sz <= 0){
-        GLOG_ERR("write file :%s error :%d", jsonfile.c_str(), sz);
+        GLOG_SER("write file :%s error :%d", jsonfile.c_str(), sz);
         return -1;
     }
     return 0;
 }
+int             
+protobuf_msg_to_msgb_file(const google::protobuf::Message & msg, const std::string & msgbfile) {
+    std::string msgb;
+    if (!msg.SerializeToString(&msgb)) {
+        GLOG_ERR("protomsg msg serialize error !");
+        return -1;
+    }
+    int sz = dcsutil::writefile(msgbfile, msgb.data(), msgb.length());
+    if (sz <= 0) {
+        GLOG_SER("write file :%s error :%d", msgbfile.c_str(), sz);
+        return -1;
+    }
+    return 0;
+}
+int             
+protobuf_msg_from_msgb_file(google::protobuf::Message & msg, const std::string & msgbfile) {
+    string sfile;
+    int sz = dcsutil::filesize(msgbfile);
+    sfile.reserve(sz);
+    int n = dcsutil::readfile(msgbfile.c_str(), (char*)sfile.data(), sfile.capacity());
+    if (n <= 0) {
+        GLOG_ERR("readfile :%s error ret :%d", msgbfile.c_str(), n);
+        return -1;
+    }
+    if (!msg.ParseFromArray(sfile.data(), n)) {
+        GLOG_ERR("protobuf parse from array ereror ! buff size:%d", n);
+        return -1;
+    }
+    return 0;
+}
+
 int 
 protobuf_msg_from_json_file(google::protobuf::Message & msg, const std::string & jsonfile, std::string & error){
     string sfile;
