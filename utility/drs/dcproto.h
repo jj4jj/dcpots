@@ -51,7 +51,15 @@ int             protobuf_msg_from_msgb_file(google::protobuf::Message & msg, con
 
 std::string		protobuf_msg_field_get_value(const google::protobuf::Message & msg, const string & name, int idx);
 int				protobuf_msg_field_set_value(google::protobuf::Message & msg, const string & name, int idx, const string & value, string & error);
-int				protobuf_msg_field_path_set_value(google::protobuf::Message & msg, const string & name, int idx, const string & value, string & error);
+
+int		        protobuf_msg_field_path_get_value(std::string & value, const google::protobuf::Message & msg, const string & path, std::string & error);
+int				protobuf_msg_field_path_set_value(google::protobuf::Message & msg, const string & path, const string & value, string & error);
+
+google::protobuf::Message *
+                protobuf_msg_field_path_get(google::protobuf::Message & msg, const string & path, string & error);
+const google::protobuf::Message * 
+                protobuf_msg_field_path_get(const google::protobuf::Message & msg, const string & path, string & error);
+
 
 ////////////////////////////////////////////////////////////////
 NS_END()

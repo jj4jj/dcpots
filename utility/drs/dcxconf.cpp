@@ -1,11 +1,12 @@
 
+#include "google/protobuf/message.h"
 #include "../../base/stdinc.h"
 #include "../../base/logger.h"
 #include "../../base/cmdline_opt.h"
-#include "google/protobuf/message.h"
 #include "dcxml.h"
 #include "dcjson.hpp"
 #include "dcproto.h"
+///////////////////////////////////////////////////
 #include "dcxconf.h"
 
 NS_BEGIN(dcsutil)
@@ -77,6 +78,7 @@ struct convert_to_cmdline_pattern_ctx {
 static void
 convert_to_cmdline_pattern(const string & name, const ::google::protobuf::Message & msg, int idx,
                             int level, void * ud, protobuf_sax_event_type ev_type) {
+    UNUSED(level);
     convert_to_cmdline_pattern_ctx * ctx = (convert_to_cmdline_pattern_ctx*)ud;
     std::string pattern, full_field_path;
     switch (ev_type) {
@@ -114,25 +116,41 @@ int dcxcmdconf_t::parse(const char * desc, const char * version) {
     ndesc.append("conf:r::set config file path;config-dump-def:r::dump the default config file:config.def.xml;");
     dcxconf_default(impl->msg);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#if 0
     convert_to_cmdline_pattern_ctx ctx;
     protobuf_msg_sax(impl->msg.GetDescriptor()->name(), impl->msg, convert_to_cmdline_pattern, &ctx);
-    ndesc.append(ctx.pattern.c_str());
+    ndesc.append(ctx.pattern);
     impl->cmdline.parse(ndesc.c_str(), version);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     auto & cmdmap = impl->cmdline.options();
     std::string error, path;
     int ret = 0;
+    std::string last_option = "";
+    int option_idx = -1;
     for (auto it = cmdmap.begin(); it != cmdmap.end(); ++it) {
         path = it->first.substr(5);
+        if (last_option != it->first){
+            option_idx = -1;
+        }
+        else {
+            if (option_idx == -1){
+                option_idx = 1;
+            }
+            else {
+                ++option_idx;
+            }
+        }
         dcsutil::strreplace(path, "-", ".");
-        ret = protobuf_msg_field_set_value(impl->msg, path, -1, it->second, error, true);
+        if (option_idx > 0){
+            path.append(":");
+            path.append(std::to_string(option_idx));
+        }
+        ret = protobuf_msg_field_path_set_value(impl->msg, path, it->second, error);
         if (ret) {
-            GLOG_ERR("set field value path:%s value:%s error:%d", it->first, it->second, error.c_str());
+            GLOG_ERR("set field value path:%s value:%s error:%d",
+                it->first.c_str(), it->second.c_str(), error.c_str());
             return -1;
         }
     }
-#endif
     return 0;
 }
 cmdline_opt_t & dcxcmdconf_t::cmdopt() {

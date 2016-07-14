@@ -212,26 +212,134 @@ protobuf_msg_field_get_value(const Message & msg, const string & name, int idx){
 		}
 	}
 }
-int				
-protobuf_msg_field_path_set_value(google::protobuf::Message & msg, const string & name, int idx, const string & value, string & error) {
-#if 0
-    //todo
-    google::protobuf::Message * msgp = &msg;
-    const Reflection* reflection = msg.GetReflection();
-    const 
-    std::vector<std::string>    vs;
-    dcsutil::strsplit(name, ".", vs);
-    google::protobuf::Message * msgp 
-    for (int i = 0; i < vs.size() ++i) {
-        field = msgp->GetDescriptor()->FindFieldByName(vs[i]);
-        if (!reflection || !field) {
-            strnprintf(error, 64, "not found field :%s", name.c_str());
-            return -1;
-        }
+static inline void
+protobuf_path_split(const std::string & path, std::vector<std::string> & vps){
+    dcsutil::strsplit(path, ".", vps);
+}
 
+static inline int 
+protobuf_path_field_split(const std::string & field, std::string & name){
+    std::vector<std::string> vsf;
+    strsplit(field, ":", vsf);
+    name = vsf[0];
+    if (vsf.size() > 1){
+        return std::stoi(vsf[1]);
     }
-#endif
+    return -1;
+}
+const Message * protobuf_msg_field_path_get(const google::protobuf::Message & msg, const string & path, string & error){
+    const google::protobuf::Message * msgp = &msg;
+    std::vector<std::string>    vs;
+    protobuf_path_split(path, vs);
+    const FieldDescriptor * field = nullptr;
+    const Reflection* reflection = nullptr;
+    std::vector<std::string>    vsf;
+    std::string field_name;
+    int   field_idx = -1;
+    for (size_t i = 0; i < vs.size(); ++i) {
+        field_idx = protobuf_path_field_split(vs[i], field_name);
+        field = msgp->GetDescriptor()->FindFieldByName(field_name);
+        if (!field) {
+            strnprintf(error, 128 + path.length(), "not found field :%s in path:%s", vs[i].c_str(), path.c_str());
+            return nullptr;
+        }
+        if (field->message_type()){
+            if (i + 1 == vs.size()){
+                strnprintf(error, 128 + path.length(), "error :field :%s is a message in path:%s!", vs.back().c_str(), path.c_str());
+                return nullptr;
+            }
+            else {
+                reflection = msgp->GetReflection();
+                if (!reflection){
+                    strnprintf(error, 64, "not found reflection :%s", msgp->GetTypeName().c_str());
+                    return nullptr;
+                }
+                if (field->is_repeated()){
+                    //get
+                    msgp = &reflection->GetRepeatedMessage(*msgp, field, field_idx);
+                }
+                else {
+                    msgp = &reflection->GetMessage(*msgp, field);
+                }
+            }
+        }
+        else {
+            if ((i + 1) != vs.size()){
+                strnprintf(error, 128 + path.length(), "error :last field :%s is not a message in path:%s!", vs.back().c_str(), path.c_str());
+                return nullptr;
+            }
+        }
+    }
+    return msgp;
+}
+Message * protobuf_msg_field_path_get(google::protobuf::Message & msg, const string & path, string & error){
+    google::protobuf::Message * msgp = &msg;
+    std::vector<std::string>    vs;
+    dcsutil::strsplit(path, ".", vs);
+    const FieldDescriptor * field = nullptr;
+    const Reflection* reflection = nullptr;
+    std::vector<std::string>    vsf;
+    std::string field_name;
+    int   field_idx = -1;
+    for (size_t i = 0; i < vs.size(); ++i) {
+        field_idx = protobuf_path_field_split(vs[i], field_name);
+        field = msgp->GetDescriptor()->FindFieldByName(field_name);
+        if (!field) {
+            strnprintf(error, 128 + path.length(), "not found field :%s in path:%s", vs[i].c_str(), path.c_str());
+            return nullptr;
+        }
+        if (field->message_type()){
+            if (i + 1 == vs.size()){
+                strnprintf(error, 128 + path.length(), "error :field :%s is a message in path:%s!", vs.back().c_str(), path.c_str());
+                return nullptr;
+            }
+            else {
+                reflection = msgp->GetReflection();
+                if (!reflection){
+                    strnprintf(error, 64, "not found reflection :%s", msgp->GetTypeName().c_str());
+                    return nullptr;
+                }
+                if (field->is_repeated()){
+                    //get
+                    msgp = reflection->MutableRepeatedMessage(msgp, field, field_idx);
+                }
+                else {
+                    msgp = reflection->MutableMessage(msgp, field);
+                }
+            }
+        }
+        else {
+            if ((i + 1) != vs.size()){
+                strnprintf(error, 128 + path.length(), "error :last field :%s is not a message in path:%s!", vs.back().c_str(), path.c_str());
+                return nullptr;
+            }
+        }
+    }
+    return msgp;
+}
+int	protobuf_msg_field_path_get_value(std::string & value, const google::protobuf::Message & msg, const string & path, std::string & error){
+    const Message * msgp = protobuf_msg_field_path_get(msg, path, error);
+    if (!msgp){
+        return -1;
+    }
+    std::vector<std::string>    vps;
+    protobuf_path_split(path, vps);
+    std::string field_name;
+    int field_idx = protobuf_path_field_split(vps.back(), field_name);
+    value = protobuf_msg_field_get_value(*msgp, field_name, field_idx);
     return 0;
+}
+int				
+protobuf_msg_field_path_set_value(google::protobuf::Message & msg, const string & path, const string & value, string & error) {
+    Message * msgp = protobuf_msg_field_path_get(msg, path, error);
+    if (!msgp){
+        return -1;
+    }
+    std::vector<std::string>    vps;
+    protobuf_path_split(path, vps);
+    std::string field_name;
+    int field_idx = protobuf_path_field_split(vps.back(), field_name);
+    return protobuf_msg_field_set_value(*msgp, field_name, field_idx, value, error);
 }
 int
 protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
