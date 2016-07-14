@@ -180,8 +180,8 @@ NS_BEGIN(dcsutil)
         size_t i = 0;
         val.clear();
         for (auto & v : it){
-            if (i != 0){ v.append(sep); }
-            v.append(v);
+            if (i != 0){ val.append(sep); }
+            val.append(v);
             ++i;
         }
         return val.c_str();

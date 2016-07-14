@@ -53,7 +53,10 @@ def generate(desc , root_path):
     subdirs = subdirs + '\n';
     if len(desc.EXES) > 0 :
         subdirs = subdirs + '\n'.join(map(lambda l:'add_subdirectory('+l['subdir']+')', desc.EXES))
-    copy_replace_file(rootf, root_path+'/CMakeLists.txt',
+    
+        extra_statements = ''        
+        
+        copy_replace_file(rootf, root_path+'/CMakeLists.txt',
             {'<definations>': definations,
              '<debug_mode>': desc.DEBUG,
              '<project_name>': desc.PROJECT,
@@ -62,7 +65,9 @@ def generate(desc , root_path):
              '<verbose>': desc.VERBOSE,
              #'<extra_ld_flags>': desc.EXTRA_LD_FLAGS,
              '<add_subdirectory_area>': subdirs,
-             '<project_version>': desc.VERSION})
+             '<project_version>': desc.VERSION,
+                         '<extra_statements>':extra_statements})
+
     for lib in desc.LIBS:
         extra_includes = getattr(desc, 'EXTRA_INCLUDES', None) or []
         subf=os.path.join(root_path,lib['subdir'],'CMakeLists.txt')
@@ -92,13 +97,22 @@ def generate(desc , root_path):
         if lib.has_key('type'):
             lib_type = lib['type']
 
+        extra_statements = ''
+        if lib.has_key('preobj'):
+            #preobj.out/dep/cmd
+            extra_statements += 'add_custom_command(TARGET %s\nPRE_BUILD\n\
+                        COMMAND %s\n\
+                        DEPENDS %s\n)' % (lib["name"], lib["preobj"]["cmd"],
+                lib["preobj"]["dep"])
+
         copy_replace_file(libf, subf,
             {'<lib_name>': lib['name'],
              '<includes>': includes,
              '<lib_type>': lib_type,
              '<linkpaths>': linkpaths,
              '<linklibs>': linklibs,
-             '<extra_srcs>': extra_srcs})
+             '<extra_srcs>': extra_srcs,
+             '<extra_statements>':extra_statements})
 
     for exe in desc.EXES:
         subf=os.path.join(root_path,exe['subdir'],'CMakeLists.txt')
@@ -124,12 +138,21 @@ def generate(desc , root_path):
             extra_srcs += '\n'
             extra_srcs += '\n'.join(map(src_extra_files, exe['extra_srcs']))
 
+        extra_statements = ''
+        if exe.has_key('preobj'):
+            extra_statements += 'add_custom_command(TARGET %s\nPRE_BUILD\n\
+                        COMMAND %s\n\
+                        DEPENDS %s\n)' % (exe["name"], exe["preobj"]["cmd"],
+                        exe["preobj"]["dep"])
+
         copy_replace_file(exef, subf,
             {'<exe_name>': exe['name'],
              '<includes>': includes,
              '<linkpaths>': linkpaths,
              '<linklibs>': linklibs,
-             '<extra_srcs>': extra_srcs})
+             '<extra_srcs>': extra_srcs,
+                         '<extra_statements>': extra_statements})
+
 
 def main(desc_file_path):
     modfile = desc_file_path+'.py'

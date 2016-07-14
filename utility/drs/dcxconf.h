@@ -10,6 +10,8 @@ namespace dcsutil {
         DCXCONF_XML,
         DCXCONF_JSON,
         DCXCONF_MSGB,
+        DCXCONF_YAML,
+        DCXCONF_XINI,
     };
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //default support --conf=file, --version, --help, --config-dump-def=file,--conf-...

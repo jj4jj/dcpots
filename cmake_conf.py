@@ -118,7 +118,12 @@ EXES = [
                 'mysqlclient',
                 'mongoc-1.0',
                 'bson-1.0',
-            ]
+            ],
+            'preobj': {
+                'out':'${CMAKE_CURRENT_SOURCE_DIR}/test_conf.pb.cc',
+                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/test_conf.proto',
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/test_conf.proto -I${CMAKE_CURRENT_SOURCE_DIR} --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}'
+            }
         },
         {
             'name':'mongoproxy',

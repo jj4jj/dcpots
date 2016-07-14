@@ -21,7 +21,7 @@ cmdline_opt_t::cmdline_opt_t(int argc, const char ** argv){
 	_THIS_HANDLE->usage = "usage: ";
 	_THIS_HANDLE->usage += argv[0];
 	_THIS_HANDLE->usage += " [options]	\n";
-	_THIS_HANDLE->usage += "option should be like as follow:\n";
+	_THIS_HANDLE->usage += "options should be like as follow:\n";
 }
 cmdline_opt_t::~cmdline_opt_t(){
 	if (handle){

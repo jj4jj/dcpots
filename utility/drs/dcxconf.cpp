@@ -10,7 +10,7 @@
 #include "dcxconf.h"
 
 NS_BEGIN(dcsutil)
-int  dcxconf_load(::google::protobuf::Message & msg, const char * file, int type) {
+int  dcxconf_load(::google::protobuf::Message & msg, const char * file, dcxconf_file_type type) {
     std::string error;
     int ret = 0;
     switch (type) {
@@ -32,7 +32,7 @@ int  dcxconf_load(::google::protobuf::Message & msg, const char * file, int type
     }
     return ret;
 }
-int  dcxconf_dump(const ::google::protobuf::Message & msg, const char * file, int type) {
+int  dcxconf_dump(const ::google::protobuf::Message & msg, const char * file, dcxconf_file_type type) {
     int ret = 0;
     switch (type) {
     case DCXCONF_XML:
@@ -81,11 +81,18 @@ convert_to_cmdline_pattern(const string & name, const ::google::protobuf::Messag
     UNUSED(level);
     convert_to_cmdline_pattern_ctx * ctx = (convert_to_cmdline_pattern_ctx*)ud;
     std::string pattern, full_field_path;
+    pattern.reserve(255);
+    //GLOG_DBG("event:%d level:%d idx:%d name:%s", ev_type, level, idx,name.c_str());
     switch (ev_type) {
     case BEGIN_MSG:
+    if (level > 0){
+        ctx->path.push_back(name);
+    }
     break;
     case END_MSG:
-    ctx->path.pop_back();
+    if (level > 0){
+        ctx->path.pop_back();
+    }
     break;
     case BEGIN_ARRAY:
     break;
@@ -94,18 +101,19 @@ convert_to_cmdline_pattern(const string & name, const ::google::protobuf::Messag
     case VISIT_VALUE:
     if (!ctx->path.empty()) {
         dcsutil::strjoin(full_field_path, "-", ctx->path);
-        dcsutil::strprintf(pattern, " conf-%s-%s:r::config option:%s", 
+        dcsutil::strprintf(pattern, "conf-%s-%s:r::dcxconf option:%s;", 
                            full_field_path.c_str(), name.c_str(),
                            protobuf_msg_field_get_value(msg, name, idx).c_str());
     }
     else {
-        dcsutil::strprintf(pattern, " conf-%s:r::config option:%s",
+        dcsutil::strprintf(pattern, "conf-%s:r::dcxconf option:%s;",
                            name.c_str(),
                            protobuf_msg_field_get_value(msg, name, idx).c_str());
     }
-    ctx->pattern.append(pattern);
+    ctx->pattern.append(pattern.data());
     break;
     }
+    //GLOG_DBG("ctx->path:%zu full_field_path:%s", ctx->path.size(), full_field_path.c_str());
 }
 
 int dcxcmdconf_t::parse(const char * desc, const char * version) {
@@ -119,14 +127,26 @@ int dcxcmdconf_t::parse(const char * desc, const char * version) {
     convert_to_cmdline_pattern_ctx ctx;
     protobuf_msg_sax(impl->msg.GetDescriptor()->name(), impl->msg, convert_to_cmdline_pattern, &ctx);
     ndesc.append(ctx.pattern);
+    GLOG_DBG("desc new ...:%s (msg:%s)", ndesc.c_str(), impl->msg.DebugString().c_str());
     impl->cmdline.parse(ndesc.c_str(), version);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    int ret = 0;
+    if (cmdopt().hasopt("conf")){
+        const char * config_file = cmdopt().getoptstr("conf");
+        ret = dcxconf_load(impl->msg, config_file);
+        if (ret){
+            GLOG_ERR("load config file:%s error :%d!", config_file, ret);
+            exit(-1);
+        }
+    }
     auto & cmdmap = impl->cmdline.options();
     std::string error, path;
-    int ret = 0;
     std::string last_option = "";
     int option_idx = -1;
     for (auto it = cmdmap.begin(); it != cmdmap.end(); ++it) {
+        if (it->first.find("conf-") != 0){
+            continue;
+        }
         path = it->first.substr(5);
         if (last_option != it->first){
             option_idx = -1;
@@ -151,6 +171,15 @@ int dcxcmdconf_t::parse(const char * desc, const char * version) {
             return -1;
         }
     }
+    if (cmdopt().hasopt("config-dump-def")){
+        const char * config_file = cmdopt().getoptstr("config-dump-def");
+        ret = dcxconf_dump(impl->msg, config_file);
+        if (ret){
+            GLOG_ERR("dump config file:%s error :%d!", config_file, ret);
+            exit(-1);
+        }
+    }
+
     return 0;
 }
 cmdline_opt_t & dcxcmdconf_t::cmdopt() {

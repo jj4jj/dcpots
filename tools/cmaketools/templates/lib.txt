@@ -17,3 +17,5 @@ link_directories(<linkpaths>
 target_link_libraries(<lib_name>
 <linklibs>)
 
+
+<extra_statements>

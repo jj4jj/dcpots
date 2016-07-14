@@ -28,3 +28,5 @@ pthread)
 
 #installing
 INSTALL(TARGETS <exe_name> DESTINATION bin/)
+
+<extra_statements>

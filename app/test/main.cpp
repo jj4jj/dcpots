@@ -655,7 +655,24 @@ static int app_test(int argc, const char * argv[]){
     };
     return AppMain<TestApp>(argc, argv);
 }
+#include "utility/drs/dcxconf.h"
+#include "test_conf.pb.h"
+using namespace dcsutil;
+int xconf_test(int argc, const char * argv[]){
+    TestConf tc;
+    dcxconf_default(tc);
+    tc.set_c(2456677);
+    int ret = dcxconf_dump(tc, "dcxonf_test.xml");
+    GLOG_DBG("dump ret:%d", ret);
+    TestConf tc2;
+    ret = dcxconf_load(tc2, "dcxonf_test.xml");
+    GLOG_DBG("load ret:%d tc2:%s", ret, tc2.ShortDebugString().c_str());
 
+    dcxcmdconf_t    dxc(argc-1, &argv[1], tc);
+    dxc.parse();
+    dxc.cmdopt().pusage();
+    return 0;
+}
 int main(int argc, const char* argv[])
 {
 	global_logger_init(logger_config_t());
@@ -680,6 +697,9 @@ int main(int argc, const char* argv[])
         }
         if (strstr(argv[1], "app")){
             return app_test(argc, argv);
+        }
+        if (strstr(argv[1], "xconf")){
+            return xconf_test(argc, argv);
         }
 
 		switch (argv[1][0])
