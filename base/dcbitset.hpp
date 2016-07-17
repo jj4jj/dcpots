@@ -1,8 +1,18 @@
 #pragma once
 #include <bitset>
+#include <vector>
 #include <cmath>
+
 namespace dcsutil {
-	template <unsigned long long N>
+    struct bits {
+        void    set(size_t pos, bool bv = true);
+        bool    at(size_t pos);
+        std::vector<size_t> nvbits;
+        bits(size_t n);
+    };
+    
+    ///////////////////////////////////////////////////
+    template <unsigned long long N>
 	struct bit_count1 {
 		enum {
 			value = 1 + bit_count1<N&(N - 1)>::value
@@ -20,7 +30,6 @@ namespace dcsutil {
 			value = 0
 		};
 	};
-
 
 	////////////////////////////////////////////
 	template<class type = int>
