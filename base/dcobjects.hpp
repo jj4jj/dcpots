@@ -2,13 +2,12 @@
 
 namespace dcsutil{
 //object pool
-
-template<class T, int MAX_NUM = 1024>
+template<class T, unsigned int count_max = 1024>
 class object_pool_t {
 public:
-	typedef	std::array<T, MAX_NUM>			pool_t;
+	typedef	std::array<T, count_max>		pool_t;
 	typedef typename pool_t::pointer		pointer;
-	typedef std::unordered_set<uint64_t>	pool_hash_t;
+	typedef std::unordered_set<size_t>	    pool_hash_t;
 private:
 	pool_t             pool;
 	pool_hash_t        free_pool;
@@ -16,7 +15,7 @@ private:
 public:
 	object_pool_t(){
 		num = 0;
-		for (int i = 1; i < MAX_NUM; ++i){
+		for (unsigned int i = 1; i < count_max; ++i){
 			free_pool.insert(i);
 		}
 	}
@@ -30,14 +29,10 @@ public:
 		return num;
 	}
 	size_t    total(){
-		return MAX_NUM;
+		return count_max;
 	}
 	size_t    free(){
 		return free_pool.size();
-	}
-	size_t    alloc(std::mutex & lock){
-		std::lock_guard<std::mutex> lock_gurad(lock);
-		return genid();
 	}
 	size_t    alloc(){
 		return genid();
@@ -60,7 +55,7 @@ public:
 		return p - &pool[0] + 1;
 	}
 	pointer     ptr(size_t id){
-		if (id > 0 && id <= MAX_NUM &&
+		if (id > 0 && id <= count_max &&
 			free_pool.find(id) == free_pool.end()){
 			return &pool[id - 1];
 		}
@@ -79,21 +74,21 @@ private:
 		}
 	}
 };
-///============================================================
-//object queue (cycle , ring)
-template <typename T, size_t MAX>
+///==============================================================
+//object queue (cycle , ring) =================================//
+template <typename T, size_t count_max>
 class object_queue_t {
 public:
-	typedef typename object_pool_t<T, MAX>::pointer pointer;
+	typedef typename object_pool_t<T, count_max>::pointer pointer;
 private:
-	size_t                front_, rear_;
-	std::vector<pointer>   q;
-	object_pool_t<T, MAX>    pool;
+	size_t                          front_, rear_;
+	std::vector<pointer>            q;
+	object_pool_t<T, count_max>     pool;
 public:
 	// [--- front xxxxx rear------]
 	// [xxxx rear ---- front xxxxx]
 	object_queue_t(){
-		q.resize(MAX, null());
+		q.resize(count_max, null());
 		front_ = rear_ = 0;
 	}
 	pointer null(){
@@ -103,7 +98,7 @@ public:
 		return pool.used();
 	}
 	pointer push(){
-		if (rear_ + 1 == front_ || rear_ == front_ + MAX){//full 
+		if (rear_ + 1 == front_ || rear_ == front_ + count_max){//full 
 			return pool.null();
 		}
 		//allocate and push it
@@ -111,7 +106,7 @@ public:
 		auto p = pool.ptr(id);
 		if (p != null()){
 			q[rear_] = p;
-			rear_ = (rear_ + 1) % MAX;
+			rear_ = (rear_ + 1) % count_max;
 		}
 		return p;
 	}
@@ -129,7 +124,7 @@ public:
 			return;
 		}
 		auto p = q[front_];
-		front_ = (front_ + 1) % MAX;
+		front_ = (front_ + 1) % count_max;
 		pool.free(pool.id(p));
 	}
 };
