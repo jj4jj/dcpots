@@ -1,8 +1,8 @@
 #pragma once
-#include <vector>
+#include <unordered_set>
 
 namespace dcsutil {
-size_t              prime_n(std::vector<size_t> & pn);
+size_t              prime_n(size_t n, std::unordered_set<size_t> & pn);
 size_t              prime_next(size_t n);
 size_t              prime_prev(size_t n);
 bool                is_a_prime(size_t n);

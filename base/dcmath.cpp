@@ -1,10 +1,28 @@
 
 #include "stdinc.h"
 #include "dcmath.hpp"
+#include "dcbitset.hpp"
+
 namespace dcsutil {
 
 //////////////////////////////////////////////////////////////////////////////
-size_t              prime_n(std::vector<size_t> & pn){
+size_t              prime_n(size_t n, std::unordered_set<size_t> & pn){
+    //filter: 2->n;
+    pn.clear();
+    if (n < 2){
+        return 0;
+    }
+    bits flip_prime_set(n);
+    pn.insert(2);
+    for (size_t i = 3; i <= n; ++i){
+        if (!flip_prime_set.at(i)){
+            flip_prime_set.set(i);
+            pn.insert(i);
+            for (size_t k = 2; k <= n/i; ++k){
+                flip_prime_set.set(k*i);
+            }
+        }
+    }
     return pn.size();
 }
 bool   is_a_prime(size_t n){

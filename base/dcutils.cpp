@@ -7,6 +7,8 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include <dlfcn.h>
+
+#include "dcbitset.hpp"
 //#include <libgen.h>
 
 namespace {
@@ -1195,7 +1197,36 @@ namespace dcsutil {
         return dlerror();
     }
 
-
+    //////////////////////////////////////////////////////////
+    bits::bits(size_t n){
+        if (n > 8){
+            nvbits.reserve((n + (8 * sizeof(size_t)-1)) / (8 * sizeof(size_t)));
+        }
+        else {
+            nvbits.reserve(8);
+        }
+    }
+    void    bits::set(size_t pos, bool bv){
+        size_t idx = pos / (sizeof(size_t)*8);
+        size_t xoffset = pos % (sizeof(size_t)*8);
+        for (size_t x = nvbits.size(); x <= idx; ++x){
+            nvbits.push_back(0ULL);
+        }
+        if (bv){
+            nvbits[idx] |= (1ULL << xoffset);
+        }
+        else {
+            nvbits[idx] &= (~(1ULL << xoffset));
+        }
+    }
+    bool    bits::at(size_t pos){
+        size_t idx = pos / (sizeof(size_t)* 8);
+        size_t xoffset = pos % (sizeof(size_t)* 8);
+        if (idx >= nvbits.size()){
+            return false;
+        }
+        return (nvbits[idx] & ((1ULL) << xoffset)) ? true : false;
+    }
 
 
 
