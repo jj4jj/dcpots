@@ -1034,6 +1034,41 @@ namespace dcsutil {
     bool                strrefind(string & str, const string & repattern, std::match_results<string::const_iterator>& m){
         return std::regex_search(str, m, std::regex(repattern));
     }
+    std::string &       strtrim(std::string & str, const char * charset){
+        if (str.empty() || !charset || !*charset){
+            return str;
+        }
+        strltrim(str, charset);
+        return strrtrim(str, charset);
+    }
+    std::string &       strltrim(std::string & str, const char * charset){
+        if (str.empty() || !charset || !*charset){
+            return str;
+        }
+        for (size_t i = 0; i < str.length(); ++i){
+            if (!strchr(charset, str[i])){
+                if (i > 0){
+                    str.erase(0, i);
+                }
+                return str;
+            }
+        }
+        return str;
+    }
+    std::string &       strrtrim(std::string & str, const char * charset){
+        if (str.empty() || !charset || !*charset){
+            return str;
+        }
+        for (size_t i = str.length() - 1; ((long int)i) >= 0; --i){            
+            if (!strchr(charset, str[i])){
+                if (i > 0){
+                    str.erase(i, str.length()-i);
+                }
+                return str;
+            }
+        }
+        return str;
+    }
 
     int                 strsunpack(const std::string & str, const std::string & sep, const std::string & ks, ...){
         //{K=V,}

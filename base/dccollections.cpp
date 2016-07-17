@@ -30,7 +30,7 @@ void *  mempool_t::ptr(size_t id){
     //todo
     return nullptr;
 }
-size_t  mempool_t::id(void *){
+size_t  mempool_t::id(void *) const {
     //todo
     return 0;
 }
@@ -63,7 +63,7 @@ int         hashmap_t::init(const mempool_conf_t & conf){
     //todo
     return 0;
 }
-void *      hashmap_t::insert(const void * blk, bool unique = true){
+void *      hashmap_t::insert(const void * blk, bool unique){
     //todo
     return nullptr;
 }

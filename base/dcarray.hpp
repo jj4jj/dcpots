@@ -1,4 +1,8 @@
 #pragma once
+#include <cstdint>
+#include <cstring>
+#include <algorithm>
+#include <cassert>
 
 template<class T, size_t cmax, class LengthT = uint32_t>
 struct array_t {

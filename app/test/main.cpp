@@ -659,6 +659,15 @@ static int app_test(int argc, const char * argv[]){
 #include "test_conf.pb.h"
 using namespace dcsutil;
 int xconf_test(int argc, const char * argv[]){
+
+    std::string sxml = "\n\n \n \t \t \t\n\n\n";
+    std::cout << sxml << std::endl;
+    std::cout << "=========================" << std::endl;
+    dcsutil::strrereplace(sxml, "^\\s*$", "");
+    std::cout << sxml << std::endl <<" =================2====";
+    std::regex_replace(sxml, std::regex("^\\s*$"), "");
+    std::cout << sxml << std::endl;
+
     TestConf tc;
     dcxconf_default(tc);
     tc.set_c(2456677);

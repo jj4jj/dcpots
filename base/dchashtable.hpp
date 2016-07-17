@@ -8,7 +8,7 @@
 //collision strategy : 
 //1.create a link list in multiple layer
 //2.in last max layer linear probe solving
-
+namespace dcsutil {
 template<class T, size_t cmax, size_t layer = 3, class HcfT = ::std::hash<T>>
 struct hashtable_t {
     struct hashmap_entry_t {
@@ -21,7 +21,7 @@ struct hashtable_t {
         size_t  count;
     } hash_layer_segment[layer];
     enum {
-        hash_entry_index_1st_layer_size = next_prime<cmax>::value,
+        hash_entry_index_1st_layer_size = next_prime<cmax, true>::value,
         hash_entry_index_size = (layer*hash_entry_index_1st_layer_size),
     };
     typedef mmpool_t<T, cmax>                                   pool_t;
@@ -216,3 +216,8 @@ struct hashtable_t {
         return NULL;
     }
 };
+
+
+
+
+}

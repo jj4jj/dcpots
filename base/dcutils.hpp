@@ -84,6 +84,10 @@ NS_BEGIN(dcsutil)
     string &            strreplace(string & str, const string & sub, const string & repl, bool global = false);
     string &            strrereplace(string & str, const string & repattern, const string & repl);
     bool                strrefind(string & str, const string & repattern, std::match_results<string::const_iterator>& m);
+    std::string &       strtrim(std::string & str, const char * charset=" \t");
+    std::string &       strltrim(std::string & str, const char * charset = " \t");
+    std::string &       strrtrim(std::string & str, const char * charset = " \t");
+
     template <typename StrItable>
     const char         *strjoin(std::string & val, const std::string & sep, StrItable it);
     const char         *strspack(std::string & str, const std::string & sep, const std::string & ks, ...);
