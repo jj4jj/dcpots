@@ -1,6 +1,6 @@
 #pragma  once
 #include <type_traits>
-#include "bitset.hpp"
+#include "dcbitset.hpp"
 #include <atomic>
 #include <cstdio>
 namespace dcsutil {
