@@ -136,13 +136,13 @@ namespace dcsutil {
         fclose(fp);
         return fp != nullptr;
     }
-    int			readfile(std::string & content, const std::string & file) {
+    int			readfile(const std::string & file, std::string & content) {
         char filebuff[512];
         content.clear();
         content.reserve(1024 * 8);
         FILE * fp = fopen(file.c_str(), "r");
         if (!fp) {
-            GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
+            GLOG_SER("open file:%s !", file.c_str());
             return -1;
         }
         while (true) {
@@ -166,7 +166,7 @@ namespace dcsutil {
     int			readfile(const std::string & file, char * buffer, size_t sz) {
         FILE * fp = fopen(file.c_str(), "r");
         if (!fp) {
-            GLOG_ERR("open file£º%s error:%d", file.c_str(), errno);
+            GLOG_SER("open file:%s error!", file.c_str());
             return -1;
         }
         if (sz == 0 || !buffer) {

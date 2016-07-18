@@ -193,6 +193,18 @@ cmdline_opt_t::getoptnum(const char * opt){
 	}
 	return count;
 }
+bool			
+cmdline_opt_t::hasopt(const char * opt, int idx){
+    auto range = _THIS_HANDLE->dict_opts.equal_range(opt);
+    while (range.first != range.second){
+        if (idx == 0){
+            return range.first->second.c_str();
+        }
+        --idx;
+        range.first++;
+    }
+    return nullptr;
+}
 const char * 
 cmdline_opt_t::getoptstr(const char * opt, int idx){
 	auto range = _THIS_HANDLE->dict_opts.equal_range(opt);

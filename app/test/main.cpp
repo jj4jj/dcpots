@@ -660,25 +660,29 @@ static int app_test(int argc, const char * argv[]){
 using namespace dcsutil;
 int xconf_test(int argc, const char * argv[]){
 
-    std::string sxml = "\n\n \n \t \t \t\n\n\n";
+    std::string sxml = "\n\n    \n \t \t \t\n\n\n";
     std::cout << sxml << std::endl;
     std::cout << "=========================" << std::endl;
-    dcsutil::strrereplace(sxml, "^\\s*$", "");
-    std::cout << sxml << std::endl <<" =================2====";
-    std::regex_replace(sxml, std::regex("^\\s*$"), "");
-    std::cout << sxml << std::endl;
+    dcsutil::strrereplace(sxml, "^[\\s]*$", "");
+    std::cout << sxml << std::endl ;
 
     TestConf tc;
     dcxconf_default(tc);
     tc.set_c(2456677);
-    int ret = dcxconf_dump(tc, "dcxonf_test.xml");
+    int ret = dcxconf_dump(tc, "dcxconf_test.xml");
     GLOG_DBG("dump ret:%d", ret);
     TestConf tc2;
-    ret = dcxconf_load(tc2, "dcxonf_test.xml");
-    GLOG_DBG("load ret:%d tc2:%s", ret, tc2.ShortDebugString().c_str());
+    //ret = dcxconf_load(tc2, "dcxconf_test.xml");
+    //GLOG_DBG("load ret:%d tc2:%s", ret, tc2.ShortDebugString().c_str());
+    readfile("dcxconf_test.xml", sxml);
+    cout << sxml << endl;
+    cout << "replaced" << endl;
+    dcsutil::strrereplace(sxml, "^[ \t]*$", "");
+    cout << sxml << endl;
 
     dcxcmdconf_t    dxc(argc-1, &argv[1], tc);
     dxc.parse();
+    cout << "cmdopt().hasopt(\"config - dump - def\"):" << dxc.cmdopt().hasopt("config-dump-def")<<endl;
     dxc.cmdopt().pusage();
     return 0;
 }
