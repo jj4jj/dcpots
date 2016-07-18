@@ -18,7 +18,8 @@ typedef msgproto_t<RpcMsg>  dcrpc_msg_t;
 ////////////////////////////////////////////////////////////////////
 struct  RpcClientImpl {
     dctcp_t * stcp{ nullptr };
-    int cnnxfd{ -1 };
+    bool      stcp_owner{ false };
+    int       cnnxfd{ -1 };    
     std::unordered_map<uint64_t, RpcClient::RpcCallNotify>  rpcall_cbs;
     std::unordered_map<string, RpcClient::RpcCallNotify>    notify_cbs;
     //todo timer queue
@@ -35,7 +36,6 @@ public:
     RpcClientImpl(){
         send_msg_buff.create(dcrpc::MAX_RPC_MSG_BUFF_SIZE);
     }
-
     ~RpcClientImpl(){
         send_msg_buff.destroy();
     }
@@ -126,15 +126,21 @@ static int _rpc_client_stcp_dispatch(dctcp_t* dc, const dctcp_event_t & ev, void
     }
     return 0;
 }
-int RpcClient::init(const std::string & svraddrs, int queue_size){
+int RpcClient::init(const std::string & svraddrs, int queue_size, dctcp_t * stcp){
     if (impl){
         return -1;
     }
     impl = new RpcClientImpl;
-    dctcp_config_t dctcp;
-    impl->stcp = dctcp_create(dctcp);
-    if (!impl->stcp){
-        return -2;
+    if (!stcp){
+        dctcp_config_t dctcp;
+        impl->stcp = dctcp_create(dctcp);
+        if (!impl->stcp){
+            return -2;
+        }
+        impl->stcp_owner = true;
+    }
+    else {
+        impl->stcp = stcp;
     }
     impl->queue_max_size = queue_size;
     dcsutil::strsplit(svraddrs, ",", impl->rpc_server_addrs);
@@ -192,16 +198,19 @@ int RpcClient::update(int tickus){
     }
     _check_connections(impl);
 	_check_sending_queue(impl);
-    int nproc = dctcp_poll(impl->stcp, tickus, 100);
+    int nproc = 0;
+    if (impl->stcp_owner){
+        nproc = dctcp_poll(impl->stcp, tickus, 100);
+    }
 	_check_sending_queue(impl);
 	return nproc;
 }
 int RpcClient::destroy(){
     if (impl){
-        if (impl->stcp){
+        if (impl->stcp_owner && impl->stcp){
             dctcp_destroy(impl->stcp);
-            impl->stcp = nullptr;
         }
+        impl->stcp = nullptr;
         delete impl;
         impl = nullptr;
     }
@@ -250,6 +259,4 @@ int RpcClient::call(const string & svc, const RpcValues & args, RpcCallNotify re
 }
 //int call(const std::string & svc, const char * buff, int ibuff, callback_result_t result_cb);
 //int call(const std::string & svc, const ::google::protobuf::Message & msg, callback_result_t result_cb);
-
-
 NS_END()
