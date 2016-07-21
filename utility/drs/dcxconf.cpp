@@ -29,6 +29,7 @@ int  dcxconf_load(::google::protobuf::Message & msg, const char * file, dcxconf_
     }
     if (ret) {
         GLOG_ERR("dcxconf load file:%s error ret:%d reason:%s", file, ret, error.c_str());
+        return -1;
     }
     return ret;
 }
@@ -127,49 +128,13 @@ int dcxcmdconf_t::parse(const char * desc, const char * version) {
     convert_to_cmdline_pattern_ctx ctx;
     protobuf_msg_sax(impl->msg.GetDescriptor()->name(), impl->msg, convert_to_cmdline_pattern, &ctx);
     ndesc.append(ctx.pattern);
-    GLOG_DBG("desc new ...:%s (msg:%s)", ndesc.c_str(), impl->msg.DebugString().c_str());
+    //GLOG_DBG("desc new ...:%s (msg:%s)", ndesc.c_str(), impl->msg.DebugString().c_str());
     impl->cmdline.parse(ndesc.c_str(), version);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    int ret = 0;
-    if (cmdopt().hasopt("conf")){
-        const char * config_file = cmdopt().getoptstr("conf");
-        ret = dcxconf_load(impl->msg, config_file);
-        if (ret){
-            GLOG_ERR("load config file:%s error :%d!", config_file, ret);
-            exit(-1);
-        }
-    }
-    auto & cmdmap = impl->cmdline.options();
-    std::string error, path;
-    std::string last_option = "";
-    int option_idx = -1;
-    for (auto it = cmdmap.begin(); it != cmdmap.end(); ++it) {
-        if (it->first.find("conf-") != 0){
-            continue;
-        }
-        path = it->first.substr(5);
-        if (last_option != it->first){
-            option_idx = -1;
-        }
-        else {
-            if (option_idx == -1){
-                option_idx = 1;
-            }
-            else {
-                ++option_idx;
-            }
-        }
-        dcsutil::strreplace(path, "-", ".");
-        if (option_idx > 0){
-            path.append(":");
-            path.append(std::to_string(option_idx));
-        }
-        ret = protobuf_msg_field_path_set_value(impl->msg, path, it->second, error);
-        if (ret) {
-            GLOG_ERR("set field value path:%s value:%s error:%d",
-                it->first.c_str(), it->second.c_str(), error.c_str());
-            return -1;
-        }
+    int ret = reload();
+    if (ret) {
+        GLOG_ERR("reload file:%s error:%d", config_file(), ret);
+        exit(-1);
     }
     if (cmdopt().hasopt("config-dump-def")){
         const char * config_file = cmdopt().getoptstr("config-dump-def");
@@ -178,8 +143,8 @@ int dcxcmdconf_t::parse(const char * desc, const char * version) {
             GLOG_ERR("dump config file:%s error :%d!", config_file, ret);
             exit(-1);
         }
+        exit(0);
     }
-
     return 0;
 }
 cmdline_opt_t & dcxcmdconf_t::cmdopt() {
@@ -191,4 +156,57 @@ cmdline_opt_t & dcxcmdconf_t::cmdopt() {
 const char *      dcxcmdconf_t::config_file() {
     return impl->cmdline.getoptstr("conf");
 }
+int  dcxcmdconf_t::reload() {
+    int ret = 0;
+    if (cmdopt().hasopt("conf")) {
+        const char * config_file = cmdopt().getoptstr("conf");
+        ::google::protobuf::Message * pNewMsg = impl->msg.New();
+        pNewMsg->Clear();
+        dcxconf_default(*pNewMsg);
+        ret = dcxconf_load(*pNewMsg, config_file);
+        if (ret) {
+            delete pNewMsg;
+            GLOG_ERR("reload config file:%s error :%d !", config_file, ret);
+            return -1;
+        }
+        else {
+            impl->msg.CopyFrom(*pNewMsg);
+            delete pNewMsg;
+        }
+    }
+    auto & cmdmap = impl->cmdline.options();
+    std::string error, path;
+    std::string last_option = "";
+    int option_idx = -1;
+    for (auto it = cmdmap.begin(); it != cmdmap.end(); ++it) {
+        if (it->first.find("conf-") != 0) {
+            continue;
+        }
+        path = it->first.substr(5);
+        if (last_option != it->first) {
+            option_idx = -1;
+        }
+        else {
+            if (option_idx == -1) {
+                option_idx = 1;
+            }
+            else {
+                ++option_idx;
+            }
+        }
+        dcsutil::strreplace(path, "-", ".");
+        if (option_idx > 0) {
+            path.append(":");
+            path.append(std::to_string(option_idx));
+        }
+        ret = protobuf_msg_field_path_set_value(impl->msg, path, it->second, error);
+        if (ret) {
+            GLOG_ERR("set field value path:%s value:%s error:%d",
+                     it->first.c_str(), it->second.c_str(), error.c_str());
+            return -1;
+        }
+    }
+    return 0;
+}
+
 NS_END()

@@ -6,7 +6,7 @@ namespace dcsutil{
 struct RedisAsyncAgentImpl;
 using std::string;
 struct RedisAsyncAgent {
-	int	 init(const string & addrs);
+	int	 init(const string & addrs, const char * passwd = nullptr);
 	int  update();
 	int	 destroy();
 	typedef std::function<void(int error, redisReply* r)> CommandCallBack;

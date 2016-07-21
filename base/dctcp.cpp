@@ -127,8 +127,23 @@ static inline int _create_tcpsocket(int sendbuffsize, int recvbuffsize){
 	if (ret) return -2;
 	return fd;
 }
+static dctcp_t * s_default_loop = nullptr;
+dctcp_t *    dctcp_default_loop() {
+    if (s_default_loop) {
+        return s_default_loop;
+    }
+    else {
+        dctcp_config_t tcpconf;
+        tcpconf.max_recv_buff = 32 * 1024;
+        tcpconf.max_send_buff = 64 * 1024;
+        tcpconf.max_client = 40960;
+        tcpconf.max_tcp_send_buff_size = 64 * 1024;
+        tcpconf.max_tcp_recv_buff_size = 16 * 1024;
+        return dctcp_create(tcpconf);
+    }
+}
 
-struct dctcp_t * dctcp_create(const dctcp_config_t & conf){
+dctcp_t * dctcp_create(const dctcp_config_t & conf){
 	dctcp_t * stcp = new dctcp_t();
 	stcp->conf = conf;
 	stcp->events = (epoll_event *)malloc(conf.max_client * sizeof(epoll_event));

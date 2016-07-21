@@ -22,6 +22,7 @@ namespace dcsutil {
         cmdline_opt_t &                 cmdopt();
         ::google::protobuf::Message &   config_msg();
         const char *                    config_file();
+        int                             reload();
         dcxcmdconf_impl_t *             impl;
     };
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////

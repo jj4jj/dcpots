@@ -1,5 +1,6 @@
 #pragma once
 #include "../share/dcrpc.h"
+struct dctcp_t;
 namespace dcrpc {
 struct RpcValues;
 struct RpcClientImpl;

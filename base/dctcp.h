@@ -46,9 +46,12 @@ struct dctcp_event_t {
 };
 
 struct dctcp_t;
-typedef int (*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
 
-struct dctcp_t *	dctcp_create(const dctcp_config_t & conf);
+typedef int(*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
+
+
+dctcp_t *           dctcp_default_loop();
+dctcp_t *	        dctcp_create(const dctcp_config_t & conf);
 void				dctcp_destroy(dctcp_t * );
 void				dctcp_event_cb(dctcp_t*, dctcp_event_cb_t cb, void *ud);
 //return proced events

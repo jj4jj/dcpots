@@ -654,7 +654,7 @@ protobuf_msg_to_xml_file(const google::protobuf::Message & msg, const std::strin
 int			
 protobuf_msg_to_xml_string(const google::protobuf::Message & msg, std::string & sxml){
     protobuf_msg_sax(msg.GetDescriptor()->name(), msg, convert_to_xml, &sxml);
-    dcsutil::strrereplace(sxml, "\\s*\n", "\n");
+    //dcsutil::strrereplace(sxml, "\\s*\n", "\n");
     return 0;
 }
 
