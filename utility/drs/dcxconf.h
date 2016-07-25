@@ -20,6 +20,9 @@ namespace dcsutil {
         dcxcmdconf_t(int argc, const char * argv[], ::google::protobuf::Message & msg, dcxconf_file_type type = DCXCONF_XML);
         int                             parse(const char * desc = "", const char * version = nullptr);        
         cmdline_opt_t &                 cmdopt();
+        const std::string &             options() const;
+        int                             init();
+        int                             command();
         ::google::protobuf::Message &   config_msg();
         const char *                    config_file();
         int                             reload();

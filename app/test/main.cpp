@@ -686,6 +686,32 @@ int xconf_test(int argc, const char * argv[]){
     dxc.cmdopt().pusage();
     return 0;
 }
+static int xapp_test(int argc, const char * argv[]){
+    struct TestApp : dcsutil::App {
+        dcxcmdconf_t * dxc;
+        TestConf    conf;
+        virtual int on_create(int argc, const char * argv[]){
+            dxc = new dcxcmdconf_t(argc, argv, conf);
+            set_cmdopt(dxc->cmdopt());
+            return 0;
+        }
+        virtual string options(){
+            return dxc->options();
+        }
+        virtual int on_init(){
+            int ret = dxc->init();
+            if (ret){
+                return -1;
+            }
+            return 0;
+        }
+        virtual int on_reload(){
+            return dxc->reload();
+        }
+    };
+
+
+}
 int main(int argc, const char* argv[])
 {
 	global_logger_init(logger_config_t());
@@ -713,6 +739,9 @@ int main(int argc, const char* argv[])
         }
         if (strstr(argv[1], "xconf")){
             return xconf_test(argc, argv);
+        }
+        if (strstr(argv[1], "xapp")){
+            return xapp_test(argc, argv);
         }
 
 		switch (argv[1][0])

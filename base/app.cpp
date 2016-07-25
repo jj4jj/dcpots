@@ -62,7 +62,12 @@ App::~App(){
         delete impl_;
     }
 }
-
+int	App::on_create(int argc, const char * argv[]){//once, 0 is ok , error code
+    std::string args;
+    dcsutil::strjoin(args, " ", argv);
+    GLOG_WAR("process create argc:%d argv[%s] !", argc,);
+    return 0;
+}
 int App::on_init(const char  * config){
     UNUSED(config);
     GLOG_WAR("process initialize !");
@@ -94,6 +99,11 @@ const char * App::on_control(const char * cmdline){
     GLOG_IFO("process received a command line:%s", cmdline);
     return cmdline;
 }
+void  App::set_cmdopt(cmdline_opt_t & cmdopt){
+    assert("cmdline options must be set most once !" && !this->impl_->cmdopt);
+    this->impl_->cmdopt = &cmdopt;
+}
+
 //typedef std::function<void()>   timer_task_t;
 //ms: > 0 (just after ms excute once),0:(excute now),<0(period ms excute);
 void App::shedule(timer_task_t task, int ms){
@@ -281,11 +291,14 @@ const   char *  App::name() const {
 }
 
 int App::init(int argc, const char * argv[]){
-    int ret = 0;
-    impl_->cmdopt = new cmdline_opt_t(argc, argv);
+    int ret = on_create(argc, argv);
+    if (ret){
+        GLOG_ERR("app check start error:%d !", ret);
+        return -1;
+    }
     string cmdopt_pattern;
     const char * program_name = dcsutil::path_base(argv[0]);
-#define		MAX_CMD_OPT_OPTION_LEN	(1024*4)
+#define		MAX_CMD_OPT_OPTION_LEN	(1024*32)
     size_t lpattern = strnprintf(cmdopt_pattern, 1024 * 4, ""
         "console-shell:n::console shell(connect with --console-listen);"
         "start:n:S:start process normal mode;"
@@ -301,17 +314,17 @@ int App::init(int argc, const char * argv[]){
         "log-level:r::log level settings:INFO;"
         "log-size:r::log single file max size settings:20480000;"
         "log-roll:r::log max rolltation count settings:20;"
-        "config:o:c:config file path;"
         "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
         "console-listen:r::console command listen (tcp address);"
         "shm:r::keep process state shm key/path;"
         "tick-interval:r::tick update interval time (microseconds):10000;"
         "tick-maxproc:r::tick proc times once:1000;"
         "", program_name, program_name, program_name);
-
     snprintf((char*)(cmdopt_pattern.data() + lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
         "%s", options().c_str());
-
+    if (!impl_->cmdopt){
+        impl_->cmdopt = new cmdline_opt_t(argc, argv);
+    }
     impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
     //////////////////////////////////////////////////////////////
     const char * pidfile = cmdopt().getoptstr("pid-file");
@@ -394,14 +407,16 @@ int App::init(int argc, const char * argv[]){
     }
     eztimer_set_dispatcher(app_timer_dispatch);
 
+    /*
     dctcp_config_t dconf;
     dconf.max_send_buff = 1024 * 1024;
     dconf.max_recv_buff = 1024 * 1024;
     dconf.max_tcp_send_buff_size = 1024 * 1024 * 4;
     dconf.max_tcp_recv_buff_size = 1024 * 1024 * 4;
-    impl_->stcp = dctcp_create(dconf);
+    */
+    impl_->stcp = dctcp_default_loop();
     if (!impl_->stcp){
-        GLOG_SER("stcp init error !");
+        GLOG_SER("dctcp loop init error !");
         return -4;
     }
     dctcp_event_cb(impl_->stcp, app_stcp_listener, impl_);
@@ -436,7 +451,7 @@ int App::init(int argc, const char * argv[]){
         }
     }
     //////////////////////////////////////////////////////////////////////////////////
-    return on_init(cmdopt().getoptstr("config"));
+    return on_init();
 }
 int App::run(){
     int  iret = 0;

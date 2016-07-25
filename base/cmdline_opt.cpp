@@ -18,10 +18,10 @@ cmdline_opt_t::cmdline_opt_t(int argc, const char ** argv){
 	handle = new cmdline_opt_impl_t();
 	_THIS_HANDLE->argc = argc;
 	_THIS_HANDLE->argv = argv;
-	_THIS_HANDLE->usage = "usage: ";
+	_THIS_HANDLE->usage = "Usage: ";
 	_THIS_HANDLE->usage += argv[0];
-	_THIS_HANDLE->usage += " [options]	\n";
-	_THIS_HANDLE->usage += "options should be like as follow:\n";
+	_THIS_HANDLE->usage += " [Options]	\n";
+	_THIS_HANDLE->usage += "Options should be like as follow:\n";
 }
 cmdline_opt_t::~cmdline_opt_t(){
 	if (handle){
@@ -33,7 +33,11 @@ static inline void pversion(const char * version){
     exit(-1);
 }
 void cmdline_opt_t::parse(const char * pattern, const char * version){
-	std::vector<std::string>	sopts;
+    _THIS_HANDLE->dict_opts.clear();
+    _THIS_HANDLE->dict_opts_default.clear();
+    _THIS_HANDLE->usage.clear();
+
+    std::vector<std::string>	sopts;
     string pattern_ex = "help:n:h:show help info;";
     if (version){
         pattern_ex += "version:n:V:show version info:";
@@ -177,8 +181,6 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
                 //std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
                 _THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
             }
-
-
 		}
         opt = getopt_long(_THIS_HANDLE->argc, (char* const *)_THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
 	}
