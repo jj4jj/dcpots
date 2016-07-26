@@ -32,9 +32,9 @@ public:
     int             tick_interval() const;
     int             tick_maxproc(int maxproc);
     int             tick_maxproc() const;
-    time_t          utctime();
+    time_t          utctime() const;
     time_t          add_time(int seconds);
-    int             gmt_tz_offset();
+    int             gmt_tz_offset() const;
     void            gmt_tz_offset(int tzo);
 
 public:

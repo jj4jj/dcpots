@@ -696,7 +696,7 @@ static int xapp_test(int argc, const char * argv[]){
                 GLOG_ERR("init config error:%d !", ret);
                 return -1;
             }
-            set_cmdopt(dxc.cmdopt());
+            cmdopt(dxc.cmdopt());
             return 0;
         }
         virtual int on_command(){
