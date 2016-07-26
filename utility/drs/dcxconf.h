@@ -17,16 +17,16 @@ namespace dcsutil {
     //default support --conf=file, --version, --help, --config-dump-def=file,--conf-...
     struct dcxcmdconf_impl_t;
     struct dcxcmdconf_t {
-        dcxcmdconf_t(int argc, const char * argv[], ::google::protobuf::Message & msg, dcxconf_file_type type = DCXCONF_XML);
-        int                             parse(const char * desc = "", const char * version = nullptr);        
+        dcxcmdconf_t(::google::protobuf::Message & msg, dcxconf_file_type type = DCXCONF_XML);
+        int                             init(int argc, const char * argv[]);
+        int                             reload();
+        int                             parse(const char * desc = nullptr, const char * version = nullptr);
+        int                             command();
         cmdline_opt_t &                 cmdopt();
         const std::string &             options() const;
-        int                             init();
-        int                             command();
         ::google::protobuf::Message &   config_msg();
         const char *                    config_file();
-        int                             reload();
-        dcxcmdconf_impl_t *             impl;
+        dcxcmdconf_impl_t *             impl_;
     };
     ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     int  dcxconf_load(::google::protobuf::Message & msg, const char * file, dcxconf_file_type type = DCXCONF_XML);

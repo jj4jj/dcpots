@@ -688,29 +688,35 @@ int xconf_test(int argc, const char * argv[]){
 }
 static int xapp_test(int argc, const char * argv[]){
     struct TestApp : dcsutil::App {
-        dcxcmdconf_t * dxc;
+        dcxcmdconf_t dxc;
         TestConf    conf;
         virtual int on_create(int argc, const char * argv[]){
-            dxc = new dcxcmdconf_t(argc, argv, conf);
-            set_cmdopt(dxc->cmdopt());
+            int ret = dxc.init(argc, argv, conf);
+            if (ret){
+                GLOG_ERR("init config error:%d !", ret);
+                return -1;
+            }
+            set_cmdopt(dxc.cmdopt());
             return 0;
         }
-        virtual string options(){
-            return dxc->options();
+        virtual int on_command(){
+            return dxc.command();
         }
         virtual int on_init(){
-            int ret = dxc->init();
+            return on_reload();
+        }
+        virtual int on_reload(){
+            int ret = dxc.reload();
             if (ret){
                 return -1;
             }
+
+
+
             return 0;
         }
-        virtual int on_reload(){
-            return dxc->reload();
-        }
     };
-
-
+    return AppMain<TestApp>(argc, argv);
 }
 int main(int argc, const char* argv[])
 {

@@ -10,41 +10,64 @@ struct cmdline_opt_impl_t {
 	std::multimap<string, string>	dict_opts;
 	std::map<string, string>		dict_opts_default;
 	string							usage;
+    string                          init_pattern;
 };
 
-#define _THIS_HANDLE ((cmdline_opt_impl_t*)handle)
-
-cmdline_opt_t::cmdline_opt_t(int argc, const char ** argv){
-	handle = new cmdline_opt_impl_t();
-	_THIS_HANDLE->argc = argc;
-	_THIS_HANDLE->argv = argv;
-	_THIS_HANDLE->usage = "Usage: ";
-	_THIS_HANDLE->usage += argv[0];
-	_THIS_HANDLE->usage += " [Options]	\n";
-	_THIS_HANDLE->usage += "Options should be like as follow:\n";
+cmdline_opt_t::cmdline_opt_t(int argc, const char ** argv) :impl_(nullptr){
+    init(argc, argv, nullptr);
+}
+static inline void _destroy_cmdlineopt(cmdline_opt_t * cmdopt){
+    if (cmdopt->impl_){
+        delete cmdopt->impl_;
+        cmdopt->impl_ = nullptr;
+    }
 }
 cmdline_opt_t::~cmdline_opt_t(){
-	if (handle){
-		delete _THIS_HANDLE;
-	}
+    _destroy_cmdlineopt(this);
+}
+#define MAX_OPT_SHOW_TEXT_WIDTH (32)
+int cmdline_opt_t::init(int argc, const char * argv[], const char * init_pattern /* = nullptr */){
+    if (argc > 0 && argv != nullptr){
+        _destroy_cmdlineopt(this);
+        impl_ = new cmdline_opt_impl_t();
+        impl_->argc = argc;
+        impl_->argv = argv;
+        impl_->usage = "Usage: ";
+        impl_->usage += argv[0];
+        impl_->usage += " [Options]	\n";
+        impl_->usage += "Options should be like as follow:\n";
+        if (init_pattern){
+            impl_->init_pattern = init_pattern;
+        }
+        return 0;
+    }
+    else {
+        return -1;
+    }
 }
 static inline void pversion(const char * version){
-    std::cerr << version << std::endl;
-    exit(-1);
+    std::cout << version << std::endl;
+    exit(0);
 }
 void cmdline_opt_t::parse(const char * pattern, const char * version){
-    _THIS_HANDLE->dict_opts.clear();
-    _THIS_HANDLE->dict_opts_default.clear();
-    _THIS_HANDLE->usage.clear();
+    impl_->dict_opts.clear();
+    impl_->dict_opts_default.clear();
+    impl_->usage.clear();
 
     std::vector<std::string>	sopts;
-    string pattern_ex = "help:n:h:show help info;";
+    string pattern_ex = impl_->init_pattern;
+    if (!pattern_ex.empty() && pattern_ex.back() != ';'){
+        pattern_ex.append(";");
+    }
+    pattern_ex += "help:n:h:show help info;";
     if (version){
         pattern_ex += "version:n:V:show version info:";
         pattern_ex += version;
         pattern_ex += ";";
     }
-    pattern_ex += pattern;
+    if (pattern){
+        pattern_ex += pattern;
+    }
 	dcsutil::strsplit(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
 	std::vector<std::string>	longoptnames;
@@ -89,48 +112,47 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 			//std::cout << "add dbg:" << opt_.name << ":val:" << opt_.val << std::endl;
 		}
 		//////////////////////////////////////////////////////////
-		dcsutil::strrepeat(_THIS_HANDLE->usage, " ", 4);
+		dcsutil::strrepeat(impl_->usage, " ", 4);
 		int length = 4;
 		if (soptv[2][0]){
-			_THIS_HANDLE->usage += "-";
-			_THIS_HANDLE->usage += soptv[2];
+			impl_->usage += "-";
+			impl_->usage += soptv[2];
 			length += 2;
 		}
 		if (soptv[0][0]){
 			if (soptv[2][0]){
-				_THIS_HANDLE->usage += ", ";
+				impl_->usage += ", ";
 				length += 2;
 			}
-			_THIS_HANDLE->usage += "--";
-			_THIS_HANDLE->usage += soptv[0];
+			impl_->usage += "--";
+			impl_->usage += soptv[0];
 			length += soptv[0].length();
 			length += 2;
 		}
 		if (soptv[1][0] == 'r'){
-			_THIS_HANDLE->usage += " <arg>";
+			impl_->usage += " <arg>";
 			length += 6;
 		}
 		if (soptv[1][0] == 'o'){
-			_THIS_HANDLE->usage += " [arg]";
+			impl_->usage += " [arg]";
 			length += 6;
 		}
-        #define MAX_OPT_SHOW_TEXT_WIDTH (25)
 		if (soptv[3][0]){
 			if (length < MAX_OPT_SHOW_TEXT_WIDTH){
-				dcsutil::strrepeat(_THIS_HANDLE->usage, " ", MAX_OPT_SHOW_TEXT_WIDTH - length);
+				dcsutil::strrepeat(impl_->usage, " ", MAX_OPT_SHOW_TEXT_WIDTH - length);
 			}
-			_THIS_HANDLE->usage += "\t";
-			_THIS_HANDLE->usage += soptv[3];
+			impl_->usage += "\t";
+			impl_->usage += soptv[3];
 		}
 		if (soptv.size() > 4 && soptv[4][0]){
-			_THIS_HANDLE->usage += "  (";
-			_THIS_HANDLE->usage += soptv[4];
-			_THIS_HANDLE->usage += ")";
+			impl_->usage += "  (";
+			impl_->usage += soptv[4];
+			impl_->usage += ")";
 			/////////////////////////////////////
-			_THIS_HANDLE->dict_opts_default[string(soptv[0])] = soptv[4];
-			_THIS_HANDLE->dict_opts_default[string(soptv[2])] = soptv[4];
+			impl_->dict_opts_default[string(soptv[0])] = soptv[4];
+			impl_->dict_opts_default[string(soptv[2])] = soptv[4];
 		}
-		_THIS_HANDLE->usage += "\n";
+		impl_->usage += "\n";
 		//////////////////////////////////////////////////////////
 	}
 	//end
@@ -140,17 +162,17 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 	int longIndex = 0;
 	int opt = 0;
 	//std::cout << "dbg:" << short_opt << std::endl;
-    opt = getopt_long(_THIS_HANDLE->argc, (char* const *)_THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
+    opt = getopt_long(impl_->argc, (char* const *)impl_->argv, short_opt.c_str(), &longopts[0], &longIndex);
 	while (opt != -1) {
 		if (opt == 0){
 			string opt_name = longopts[longIndex].name;
 			string opt_value = (optarg ? optarg : "");
 			//std::cout << "dbg long:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
-			_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
+			impl_->dict_opts.insert(std::make_pair(opt_name, opt_value));
 			if (longopts[longIndex].val > 0){
 				opt_name = string((char*)&(longopts[longIndex].val), 1);
 				//std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
-				_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
+				impl_->dict_opts.insert(std::make_pair(opt_name, opt_value));
 			}
             //std::clog << "opt_name" << "dbg"<< std::endl;
 			if (opt_name == "help"){
@@ -173,21 +195,21 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 			}
 			string opt_name = string((char*)&opt, 1);
 			string opt_value = (optarg ? optarg : "");
-			_THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
+			impl_->dict_opts.insert(std::make_pair(opt_name, opt_value));
 			//std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
 
             if (shortopt_2_longopt.find(opt) != shortopt_2_longopt.end()){
                 opt_name = shortopt_2_longopt[opt];
                 //std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
-                _THIS_HANDLE->dict_opts.insert(std::make_pair(opt_name, opt_value));
+                impl_->dict_opts.insert(std::make_pair(opt_name, opt_value));
             }
 		}
-        opt = getopt_long(_THIS_HANDLE->argc, (char* const *)_THIS_HANDLE->argv, short_opt.c_str(), &longopts[0], &longIndex);
+        opt = getopt_long(impl_->argc, (char* const *)impl_->argv, short_opt.c_str(), &longopts[0], &longIndex);
 	}
 }
 int			
 cmdline_opt_t::getoptnum(const char * opt){
-	auto range = _THIS_HANDLE->dict_opts.equal_range(opt);
+	auto range = impl_->dict_opts.equal_range(opt);
 	int count = 0;
 	while (range.first != range.second){
 		++count;
@@ -197,7 +219,7 @@ cmdline_opt_t::getoptnum(const char * opt){
 }
 bool			
 cmdline_opt_t::hasopt(const char * opt, int idx){
-    auto range = _THIS_HANDLE->dict_opts.equal_range(opt);
+    auto range = impl_->dict_opts.equal_range(opt);
     while (range.first != range.second){
         if (idx == 0){
             return range.first->second.c_str();
@@ -209,7 +231,7 @@ cmdline_opt_t::hasopt(const char * opt, int idx){
 }
 const char * 
 cmdline_opt_t::getoptstr(const char * opt, int idx){
-	auto range = _THIS_HANDLE->dict_opts.equal_range(opt);
+	auto range = impl_->dict_opts.equal_range(opt);
 	while (range.first != range.second){
 		if (idx == 0){
 			return range.first->second.c_str();
@@ -217,8 +239,8 @@ cmdline_opt_t::getoptstr(const char * opt, int idx){
 		--idx;
 		range.first++;
 	}
-	auto it = _THIS_HANDLE->dict_opts_default.find(opt);
-	if (it != _THIS_HANDLE->dict_opts_default.end()){
+	auto it = impl_->dict_opts_default.find(opt);
+	if (it != impl_->dict_opts_default.end()){
 		return it->second.c_str();
 	}
 	return nullptr;
@@ -233,15 +255,15 @@ cmdline_opt_t::getoptint(const char * opt, int idx){
 }
 void
 cmdline_opt_t::pusage(){
-	std::cerr << _THIS_HANDLE->usage << std::endl;
-    exit(-1);
+	std::cerr << impl_->usage << std::endl;
+    exit(0);
 }
 const char *	
 cmdline_opt_t::usage(){
-	return _THIS_HANDLE->usage.c_str();
+	return impl_->usage.c_str();
 }
 const std::multimap<std::string, std::string>  &
 cmdline_opt_t::options() const {
-    return _THIS_HANDLE->dict_opts;
+    return impl_->dict_opts;
 }
 

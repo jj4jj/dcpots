@@ -64,13 +64,13 @@ struct dcxcmdconf_impl_t {
     ::google::protobuf::Message & msg;
     dcxconf_file_type type;
     std::string   options;
-    dcxcmdconf_impl_t(int argc, const char * argv[], ::google::protobuf::Message & msg_, dcxconf_file_type type_) :
-        cmdline(argc, argv), msg(msg_), type(type_){
+    dcxcmdconf_impl_t(::google::protobuf::Message & msg_, dcxconf_file_type type_) :
+        msg(msg_), type(type_){
     }
 };
 //default support --conf=file, --version, --help, --default-conf-dump=file,--conf-...
-dcxcmdconf_t::dcxcmdconf_t(int argc, const char * argv[], ::google::protobuf::Message & msg, dcxconf_file_type type) {
-    impl = new dcxcmdconf_impl_t(argc, argv, msg, type);
+dcxcmdconf_t::dcxcmdconf_t(::google::protobuf::Message & msg, dcxconf_file_type type) {
+    impl_ = new dcxcmdconf_impl_t(msg, type);
 }
 
 struct convert_to_cmdline_pattern_ctx {
@@ -118,29 +118,24 @@ convert_to_cmdline_pattern(const string & name, const ::google::protobuf::Messag
     //GLOG_DBG("ctx->path:%zu full_field_path:%s", ctx->path.size(), full_field_path.c_str());
 }
 const std::string &   dcxcmdconf_t::options() const {
-    if (impl->options.empty()){
-        impl->options.append("conf:r::set config file path;"
+    if (impl_->options.empty()){
+        impl_->options.append("conf:r::set config file path;"
                              "config-dump-def:r::dump the default config file:config.def.xml;");
-        dcxconf_default(impl->msg);
+        dcxconf_default(impl_->msg);
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////
         convert_to_cmdline_pattern_ctx ctx;
-        protobuf_msg_sax(impl->msg.GetDescriptor()->name(), impl->msg, convert_to_cmdline_pattern, &ctx);
-        impl->options.append(ctx.pattern);
+        protobuf_msg_sax(impl_->msg.GetDescriptor()->name(), impl_->msg, convert_to_cmdline_pattern, &ctx);
+        impl_->options.append(ctx.pattern);
     }
-    return impl->options;
+    return impl_->options;
+}
+int dcxcmdconf_t::init(int argc, const char * argv[]){
+    return impl_->cmdline.init(argc, argv, options().c_str());
 }
 int dcxcmdconf_t::command(){
-
-}
-int dcxcmdconf_t::init(){
-    int ret = reload();
-    if (ret) {
-        GLOG_ERR("reload file:%s error:%d", config_file(), ret);
-        return -1;
-    }
     if (cmdopt().hasopt("config-dump-def")){
         const char * config_file = cmdopt().getoptstr("config-dump-def");
-        ret = dcxconf_dump(impl->msg, config_file);
+        int ret = dcxconf_dump(impl_->msg, config_file);
         if (ret){
             GLOG_ERR("dump config file:%s error :%d!", config_file, ret);
             return -2;
@@ -158,22 +153,35 @@ int dcxcmdconf_t::parse(const char * desc, const char * version) {
         ndesc.append(";");
     }
     ndesc.append(options());
-    impl->cmdline.parse(ndesc.c_str(), version);
+    impl_->cmdline.parse(ndesc.c_str(), version);
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    return init();
+    int ret = reload();
+    if (ret) {
+        GLOG_ERR("reload file:%s error:%d", config_file(), ret);
+        return -1;
+    }
+    ret = command();
+    if (ret < 0){
+        GLOG_ERR("command file:%s error:%d", config_file(), ret);
+        return -1;
+    }
+    else if (ret > 0){
+        exit(0);
+    }
+    return 0;
 }
 cmdline_opt_t & dcxcmdconf_t::cmdopt() {
-    return impl->cmdline;
+    return impl_->cmdline;
 }
 ::google::protobuf::Message & dcxcmdconf_t::config_msg() {
-    return impl->msg;
+    return impl_->msg;
 }
 const char *      dcxcmdconf_t::config_file() {
-    return impl->cmdline.getoptstr("conf");
+    return impl_->cmdline.getoptstr("conf");
 }
 int  dcxcmdconf_t::reload() {
     int ret = 0;
-    auto & cmdmap = impl->cmdline.options();
+    auto & cmdmap = impl_->cmdline.options();
     std::string error, path;
     std::string last_option = "";
     int option_idx = -1;
@@ -198,7 +206,7 @@ int  dcxcmdconf_t::reload() {
             path.append(":");
             path.append(std::to_string(option_idx));
         }
-        ret = protobuf_msg_field_path_set_value(impl->msg, path, it->second, error);
+        ret = protobuf_msg_field_path_set_value(impl_->msg, path, it->second, error);
         if (ret) {
             GLOG_ERR("set field value path:%s value:%s error:%d",
                      it->first.c_str(), it->second.c_str(), error.c_str());
@@ -207,7 +215,7 @@ int  dcxcmdconf_t::reload() {
     }
     if (cmdopt().hasopt("conf")) {
         const char * config_file = cmdopt().getoptstr("conf");
-        ::google::protobuf::Message * pNewMsg = impl->msg.New();
+        ::google::protobuf::Message * pNewMsg = impl_->msg.New();
         pNewMsg->Clear();
         dcxconf_default(*pNewMsg);
         ret = dcxconf_load(*pNewMsg, config_file);
@@ -217,7 +225,7 @@ int  dcxcmdconf_t::reload() {
             return -1;
         }
         else {
-            impl->msg.CopyFrom(*pNewMsg);
+            impl_->msg.CopyFrom(*pNewMsg);
             delete pNewMsg;
         }
     }

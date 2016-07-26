@@ -62,14 +62,16 @@ App::~App(){
         delete impl_;
     }
 }
+int	App::on_command(){
+    return 0;
+}
 int	App::on_create(int argc, const char * argv[]){//once, 0 is ok , error code
     std::string args;
     dcsutil::strjoin(args, " ", argv);
     GLOG_WAR("process create argc:%d argv[%s] !", argc,);
     return 0;
 }
-int App::on_init(const char  * config){
-    UNUSED(config);
+int App::on_init(){
     GLOG_WAR("process initialize !");
     return 0;
 }
@@ -99,7 +101,7 @@ const char * App::on_control(const char * cmdline){
     GLOG_IFO("process received a command line:%s", cmdline);
     return cmdline;
 }
-void  App::set_cmdopt(cmdline_opt_t & cmdopt){
+void  App::cmdopt(cmdline_opt_t & cmdopt){
     assert("cmdline options must be set most once !" && !this->impl_->cmdopt);
     this->impl_->cmdopt = &cmdopt;
 }
@@ -137,71 +139,7 @@ std::string App::options(){
 std::vector<dcshmobj_user_t*>   App::shm_users() {
     return std::vector<dcshmobj_user_t*>();
 }
-
-static inline int init_command(App & app, const char * pidfile){
-	if (app.cmdopt().hasopt("stop")){
-		if (!pidfile){
-			fprintf(stderr, "lacking command line option pid-file ...\n");
-			return -1;
-		}
-		int killpid = lockpidfile(pidfile, SIGTERM, true);
-		fprintf(stderr, "stoped process with normal stop mode [%d]\n", killpid);
-		exit(0);
-	}
-	if (app.cmdopt().hasopt("restart")){
-		if (!pidfile){
-			fprintf(stderr, "lacking command line option pid-file ...\n");
-			return -1;
-		}
-		int killpid = lockpidfile(pidfile, SIGUSR1, true);
-		fprintf(stderr, "stoped process with restart mode [%d]\n", killpid);
-		exit(0);
-	}
-	if (app.cmdopt().hasopt("reload")){
-		if (!pidfile){
-			fprintf(stderr, "lacking command line option pid-file ...\n");
-			return -1;
-		}
-		int killpid = lockpidfile(pidfile, SIGUSR2, true, nullptr, true);
-		fprintf(stderr, "reloaded process [%d]\n", killpid);
-		exit(0);
-	}
-	if (app.cmdopt().hasopt("console-shell")){
-		const char * console = app.cmdopt().getoptstr("console-listen");
-		if (!console){
-			fprintf(stderr, "has no console-listen option open console shell error !\n");
-			exit(-1);
-		}
-		string console_server = "tcp://";
-		console_server += console;
-		printf("connecting to %s ...\n", console_server.c_str());
-		int confd = openfd(console_server.c_str(), "w", 3000);
-		if (!confd){			
-			fprintf(stderr, "connect error %s!\n", strerror(errno));
-			exit(-1);
-		}
-		enum { CONSOLE_BUFFER_SIZE = 1024*1024};
-		char * console_buffer = new char[CONSOLE_BUFFER_SIZE];
-		printf("console server connected ! command <quit> will exit shell\n");
-		while (true){
-			int n = readfd(confd, console_buffer, CONSOLE_BUFFER_SIZE,
-				"token:\r\n\r\n", 1000 * 3600);
-			if (n < 0){
-				fprintf(stderr, "console server closed [ret=%d]!\n", n);
-				break;
-			}
-			printf("%s\n%s$", console_buffer, console);
-			const char * command = fgets(console_buffer, CONSOLE_BUFFER_SIZE, stdin);
-			if (strcasecmp(command, "quit") == 0){
-				break;
-			}
-			dcsutil::writefd(confd, command, 0, "token:\r\n\r\n");
-		}
-		closefd(confd);
-		delete console_buffer;
-		exit(0);
-	}
-    ///////////////////////////////////////////////////////////////////
+static inline int _shm_command(App & app){
     const char * shm_keypath = app.cmdopt().getoptstr("shm");
     bool need_exit = false;
     do {
@@ -222,9 +160,80 @@ static inline int init_command(App & app, const char * pidfile){
     } while (false);
 
     if (need_exit){
-        exit(0);
+        return 1;
     }
-	return 0;
+    return 0;
+}
+//return 0: continue, 
+//return -1(<0): error
+//return 1(>0): exit success
+static inline int init_command(App & app, const char * pidfile){
+    int ret = 0;
+	if (app.cmdopt().hasopt("stop")){
+		if (!pidfile){
+			fprintf(stderr, "lacking command line option pid-file ...\n");
+			return -1;
+		}
+		int killpid = lockpidfile(pidfile, SIGTERM, true);
+		fprintf(stderr, "stoped process with normal stop mode [%d]\n", killpid);
+        return 1;
+	}
+	if (app.cmdopt().hasopt("restart")){
+		if (!pidfile){
+			fprintf(stderr, "lacking command line option pid-file ...\n");
+			return -1;
+		}
+		int killpid = lockpidfile(pidfile, SIGUSR1, true);
+		fprintf(stderr, "stoped process with restart mode [%d]\n", killpid);
+        return 1;
+    }
+	if (app.cmdopt().hasopt("reload")){
+		if (!pidfile){
+			fprintf(stderr, "lacking command line option pid-file ...\n");
+			return -1;
+		}
+		int killpid = lockpidfile(pidfile, SIGUSR2, true, nullptr, true);
+		fprintf(stderr, "reloaded process [%d]\n", killpid);
+        return 1;
+    }
+	if (app.cmdopt().hasopt("console-shell")){
+		const char * console = app.cmdopt().getoptstr("console-listen");
+		if (!console){
+			fprintf(stderr, "has no console-listen option open console shell error !\n");
+			return -1;
+		}
+		string console_server = "tcp://";
+		console_server += console;
+		printf("connecting to %s ...\n", console_server.c_str());
+		int confd = openfd(console_server.c_str(), "w", 3000);
+		if (!confd){			
+			fprintf(stderr, "connect error %s!\n", strerror(errno));
+			return -1;
+		}
+		enum { CONSOLE_BUFFER_SIZE = 1024*1024};
+		char * console_buffer = new char[CONSOLE_BUFFER_SIZE];
+		printf("console server connected ! command <quit> will exit shell\n");
+		while (true){
+			int n = readfd(confd, console_buffer, CONSOLE_BUFFER_SIZE,
+				"token:\r\n\r\n", 1000 * 3600);
+			if (n < 0){
+				fprintf(stderr, "console server closed [ret=%d]!\n", n);
+				break;
+			}
+			printf("%s\n%s$", console_buffer, console);
+			const char * command = fgets(console_buffer, CONSOLE_BUFFER_SIZE, stdin);
+			if (strcasecmp(command, "quit") == 0){
+				break;
+			}
+			dcsutil::writefd(confd, command, 0, "token:\r\n\r\n");
+		}
+		closefd(confd);
+		delete console_buffer;
+        return 1;
+    }
+    ///////////////////////////////////////////////////////////////////
+    ret = _shm_command(app);
+	return app.on_command();
 }
 static inline int 
 app_console_command(AppImpl * , const char * msg, int msgsz, int fd, dctcp_t * dc){
@@ -289,65 +298,7 @@ static inline void app_tick_update(AppImpl * impl_){
 const   char *  App::name() const {
     return const_cast<App*>(this)->cmdopt().getoptstr("name");
 }
-
-int App::init(int argc, const char * argv[]){
-    int ret = on_create(argc, argv);
-    if (ret){
-        GLOG_ERR("app check start error:%d !", ret);
-        return -1;
-    }
-    string cmdopt_pattern;
-    const char * program_name = dcsutil::path_base(argv[0]);
-#define		MAX_CMD_OPT_OPTION_LEN	(1024*32)
-    size_t lpattern = strnprintf(cmdopt_pattern, 1024 * 4, ""
-        "console-shell:n::console shell(connect with --console-listen);"
-        "start:n:S:start process normal mode;"
-        "stop:n:T:stop process normal mode;"
-        "restart:n:R:stop process with restart mode;"
-        "reload:n:l:reload process config and some settings;"
-        "shm-clear-recover:n::clear the master share memory for recover;"
-        "shm-clear-backup:n::clear the backup share memory for recover;"
-        "name:r:N:set process name:%s;"
-        "daemon:n:D:daemonlize start mode;"
-        "log-dir:r::log dir settings:/tmp;"
-        "log-file:r::log file pattern settings:%s;"
-        "log-level:r::log level settings:INFO;"
-        "log-size:r::log single file max size settings:20480000;"
-        "log-roll:r::log max rolltation count settings:20;"
-        "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
-        "console-listen:r::console command listen (tcp address);"
-        "shm:r::keep process state shm key/path;"
-        "tick-interval:r::tick update interval time (microseconds):10000;"
-        "tick-maxproc:r::tick proc times once:1000;"
-        "", program_name, program_name, program_name);
-    snprintf((char*)(cmdopt_pattern.data() + lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
-        "%s", options().c_str());
-    if (!impl_->cmdopt){
-        impl_->cmdopt = new cmdline_opt_t(argc, argv);
-    }
-    impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
-    //////////////////////////////////////////////////////////////
-    const char * pidfile = cmdopt().getoptstr("pid-file");
-    //1.control command
-    ret = init_command(*this, pidfile);
-    if (ret){
-        GLOG_ERR("control command init error !");
-        return -1;
-    }
-
-    //"start:n:S:start process normal mode;"
-    if (!cmdopt().hasopt("start")){
-        exit(-1);
-    }
-    //2.daemonlization and pid running checking
-    if (cmdopt().hasopt("daemon")){
-        daemonlize(1, 0, pidfile);
-    }
-    if (pidfile && getpid() != dcsutil::lockpidfile(pidfile)){
-        fprintf(stderr, "process should be unique running ...");
-        return -2;
-    }
-    dcsutil::signalh_ignore(SIGPIPE);
+static inline void init_signal(){
     struct signalh_function {
         static void term_stop(int sig, siginfo_t *, void *){
             App::instance().stop();
@@ -357,7 +308,7 @@ int App::init(int argc, const char * argv[]){
             App::instance().restart();
             dcsutil::signalh_ignore(sig);
         }
-        static void usr2_reload(int , siginfo_t *, void *){
+        static void usr2_reload(int, siginfo_t *, void *){
             App::instance().reload();
         }
         static void segv_crash(int signo, siginfo_t * info, void * ucontex){
@@ -381,20 +332,22 @@ int App::init(int argc, const char * argv[]){
             dcsutil::signalh_default(signo);
         }
     };
+    /////////////////////////////////////////////////////////////////
+    dcsutil::signalh_ignore(SIGPIPE);
     dcsutil::signalh_push(SIGTERM, signalh_function::term_stop);
     dcsutil::signalh_push(SIGUSR1, signalh_function::usr1_restart);
     dcsutil::signalh_push(SIGUSR2, signalh_function::usr2_reload);
     dcsutil::signalh_push(SIGSEGV, signalh_function::segv_crash);
-
-    //////////////////////////////////////////////////////////////
+}
+static inline int init_facilities(App & app, AppImpl * impl_){
     //3.global logger
     logger_config_t lconf;
-    lconf.dir = cmdopt().getoptstr("log-dir");
-    lconf.pattern = cmdopt().getoptstr("log-file");
-    lconf.lv = INT_LOG_LEVEL(cmdopt().getoptstr("log-level"));
+    lconf.dir = app.cmdopt().getoptstr("log-dir");
+    lconf.pattern = app.cmdopt().getoptstr("log-file");
+    lconf.lv = INT_LOG_LEVEL(app.cmdopt().getoptstr("log-level"));
     lconf.max_file_size = cmdopt().getoptint("log-size");
     lconf.max_roll = cmdopt().getoptint("log-roll");
-    ret = global_logger_init(lconf);
+    int ret = global_logger_init(lconf);
     if (ret){
         fprintf(stderr, "logger init error = %d", ret);
         return -2;
@@ -406,14 +359,6 @@ int App::init(int argc, const char * argv[]){
         return -3;
     }
     eztimer_set_dispatcher(app_timer_dispatch);
-
-    /*
-    dctcp_config_t dconf;
-    dconf.max_send_buff = 1024 * 1024;
-    dconf.max_recv_buff = 1024 * 1024;
-    dconf.max_tcp_send_buff_size = 1024 * 1024 * 4;
-    dconf.max_tcp_recv_buff_size = 1024 * 1024 * 4;
-    */
     impl_->stcp = dctcp_default_loop();
     if (!impl_->stcp){
         GLOG_SER("dctcp loop init error !");
@@ -421,7 +366,7 @@ int App::init(int argc, const char * argv[]){
     }
     dctcp_event_cb(impl_->stcp, app_stcp_listener, impl_);
     //control
-    const char * console_listen = cmdopt().getoptstr("console-listen");
+    const char * console_listen = app.cmdopt().getoptstr("console-listen");
     if (console_listen){
         impl_->console = dctcp_listen(impl_->stcp, console_listen, "token:\r\n\r\n",
             app_console_listener, impl_);
@@ -430,12 +375,12 @@ int App::init(int argc, const char * argv[]){
             return -5;
         }
     }
-    impl_->interval = cmdopt().getoptint("tick-interval");
-    impl_->maxtps = cmdopt().getoptint("tick-maxproc");
+    impl_->interval = app.cmdopt().getoptint("tick-interval");
+    impl_->maxtps = app.cmdopt().getoptint("tick-maxproc");
     //////////////////////////////////////////////////////////////////////////////////
     std::vector<dcshmobj_user_t*>   shmusers = this->shm_users();
     if (!shmusers.empty()){
-        const char * shmkey = cmdopt().getoptstr("shm");
+        const char * shmkey = app.cmdopt().getoptstr("shm");
         if (!shmkey){
             GLOG_ERR("not config shm key path setting !");
             return -6;
@@ -450,10 +395,85 @@ int App::init(int argc, const char * argv[]){
             return -7;
         }
     }
+}
+static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_, App & app){
+    string cmdopt_pattern;
+    const char * program_name = dcsutil::path_base(argv[0]);
+#define		MAX_CMD_OPT_OPTION_LEN	(1024*32)
+    size_t lpattern = strnprintf(cmdopt_pattern, 1024*8, ""
+        "console-shell:n::console shell(connect with --console-listen);"
+        "start:n:S:start process normal mode;"
+        "stop:n:T:stop process normal mode;"
+        "restart:n:R:stop process with restart mode;"
+        "reload:n:l:reload process config and some settings;"
+        "shm-clear-recover:n::clear the master share memory for recover;"
+        "shm-clear-backup:n::clear the backup share memory for recover;"
+        "name:r:N:set process name:%s;"
+        "daemon:n:D:daemonlize start mode;"
+        "log-dir:r::log dir settings:/tmp;"
+        "log-file:r::log file pattern settings:%s;"
+        "log-level:r::log level settings:INFO;"
+        "log-size:r::log single file max size settings:20480000;"
+        "log-roll:r::log max rolltation count settings:20;"
+        "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
+        "console-listen:r::console command listen (tcp address);"
+        "shm:r::keep process state shm key/path;"
+        "tick-interval:r::tick update interval time (microseconds):10000;"
+        "tick-maxproc:r::tick proc times once:1000;"
+        "", program_name, program_name, program_name);
+    snprintf((char*)(cmdopt_pattern.data() + lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
+        "%s", app.options().c_str());
+    if (!impl_->cmdopt){
+        impl_->cmdopt = new cmdline_opt_t(argc, argv);
+    }
+    impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
+    return 0;
+}
+
+int App::init(int argc, const char * argv[]){
+    int ret = on_create(argc, argv);
+    if (ret){
+        GLOG_ERR("app check start error:%d !", ret);
+        return -1;
+    }
+    ret = init_arguments(argc, argv, impl_, *this);
+    //////////////////////////////////////////////////////////////
+    const char * pidfile = cmdopt().getoptstr("pid-file");
+    //1.control command
+    ret = init_command(*this, pidfile);
+    if (ret){
+        if (ret < 0){
+            GLOG_ERR("control command init error:%d !", ret);
+            return -1;
+        }
+        else {
+            exit(0);
+        }
+    }
+    //"start:n:S:start process normal mode;"
+    if (!cmdopt().hasopt("start")){
+        exit(-1);
+    }
+    //2.daemonlization and pid running checking
+    if (cmdopt().hasopt("daemon")){
+        daemonlize(1, 0, pidfile);
+    }
+    if (pidfile && getpid() != dcsutil::lockpidfile(pidfile)){
+        fprintf(stderr, "process should be unique running ...");
+        return -2;
+    }
+    init_signal();
+    //////////////////////////////////////////////////////////////
+    ret = init_facilities(*this, impl_);
+    if (ret){
+        GLOG_ERR("init facilities error:%d !", ret);
+        return -1;
+    }
+    GLOG_IFO("app framework init success !");
     //////////////////////////////////////////////////////////////////////////////////
     return on_init();
 }
-int App::run(){
+int App::start(){
     int  iret = 0;
     bool bret = 0;
     while (true){
@@ -501,7 +521,7 @@ void App::reload(){
 void App::restart(){
     impl_->restarting = true;
 }
-dctcp_t       * App::stcp(){
+dctcp_t       * App::evloop(){
     return impl_->stcp;
 }
 
