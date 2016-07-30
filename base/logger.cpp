@@ -23,21 +23,21 @@ struct logger_t {
 #undef THREAD_SAFE
 
 static	logger_t * G_LOGGER = nullptr;
-logger_t *		global_logger(){
+logger_t *		default_logger(){
     if (!G_LOGGER){
-        global_logger_init(logger_config_t());
+        default_logger_init(logger_config_t());
     }
 	return G_LOGGER;
 }
-int				global_logger_init(const logger_config_t & conf){
+int				default_logger_init(const logger_config_t & conf){
 	if (G_LOGGER){
-		global_logger_destroy();
+		default_logger_destroy();
 		G_LOGGER = nullptr;
 	}
 	G_LOGGER = logger_create(conf);
 	return G_LOGGER ? 0 : -1;
 }
-void			global_logger_destroy(){
+void			default_logger_destroy(){
 	if (!G_LOGGER){
 		return;
 	}
@@ -66,13 +66,13 @@ logger_t *	logger_create(const logger_config_t & conf){
 }
 void            logger_lock(logger_t * logger){
     if (!logger){
-        return global_logger()->lock.lock();
+        return default_logger()->lock.lock();
     }
     return logger->lock.lock();
 }
 void            logger_unlock(logger_t * logger){
     if (!logger){
-        return global_logger()->lock.unlock();
+        return default_logger()->lock.unlock();
     }
     return logger->lock.unlock();
 }
@@ -84,13 +84,13 @@ void			logger_destroy(logger_t * logger){
 }
 void			logger_set_level(logger_t * logger, log_msg_level_type level){
 	if (logger == nullptr){
-		logger = global_logger();
+		logger = default_logger();
 	}
 	logger->conf.lv = level;
 }
 int				logger_level(logger_t * logger){
 	if (logger == nullptr){
-		logger = global_logger();
+		logger = default_logger();
 	}
 	if (logger)
 		return logger->conf.lv;
@@ -100,14 +100,14 @@ int				logger_level(logger_t * logger){
 //last msg
 const char*		logger_msg(logger_t * logger){
 	if (logger == nullptr){
-		logger = global_logger();
+		logger = default_logger();
 	}
 	return logger->last_msg.c_str();
 }
 //last err
 int				logger_errno(logger_t * logger){
 	if (logger == nullptr){
-		logger = global_logger();
+		logger = default_logger();
 	}
 	return logger->last_err;
 }
@@ -115,7 +115,7 @@ int				logger_errno(logger_t * logger){
 //set last
 int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt, ...){
 	if (logger == nullptr){
-		logger = global_logger();
+		logger = default_logger();
 	}
 	if (loglv < logger->conf.lv){
 		return 0;

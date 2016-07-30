@@ -127,10 +127,10 @@ int main(int argc, const char * argv[]){
 		logger_config_t logconf;
 		logconf.dir = logpath;
 		logconf.pattern = "mongoproxy.log";
-		global_logger_init(logconf);
+		default_logger_init(logconf);
 	}
 	else {
-		global_logger_init(logger_config_t());
+		default_logger_init(logger_config_t());
 	}
 	dcsutil::protobuf_logger_init();
 

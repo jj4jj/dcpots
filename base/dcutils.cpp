@@ -932,20 +932,23 @@ namespace dcsutil {
         strftime((char*)str.c_str(), str.capacity(), format, &_sftm);
         return str.c_str();
     }
-    const char*         strptime(time_t & unixtime, const std::string & str, const char * format){
+    const char*		strftime(std::string & str, struct tm & rtm, const char * format){
+        str.reserve(32);
+        strftime((char*)str.c_str(), str.capacity(), format, &rtm);
+        return str.c_str();
+    }
+    time_t         strptime(const std::string & str, const char * format){
         struct tm _tmptm;
-        unixtime = 0;
-        const char * p = strptime(str.c_str(), format, &_tmptm);
+        time_t unixtime = 0;
+        const char * p = ::strptime(str.c_str(), format, &_tmptm);
         if (!p){
-            return nullptr;
+            return time_t(-1);
         }
         unixtime = mktime(&_tmptm);
-        return p;
+        return unixtime;
     }
     time_t			    stdstrtime(const char * strtime){
-        time_t _tmt;
-        strptime(_tmt, strtime);
-        return _tmt;
+        return strptime(strtime, "%FT%X%z");
     }
     bool            strisint(const std::string & str, int base){
         char * endptr;
@@ -1028,11 +1031,20 @@ namespace dcsutil {
         return str;
     }
     string &            strrereplace(string & str, const string & repattern, const string & repl){
+#if (defined(_MSC_VER) && _MSC_VER > 1500) || defined(__GNUC__) && (__GNUC__ > 4 || __GNUC__ == 4 && __GNUC_MINOR__ >= 9)
         str = std::regex_replace(str, std::regex(repattern), repl);
+#else        
+        GLOG_ERR("not found re find in this compiler repattern:%s -> %s", repattern.c_str(), repl.c_str());
+#endif
         return str;
     }
     bool                strrefind(string & str, const string & repattern, std::match_results<string::const_iterator>& m){
+#if (defined(_MSC_VER) && _MSC_VER > 1500) || (defined(__GNUC__) && (__GNUC__ > 4 || __GNUC__ == 4 && __GNUC_MINOR__ >= 9))
         return std::regex_search(str, m, std::regex(repattern));
+#else
+        GLOG_ERR("not found re find in this compiler repattern:%s", repattern.c_str());
+        return false;
+#endif
     }
     std::string &       strtrim(std::string & str, const char * charset){
         if (str.empty() || !charset || !*charset){
@@ -1100,6 +1112,16 @@ namespace dcsutil {
         }
         va_end(ap);
         return vs.size();
+    }
+    const char         *strjoin(std::string & val, const std::string & sep, const char ** it){
+        size_t i = 0;
+        val.clear();
+        for (const char * p = it[0]; *p; ++p){
+            if (i != 0){ val.append(sep); }
+            val.append(p);
+            ++i;
+        }
+        return val.c_str();
     }
     const char         *strspack(std::string & str, const std::string & sep, const std::string & ks, ...){
         //{K=V,}

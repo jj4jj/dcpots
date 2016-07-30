@@ -5,13 +5,15 @@ NS_BEGIN(dcsutil)
     template<bool threadsafe>
     struct lock_mixin;
     //----------misc------------------------------------------------------------
-	//time 
 	uint64_t			time_unixtime_us();
 	inline	time_t		time_unixtime_s(){ return time_unixtime_us() / 1000000L; }
 	inline	uint64_t	time_unixtime_ms(){ return time_unixtime_us() / 1000L;}
-	const char*			strftime(std::string & str, time_t unixtime = 0, const char * format = "%FT%X%z");
-	const char*			strptime(time_t & unixtime, const std::string & str, const char * format = "%FT%X%z");
-	time_t				stdstrtime(const char * strtime = "1970-01-01T08:08:08+0800");
+
+    const char*			strftime(std::string & str, time_t unixtime = 0, const char * format = "%FT%X%z");
+    time_t  	        strptime(const std::string & str, const char * format = "%FT%X%z");
+    const char*			strftime(std::string & str, struct tm & rtm, const char * format = "%FT%X%z");
+
+    time_t				stdstrtime(const char * strtime = "1970-01-01T08:08:08+0800");
     bool                time_same_hour(time_t t1, time_t t2);
     bool                time_same_day(time_t t1, time_t t2);
     bool                time_same_month(time_t t1, time_t t2);
@@ -90,6 +92,7 @@ NS_BEGIN(dcsutil)
 
     template <typename StrItable>
     const char         *strjoin(std::string & val, const std::string & sep, StrItable it);
+    const char         *strjoin(std::string & val, const std::string & sep, const char ** it);
     const char         *strspack(std::string & str, const std::string & sep, const std::string & ks, ...);
     int                 strsunpack(const std::string & str, const std::string & sep, const std::string & k, ...);
     //todo variadic  ?
@@ -139,6 +142,5 @@ NS_BEGIN(dcsutil)
         }
         return val.c_str();
     }
-
 
 NS_END()

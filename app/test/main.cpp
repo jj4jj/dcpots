@@ -172,7 +172,7 @@ int test_node(const char * p)
 	dcf.max_children_heart_beat_expired = 20;
 	int ltest = 0;
 	logger_config_t loger_conf;
-	global_logger_init(loger_conf);	
+	default_logger_init(loger_conf);	
 	auto dc = dcnode_create(dcf);
 	CHECK(!dc)
 	dcnode_set_dispatcher(dc, dc_cb, dc);
@@ -227,7 +227,7 @@ int log_test(){
 	lc.max_roll = 3;
 	lc.dir = "./";
 	lc.pattern = "test";
-	int ret = global_logger_init(lc);
+	int ret = default_logger_init(lc);
 	if (ret){
 		return ret;
 	}
@@ -642,7 +642,7 @@ static int app_test(int argc, const char * argv[]){
                 lgconf.max_file_size = 10485760;
                 lgconf.max_roll = 20;
                 lgconf.pattern = "dctest";
-                global_logger_init(lgconf);
+                default_logger_init(lgconf);
                 std::string ds;
                 while (true){
                     GLOG_DBG("%s",dcsutil::strcharsetrandom(ds, 1024));
@@ -680,73 +680,73 @@ int xconf_test(int argc, const char * argv[]){
     dcsutil::strrereplace(sxml, "^[ \t]*$", "");
     cout << sxml << endl;
 
-    dcxcmdconf_t    dxc(argc-1, &argv[1], tc);
+    dcxcmdconf_t    dxc(tc);
+    dxc.init(argc - 1, &argv[1]);
     dxc.parse();
-    cout << "cmdopt().hasopt(\"config - dump - def\"):" << dxc.cmdopt().hasopt("config-dump-def")<<endl;
+    cout << "cmdopt().hasopt(\"config - dump - def\"):" << 
+        dxc.cmdopt().hasopt("config-dump-def")<<endl;
     dxc.cmdopt().pusage();
     return 0;
 }
 static int xapp_test(int argc, const char * argv[]){
-    struct TestApp : dcsutil::App {
-        dcxcmdconf_t dxc;
+    struct XTestApp : dcsutil::App {
         TestConf    conf;
+        dcxcmdconf_t * dxc{ nullptr };
         virtual int on_create(int argc, const char * argv[]){
-            int ret = dxc.init(argc, argv, conf);
+            dxc = new dcxcmdconf_t(conf);
+            int ret = dxc->init(argc, argv);
             if (ret){
                 GLOG_ERR("init config error:%d !", ret);
                 return -1;
             }
-            cmdopt(dxc.cmdopt());
+            cmdopt(dxc->cmdopt());
             return 0;
         }
         virtual int on_command(){
-            return dxc.command();
+            return dxc->command();
         }
         virtual int on_init(){
             return on_reload();
         }
         virtual int on_reload(){
-            int ret = dxc.reload();
+            int ret = dxc->reload();
             if (ret){
                 return -1;
             }
-
-
-
             return 0;
         }
     };
-    return AppMain<TestApp>(argc, argv);
+    return AppMain<XTestApp>(argc, argv);
 }
 int main(int argc, const char* argv[])
 {
-	global_logger_init(logger_config_t());
+	default_logger_init(logger_config_t());
 	int agent_mode = 0;
 	msgqpath = argv[0];
 	if (argc >= 2)
 	{
-		if (strstr(argv[1], "mongo")){
+		if (!strcasecmp(argv[1], "mongo")){
 			return mongo_test(argv[2]);
 		}
-		if (strstr(argv[1], "pbxml")){
+		if (!strcasecmp(argv[1], "pbxml")){
 			return pbxml_test(argv[2]);
 		}
-        if (strstr(argv[1], "bt")){
+        if (!strcasecmp(argv[1], "bt")){
             return stacktrace_test(argv[2]);
         }
-        if (strstr(argv[1], "http")){
+        if (!strcasecmp(argv[1], "http")){
             return http_test(argv[2]);
         }
-        if (strstr(argv[1], "uri")){
+        if (!strcasecmp(argv[1], "uri")){
             return uri_test(argv[2]);
         }
-        if (strstr(argv[1], "app")){
+        if (!strcasecmp(argv[1], "app")){
             return app_test(argc, argv);
         }
-        if (strstr(argv[1], "xconf")){
+        if (!strcasecmp(argv[1], "xconf")){
             return xconf_test(argc, argv);
         }
-        if (strstr(argv[1], "xapp")){
+        if (!strcasecmp(argv[1], "xapp")){
             return xapp_test(argc, argv);
         }
 

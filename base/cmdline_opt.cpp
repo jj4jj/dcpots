@@ -11,6 +11,7 @@ struct cmdline_opt_impl_t {
 	std::map<string, string>		dict_opts_default;
 	string							usage;
     string                          init_pattern;
+    string                          program;
 };
 
 cmdline_opt_t::cmdline_opt_t(int argc, const char ** argv) :impl_(nullptr){
@@ -32,10 +33,7 @@ int cmdline_opt_t::init(int argc, const char * argv[], const char * init_pattern
         impl_ = new cmdline_opt_impl_t();
         impl_->argc = argc;
         impl_->argv = argv;
-        impl_->usage = "Usage: ";
-        impl_->usage += argv[0];
-        impl_->usage += " [Options]	\n";
-        impl_->usage += "Options should be like as follow:\n";
+        impl_->program = argv[0];
         if (init_pattern){
             impl_->init_pattern = init_pattern;
         }
@@ -52,7 +50,11 @@ static inline void pversion(const char * version){
 void cmdline_opt_t::parse(const char * pattern, const char * version){
     impl_->dict_opts.clear();
     impl_->dict_opts_default.clear();
-    impl_->usage.clear();
+
+    impl_->usage = "Usage: ";
+    impl_->usage += impl_->program;
+    impl_->usage += " [Options]	\n";
+    impl_->usage += "Options should be like as follow:\n";
 
     std::vector<std::string>	sopts;
     string pattern_ex = impl_->init_pattern;

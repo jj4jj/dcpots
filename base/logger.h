@@ -46,9 +46,9 @@ struct logger_config_t{
 	}
 };
 
-int				global_logger_init(const logger_config_t & conf);
-void			global_logger_destroy();
-logger_t *		global_logger();
+int				default_logger_init(const logger_config_t & conf);
+void			default_logger_destroy();
+logger_t *		default_logger();
 ///////////////////////////////////////////////////////////////////////
 void            logger_lock(logger_t * logger = nullptr);
 void            logger_unlock(logger_t * logger = nullptr);
@@ -131,9 +131,7 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
 #define LOG_FTL(logger_, format_, ...)		LOG(logger_, LOG_LVL_FATAL, sys_err_, format_, ##__VA_ARGS__)
 
 
-
 #endif
-
 
 
 //global logger

@@ -27,15 +27,17 @@ public:
 
 public:
     const   char *  name() const;
-    const   char *  name(const char * name);
     void            tick_interval(int interval);
     int             tick_interval() const;
-    int             tick_maxproc(int maxproc);
+    void            tick_maxproc(int maxproc);
     int             tick_maxproc() const;
     time_t          utctime() const;
-    time_t          add_time(int seconds);
+    time_t          adjust_time_extra(int seconds);
+    time_t          adjust_time_reset(int seconds = 0);
     int             gmt_tz_offset() const;
     void            gmt_tz_offset(int tzo);
+    struct tm *     localtime(struct tm & ttm, time_t ttmstmp = 0);
+    const char *    strtime(std::string & str, time_t ttmstmp = 0, const char * fmt = "%FT%X%z");
 
 public:
     int			init(int argc, const char * argv[]);

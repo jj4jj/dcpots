@@ -6,7 +6,7 @@ int main(int argc, char * argv[]){
 	logger.dir = "./";
     logger.lv = LOG_LVL_DEBUG;
 	logger.pattern = "collector.log";
-	if (global_logger_init(logger)){
+	if (default_logger_init(logger)){
 		return -1;
 	}
 	if (collector_init("msgq:///tmp")){

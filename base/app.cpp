@@ -13,6 +13,10 @@
 ///////////////////////////////////////////////////
 #include "app.hpp"
 
+extern char * tzname[2];
+extern long timezone;
+extern int daylight;
+
 NS_BEGIN(dcsutil)
 
 struct AppImpl {
@@ -26,9 +30,12 @@ struct AppImpl {
 	uint32_t		task_id{ 0 };
 	int				console{ -1 };
 	int				interval { 1000 * 10 };
-	int				maxtps{ 500 };
+	int				maxtptick{ 500 };
 	uint64_t		next_tick_time{ 0 };
     dcshmobj_pool   shm_pool;
+    int             adjust_timestamp_offset{ 0 };
+    int             gmt_time_zone_offset;
+    int             gmt_time_zone{ 0 };
 };
 
 static App * s_app_instance{ nullptr };
@@ -66,9 +73,8 @@ int	App::on_command(){
     return 0;
 }
 int	App::on_create(int argc, const char * argv[]){//once, 0 is ok , error code
-    std::string args;
-    dcsutil::strjoin(args, " ", argv);
-    GLOG_WAR("process create argc:%d argv[%s] !", argc,);
+    UNUSED(argc);
+    UNUSED(argv);
     return 0;
 }
 int App::on_init(){
@@ -142,23 +148,20 @@ std::vector<dcshmobj_user_t*>   App::shm_users() {
 static inline int _shm_command(App & app){
     const char * shm_keypath = app.cmdopt().getoptstr("shm");
     bool need_exit = false;
-    do {
-        bool clear_shm_recover = app.cmdopt().hasopt("shm-clear-recover");
-        bool clear_shm_backup = app.cmdopt().hasopt("shm-clear-backup");
-        if (!shm_keypath && (clear_shm_recover || clear_shm_backup)){
-            GLOG_ERR("not found shm path param for clearing shm!");
-            return -1;
-        }
-        if (clear_shm_recover){
-            dcshm_set_delete(dcshm_path_key(shm_keypath, 1));
-            need_exit = true;
-        }
-        if (clear_shm_backup){
-            dcshm_set_delete(dcshm_path_key(shm_keypath, 2));
-            need_exit = true;
-        }
-    } while (false);
-
+    bool clear_shm_recover = app.cmdopt().hasopt("shm-clear-recover");
+    bool clear_shm_backup = app.cmdopt().hasopt("shm-clear-backup");
+    if (!shm_keypath && (clear_shm_recover || clear_shm_backup)){
+        GLOG_ERR("not found shm path param for clearing shm!");
+        return -1;
+    }
+    if (clear_shm_recover){
+        dcshm_set_delete(dcshm_path_key(shm_keypath, 1));
+        need_exit = true;
+    }
+    if (clear_shm_backup){
+        dcshm_set_delete(dcshm_path_key(shm_keypath, 2));
+        need_exit = true;
+    }
     if (need_exit){
         return 1;
     }
@@ -233,6 +236,13 @@ static inline int init_command(App & app, const char * pidfile){
     }
     ///////////////////////////////////////////////////////////////////
     ret = _shm_command(app);
+    if (ret < 0){
+        GLOG_ERR("shm command check error:%d !", ret);
+        return -1;
+    }
+    if (ret > 0){
+        return 1;
+    }
 	return app.on_command();
 }
 static inline int 
@@ -291,7 +301,7 @@ static inline void app_tick_update(AppImpl * impl_){
 	uint64_t t_time_now = dcsutil::time_unixtime_us();
 	if (t_time_now > impl_->next_tick_time){
 		eztimer_update();
-		dctcp_poll(impl_->stcp, impl_->maxtps);
+		dctcp_poll(impl_->stcp, impl_->maxtptick);
 		impl_->next_tick_time = t_time_now + impl_->interval;
 	}
 }
@@ -345,9 +355,9 @@ static inline int init_facilities(App & app, AppImpl * impl_){
     lconf.dir = app.cmdopt().getoptstr("log-dir");
     lconf.pattern = app.cmdopt().getoptstr("log-file");
     lconf.lv = INT_LOG_LEVEL(app.cmdopt().getoptstr("log-level"));
-    lconf.max_file_size = cmdopt().getoptint("log-size");
-    lconf.max_roll = cmdopt().getoptint("log-roll");
-    int ret = global_logger_init(lconf);
+    lconf.max_file_size = app.cmdopt().getoptint("log-size");
+    lconf.max_roll = app.cmdopt().getoptint("log-roll");
+    int ret = default_logger_init(lconf);
     if (ret){
         fprintf(stderr, "logger init error = %d", ret);
         return -2;
@@ -376,9 +386,9 @@ static inline int init_facilities(App & app, AppImpl * impl_){
         }
     }
     impl_->interval = app.cmdopt().getoptint("tick-interval");
-    impl_->maxtps = app.cmdopt().getoptint("tick-maxproc");
+    impl_->maxtptick = app.cmdopt().getoptint("tick-maxproc");
     //////////////////////////////////////////////////////////////////////////////////
-    std::vector<dcshmobj_user_t*>   shmusers = this->shm_users();
+    std::vector<dcshmobj_user_t*>   shmusers = app.shm_users();
     if (!shmusers.empty()){
         const char * shmkey = app.cmdopt().getoptstr("shm");
         if (!shmkey){
@@ -395,6 +405,7 @@ static inline int init_facilities(App & app, AppImpl * impl_){
             return -7;
         }
     }
+    return 0;
 }
 static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_, App & app){
     string cmdopt_pattern;
@@ -405,10 +416,11 @@ static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_,
         "start:n:S:start process normal mode;"
         "stop:n:T:stop process normal mode;"
         "restart:n:R:stop process with restart mode;"
-        "reload:n:l:reload process config and some settings;"
+        "reload:n:r:reload process config and some settings;"
         "shm-clear-recover:n::clear the master share memory for recover;"
         "shm-clear-backup:n::clear the backup share memory for recover;"
         "name:r:N:set process name:%s;"
+        "tzo:r::set app gmt timezone offset to east of UTC:+0800;"
         "daemon:n:D:daemonlize start mode;"
         "log-dir:r::log dir settings:/tmp;"
         "log-file:r::log file pattern settings:%s;"
@@ -427,9 +439,17 @@ static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_,
         impl_->cmdopt = new cmdline_opt_t(argc, argv);
     }
     impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
+    /////////////////////////////////////////////////////////////////////
+    app.gmt_tz_offset(impl_->cmdopt->getoptint("tzo"));    
     return 0;
 }
-
+//////////////////////////////////////////////////////////
+static inline void _app_reload_env(AppImpl * impl_){
+    tzset();
+    impl_->gmt_time_zone = -timezone;//west of utc 
+    GLOG_IFO("reload env timezone:%ld daylight:%d time zone name:[%s]",
+        -timezone, daylight, tzname[0]);
+}
 int App::init(int argc, const char * argv[]){
     int ret = on_create(argc, argv);
     if (ret){
@@ -437,6 +457,11 @@ int App::init(int argc, const char * argv[]){
         return -1;
     }
     ret = init_arguments(argc, argv, impl_, *this);
+    if (ret){
+        GLOG_ERR("init argumets error :%d !", ret);
+        return -1;
+    }
+    _app_reload_env(impl_);
     //////////////////////////////////////////////////////////////
     const char * pidfile = cmdopt().getoptstr("pid-file");
     //1.control command
@@ -493,6 +518,7 @@ int App::start(){
             continue;
         }
         if (impl_->reloading){//need reload
+            _app_reload_env(impl_);
             iret = on_reload();
             if (iret){
                 GLOG_ERR("reload error ret :%d !", iret);
@@ -527,6 +553,74 @@ dctcp_t       * App::evloop(){
 
 cmdline_opt_t & App::cmdopt(){
     return *impl_->cmdopt;
+}
+void            App::tick_interval(int interval){
+    impl_->interval = interval;
+}
+int             App::tick_interval() const{
+    return impl_->interval;
+}
+void             App::tick_maxproc(int maxproc){
+    impl_->maxtptick = maxproc;
+}
+int             App::tick_maxproc() const{
+    return impl_->maxtptick;
+}
+time_t          App::utctime() const{
+    return dcsutil::time_unixtime_s() + impl_->adjust_timestamp_offset;
+}
+time_t          App::adjust_time_reset(int seconds){
+    impl_->adjust_timestamp_offset = seconds;
+    return utctime();
+}
+time_t          App::adjust_time_extra(int seconds){
+    impl_->adjust_timestamp_offset += seconds;
+    return utctime();
+}
+int             App::gmt_tz_offset() const{
+    if (impl_->gmt_time_zone_offset == 0){
+        return 0;
+    }
+    int hourof = impl_->gmt_time_zone_offset > 0 ?
+        impl_->gmt_time_zone_offset / 3600:
+        (-impl_->gmt_time_zone_offset) / 3600;
+    int minof = impl_->gmt_time_zone_offset > 0 ?
+                (impl_->gmt_time_zone_offset/60) % 60:
+                (-impl_->gmt_time_zone_offset/60) % 60;
+    if (impl_->gmt_time_zone_offset > 0){
+        return hourof * 100 + minof;
+    }
+    else {
+        return -(hourof * 100 + minof);
+    }
+}
+void            App::gmt_tz_offset(int tzo){
+    int hourof = (tzo / 100) % 100;
+    int minof = (tzo > 0) ? tzo % 100: (-tzo)%100;
+    if (hourof <= 12 && hourof >= -12 && minof >= 0 && minof < 60){
+        impl_->gmt_time_zone_offset = (hourof * 60 + minof) * 60;
+    }
+    else {
+        GLOG_ERR("error gmt tz offset :%+04d", tzo);
+    }
+    GLOG_IFO("set time zone gmt offset to east of UTC:[%+05d]", tzo);
+}
+struct tm    *  App::localtime(struct tm & ttm, time_t ttime){
+    if (0 == ttime){
+        ttime = utctime();
+    }
+    if (impl_->gmt_time_zone_offset != impl_->gmt_time_zone){
+        ttime += (impl_->gmt_time_zone_offset - impl_->gmt_time_zone);
+    }
+    struct tm * ptm = localtime_r(&ttime, &ttm);
+    if (!ptm){
+        GLOG_SER("localtime_r error utc:%zu!", ttime);
+    }
+}
+const char *    App::strtime(std::string & str, time_t stmtmp, const char * fmt){
+    struct tm rtm;
+    localtime(rtm, stmtmp);
+    return dcsutil::strftime(str, rtm, fmt);
 }
 
 

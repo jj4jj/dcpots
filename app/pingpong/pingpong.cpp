@@ -67,7 +67,7 @@ void usage(){
 using namespace std;
 int main(int argc, char * argv[]){
     logger_config_t loger_conf;
-    global_logger_init(loger_conf);
+    default_logger_init(loger_conf);
     logger_set_level(nullptr, LOG_LVL_PROF);
     if (argc < 3){
         usage();
