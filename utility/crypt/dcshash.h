@@ -1,6 +1,6 @@
 #pragma  once
 
-namespace dcsutil {
+namespace dcs {
 
 
 const char * crc16(const char * buff, int ibuff);

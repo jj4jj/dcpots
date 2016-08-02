@@ -1,7 +1,7 @@
 #pragma  once
 #include <string>
 
-namespace dcsutil {
+namespace dcs {
 
 void * rsa_from_perm_pubkey(const char * file);
 void * rsa_from_perm_prvkey(const char * file);

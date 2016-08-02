@@ -3,7 +3,7 @@
 struct cmdline_opt_t;
 struct dctcp_t;
 struct dcshmobj_user_t;
-namespace dcsutil {
+namespace dcs {
 struct AppImpl;
 class App {
 public:

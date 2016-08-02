@@ -24,7 +24,7 @@
 //X509
 //EVP
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 #define MAX_HASH_DIGEST_LENGTH	(4096)
 struct rsa_t {
 	RSA * rsa{ nullptr };

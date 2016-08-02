@@ -4,7 +4,7 @@
 #include "dcmmpool.hpp"
 #include "dchashtable.hpp"
 
-namespace dcsutil {
+namespace dcs {
     //////////////////////dynamic/////////////////////////////////////////////
     struct mempool_impl_t;
     struct mempool_conf_t {

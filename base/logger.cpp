@@ -7,15 +7,15 @@
 struct logger_t {
 	logger_config_t	conf;
 #ifdef  THREAD_SAFE
-    dcsutil::lock_mixin<true>   lock;
+    dcs::lock_mixin<true>   lock;
 #else
-    dcsutil::lock_mixin<false>  lock;
+    dcs::lock_mixin<false>  lock;
 #endif //  THREAD_SAFE
 	int			last_err;
 	string		last_msg;
 	
-    dcsutil::logfile_t   logfile;
-    dcsutil::logfile_t   errfile;
+    dcs::logfile_t   logfile;
+    dcs::logfile_t   errfile;
 
     logger_t() :last_err(0){
 	}
@@ -142,7 +142,7 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 		//append stack frame info
 		string strstack;
 		snprintf(&msg_start[n], available_size, "%s\n",
-			dcsutil::stacktrace(strstack, 2));
+			dcs::stacktrace(strstack, 2));
 	}
 
 	if (logger->logfile.write(msg_start, logger->conf.max_roll, logger->conf.max_file_size)){

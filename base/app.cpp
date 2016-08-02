@@ -17,7 +17,7 @@ extern char * tzname[2];
 extern long timezone;
 extern int daylight;
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 struct AppImpl {
     std::string		version { "0.0.1" };
@@ -228,7 +228,7 @@ static inline int init_command(App & app, const char * pidfile){
 			if (strcasecmp(command, "quit") == 0){
 				break;
 			}
-			dcsutil::writefd(confd, command, 0, "token:\r\n\r\n");
+			dcs::writefd(confd, command, 0, "token:\r\n\r\n");
 		}
 		closefd(confd);
 		delete console_buffer;
@@ -298,7 +298,7 @@ static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
 	return 0;
 }
 static inline void app_tick_update(AppImpl * impl_){
-	uint64_t t_time_now = dcsutil::time_unixtime_us();
+	uint64_t t_time_now = dcs::time_unixtime_us();
 	if (t_time_now > impl_->next_tick_time){
 		eztimer_update();
 		dctcp_poll(impl_->stcp, impl_->maxtptick);
@@ -312,11 +312,11 @@ static inline void init_signal(){
     struct signalh_function {
         static void term_stop(int sig, siginfo_t *, void *){
             App::instance().stop();
-            dcsutil::signalh_ignore(sig);
+            dcs::signalh_ignore(sig);
         }
         static void usr1_restart(int sig, siginfo_t *, void *){
             App::instance().restart();
-            dcsutil::signalh_ignore(sig);
+            dcs::signalh_ignore(sig);
         }
         static void usr2_reload(int, siginfo_t *, void *){
             App::instance().reload();
@@ -336,18 +336,18 @@ static inline void init_signal(){
                 //print stack info
                 ucontext_t *uc = (ucontext_t *)ucontex;
                 string strstack;
-                const char * stackinfo = dcsutil::stacktrace(strstack, 0, 16, uc);
+                const char * stackinfo = dcs::stacktrace(strstack, 0, 16, uc);
                 GLOG_ERR("program crash stack info:\n%s", stackinfo);
             }
-            dcsutil::signalh_default(signo);
+            dcs::signalh_default(signo);
         }
     };
     /////////////////////////////////////////////////////////////////
-    dcsutil::signalh_ignore(SIGPIPE);
-    dcsutil::signalh_push(SIGTERM, signalh_function::term_stop);
-    dcsutil::signalh_push(SIGUSR1, signalh_function::usr1_restart);
-    dcsutil::signalh_push(SIGUSR2, signalh_function::usr2_reload);
-    dcsutil::signalh_push(SIGSEGV, signalh_function::segv_crash);
+    dcs::signalh_ignore(SIGPIPE);
+    dcs::signalh_push(SIGTERM, signalh_function::term_stop);
+    dcs::signalh_push(SIGUSR1, signalh_function::usr1_restart);
+    dcs::signalh_push(SIGUSR2, signalh_function::usr2_reload);
+    dcs::signalh_push(SIGSEGV, signalh_function::segv_crash);
 }
 static inline int init_facilities(App & app, AppImpl * impl_){
     //3.global logger
@@ -409,7 +409,7 @@ static inline int init_facilities(App & app, AppImpl * impl_){
 }
 static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_, App & app){
     string cmdopt_pattern;
-    const char * program_name = dcsutil::path_base(argv[0]);
+    const char * program_name = dcs::path_base(argv[0]);
 #define		MAX_CMD_OPT_OPTION_LEN	(1024*32)
     size_t lpattern = strnprintf(cmdopt_pattern, 1024*8, ""
         "console-shell:n::console shell(connect with --console-listen);"
@@ -483,7 +483,7 @@ int App::init(int argc, const char * argv[]){
     if (cmdopt().hasopt("daemon")){
         daemonlize(1, 0, pidfile);
     }
-    if (pidfile && getpid() != dcsutil::lockpidfile(pidfile)){
+    if (pidfile && getpid() != dcs::lockpidfile(pidfile)){
         fprintf(stderr, "process should be unique running ...");
         return -2;
     }
@@ -567,7 +567,7 @@ int             App::tick_maxproc() const{
     return impl_->maxtptick;
 }
 time_t          App::utctime() const{
-    return dcsutil::time_unixtime_s() + impl_->adjust_timestamp_offset;
+    return dcs::time_unixtime_s() + impl_->adjust_timestamp_offset;
 }
 time_t          App::adjust_time_reset(int seconds){
     impl_->adjust_timestamp_offset = seconds;
@@ -620,7 +620,7 @@ struct tm    *  App::localtime(struct tm & ttm, time_t ttime){
 const char *    App::strtime(std::string & str, time_t stmtmp, const char * fmt){
     struct tm rtm;
     localtime(rtm, stmtmp);
-    return dcsutil::strftime(str, rtm, fmt);
+    return dcs::strftime(str, rtm, fmt);
 }
 
 

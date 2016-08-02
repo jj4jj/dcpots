@@ -5,7 +5,7 @@
 #include "dcxml.h"
 #include "dcjson.hpp"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 using namespace google::protobuf;
 static logger_t * g_debug_logger = nullptr;
@@ -261,7 +261,7 @@ protobuf_msg_field_get_value(const Message & msg, const string & name, int idx){
 }
 static inline void
 protobuf_path_split(const std::string & path, std::vector<std::string> & vps){
-    dcsutil::strsplit(path, ".", vps);
+    dcs::strsplit(path, ".", vps);
 }
 
 static inline int 
@@ -322,7 +322,7 @@ const Message * protobuf_msg_field_path_get(const google::protobuf::Message & ms
 Message * protobuf_msg_field_path_get(google::protobuf::Message & msg, const string & path, string & error){
     google::protobuf::Message * msgp = &msg;
     std::vector<std::string>    vs;
-    dcsutil::strsplit(path, ".", vs);
+    dcs::strsplit(path, ".", vs);
     const FieldDescriptor * field = nullptr;
     const Reflection* reflection = nullptr;
     std::vector<std::string>    vsf;
@@ -654,7 +654,7 @@ protobuf_msg_to_xml_file(const google::protobuf::Message & msg, const std::strin
 int			
 protobuf_msg_to_xml_string(const google::protobuf::Message & msg, std::string & sxml){
     protobuf_msg_sax(msg.GetDescriptor()->name(), msg, convert_to_xml, &sxml);
-    dcsutil::strrereplace(sxml, "\\s*\n", "\n");
+    dcs::strrereplace(sxml, "\\s*\n", "\n");
     return 0;
 }
 
@@ -765,7 +765,7 @@ int
 protobuf_msg_to_json_file(const google::protobuf::Message & msg, const std::string & jsonfile){
     string msg_buffer;
     protobuf_msg_to_json_string(msg, msg_buffer);
-    int sz = dcsutil::writefile(jsonfile, msg_buffer.data(), msg_buffer.length());
+    int sz = dcs::writefile(jsonfile, msg_buffer.data(), msg_buffer.length());
     if (sz <= 0){
         GLOG_SER("write file :%s error :%d", jsonfile.c_str(), sz);
         return -1;
@@ -779,7 +779,7 @@ protobuf_msg_to_msgb_file(const google::protobuf::Message & msg, const std::stri
         GLOG_ERR("protomsg msg serialize error !");
         return -1;
     }
-    int sz = dcsutil::writefile(msgbfile, msgb.data(), msgb.length());
+    int sz = dcs::writefile(msgbfile, msgb.data(), msgb.length());
     if (sz <= 0) {
         GLOG_SER("write file :%s error :%d", msgbfile.c_str(), sz);
         return -1;
@@ -789,9 +789,9 @@ protobuf_msg_to_msgb_file(const google::protobuf::Message & msg, const std::stri
 int             
 protobuf_msg_from_msgb_file(google::protobuf::Message & msg, const std::string & msgbfile) {
     string sfile;
-    int sz = dcsutil::filesize(msgbfile);
+    int sz = dcs::filesize(msgbfile);
     sfile.reserve(sz);
-    int n = dcsutil::readfile(msgbfile.c_str(), (char*)sfile.data(), sfile.capacity());
+    int n = dcs::readfile(msgbfile.c_str(), (char*)sfile.data(), sfile.capacity());
     if (n <= 0) {
         GLOG_ERR("readfile :%s error ret :%d", msgbfile.c_str(), n);
         return -1;
@@ -806,9 +806,9 @@ protobuf_msg_from_msgb_file(google::protobuf::Message & msg, const std::string &
 int 
 protobuf_msg_from_json_file(google::protobuf::Message & msg, const std::string & jsonfile, std::string & error){
     string sfile;
-    int sz = dcsutil::filesize(jsonfile);
+    int sz = dcs::filesize(jsonfile);
     sfile.reserve(sz);
-    int n = dcsutil::readfile(jsonfile.c_str(), (char*)sfile.data(), sfile.capacity());
+    int n = dcs::readfile(jsonfile.c_str(), (char*)sfile.data(), sfile.capacity());
     if (n <= 0){
         GLOG_ERR("readfile :%s error ret :%d", jsonfile.c_str(), n);
         return -1;

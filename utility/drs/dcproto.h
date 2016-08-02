@@ -9,7 +9,7 @@ namespace google {
 }
 
 struct	logger_t;
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 ////////////////////////////////////////////////////////////////
 
 

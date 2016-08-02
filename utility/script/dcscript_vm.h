@@ -1,7 +1,7 @@
 #pragma once
 #include "../../base/stdinc.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 struct script_vm_t;
 enum script_vm_enm_type {
 	SCRIPT_VM_NONE = 0, //NO

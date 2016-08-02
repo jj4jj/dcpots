@@ -1,7 +1,7 @@
 #pragma once
 #include <unordered_set>
 
-namespace dcsutil {
+namespace dcs {
 size_t              prime_n(size_t n, std::unordered_set<size_t> & pn);
 size_t              prime_next(size_t n);
 size_t              prime_prev(size_t n);

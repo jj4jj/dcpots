@@ -2,7 +2,7 @@
 
 #include "stdinc.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 struct stackframe_info_t {
     string      module;
     string      func;

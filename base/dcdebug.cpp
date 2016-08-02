@@ -7,7 +7,7 @@
 #include "dcdebug.h"
 
 #include "dcutils.hpp"
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 stackframe_info_t::stackframe_info_t(){
     this->addr = nullptr;

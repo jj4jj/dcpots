@@ -3,7 +3,7 @@
 #include <vector>
 #include <cmath>
 
-namespace dcsutil {
+namespace dcs {
     struct bits {
         void    set(size_t pos, bool bv = true);
         bool    at(size_t pos);

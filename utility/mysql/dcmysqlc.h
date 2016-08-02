@@ -1,7 +1,7 @@
 #pragma  once
 #include "../../base/stdinc.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 struct mysqlclient_t {
 	struct table_row_t {

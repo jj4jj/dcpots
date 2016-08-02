@@ -100,7 +100,7 @@ struct dcnode_addr_t {
         }
         ///////////////////////////////////////////////////////////////	
         std::vector<string> vs;
-        dcsutil::strsplit(s_addr, "->", vs);
+        dcs::strsplit(s_addr, "->", vs);
         if (vs[0].find(MSGQ_PROTO) == 0){
             msgq_sharekey = vs[0].substr(strlen(MSGQ_PROTO));
             if (mode == DCNODE_MODE_PROXY){
@@ -197,7 +197,7 @@ struct dcnode_t {
     //send queue
     struct msg_queue_t {
         size_t                                                                msg_size;
-        dcsutil::object_queue_t< msg_buffer_t, DCNODE_MAX_LOCAL_NODES_NUM>      q;
+        dcs::object_queue_t< msg_buffer_t, DCNODE_MAX_LOCAL_NODES_NUM>      q;
         msg_queue_t() :msg_size(0){}
     };
     std::unordered_map<string, msg_queue_t>             send_queue;
@@ -255,7 +255,7 @@ const char * _dcnode_state_str(int st){
 //multithread is harmless
 std::atomic<uint32_t> timer_cb_seq(0);
 static inline uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_ms, dcnode_timer_callback_t cb, bool repeat = false) {
-	uint64_t cookie = dcsutil::time_unixtime_s();
+	uint64_t cookie = dcs::time_unixtime_s();
 	cookie <<= 24; //24+32 = 56;
     timer_cb_seq.fetch_add(1);
 	cookie |= timer_cb_seq;
@@ -264,7 +264,7 @@ static inline uint64_t  _insert_timer_callback(dcnode_t * dc , int32_t expired_m
 	if (repeat)
 		cookie |= 1;
 
-	uint64_t expiretimems = expired_ms + dcsutil::time_unixtime_ms();
+	uint64_t expiretimems = expired_ms + dcs::time_unixtime_ms();
 	dc->expiring_callbacks.insert(std::make_pair(expiretimems, cookie));
 	dc->timer_callbacks[cookie] = cb;
 	if (repeat)
@@ -313,7 +313,7 @@ static int _fsm_register_name(dcnode_t * dc){
 	dcnode_msg_t	msg;
 	msg.set_type(dcnode::MSG_REG_NAME);
 	msg.set_src(dc->conf.name);
-	msg.mutable_ext()->set_unixtime(dcsutil::time_unixtime_s());
+	msg.mutable_ext()->set_unixtime(dcs::time_unixtime_s());
 	if (!msg.Pack(dc->send_buffer)) {
 		//pack error
 		return -1;
@@ -337,7 +337,7 @@ static int _fsm_register_name(dcnode_t * dc){
 }
 static int _send_to_parent(dcnode_t * dc, dcnode_msg_t & dm) {
 	dm.set_src(dc->conf.name);
-	dm.mutable_ext()->set_unixtime(dcsutil::time_unixtime_s());
+	dm.mutable_ext()->set_unixtime(dcs::time_unixtime_s());
 	if (!dm.Pack(dc->send_buffer)){
 		//error pack
 		return -1;
@@ -392,7 +392,7 @@ static dcnode_name_map_entry_t * _name_smq_entrty_alloc(dcnode_t * dc, const str
 	//just sorted
 	static uint64_t s_smqpid_seq = 0;
 	if (s_smqpid_seq == 0){
-		s_smqpid_seq = dcsutil::time_unixtime_s();
+		s_smqpid_seq = dcs::time_unixtime_s();
 		s_smqpid_seq <<= 18; //>2^18 not equal getpid()
 	}
 	s_smqpid_seq++;
@@ -439,27 +439,27 @@ static int _stcp_sockfd_close(dcnode_t * dc, int fd) {
 
 static void _fsm_update_hearbeat_timer(dcnode_t * dc, int sockfd, uint64_t smqsession){
 	if (_is_smq_leaf(dc)) {
-		dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
+		dc->parent_hb_expire_time = dcs::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 	}
 	else if (smqsession > 0) {
 		if (dc->addr.msgq_push){
 			if (dcsmq_session(dc->smq) == smqsession){
-				dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
+				dc->parent_hb_expire_time = dcs::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 			}
 		}
 		else{
 			if (_name_smq_entry_find(dc, smqsession)){
 				//named node
-				dc->smq_hb_expire_time[smqsession] = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
+				dc->smq_hb_expire_time[smqsession] = dcs::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 			}
 		}
 	}
 	else if (sockfd != -1){
 		if (sockfd == dc->parentfd){
-			dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
+			dc->parent_hb_expire_time = dcs::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 		}
 		else{
-			dc->tcp_hb_expire_time[sockfd] = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
+			dc->tcp_hb_expire_time[sockfd] = dcs::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 		}
 	}
 }
@@ -491,12 +491,12 @@ static void _fsm_start_heart_beat_timer(dcnode_t * dc){
 		  (!dc->addr.msgq_sharekey.empty() && dc->addr.msgq_push )))		//mq client
 	{
 		GLOG_TRA("add parent heart-beat timer checker with:%ds", dc->conf.parent_heart_beat_gap);
-		dc->parent_hb_expire_time = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
+		dc->parent_hb_expire_time = dcs::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 		_insert_timer_callback(dc, dc->conf.parent_heart_beat_gap * 1000, hb, true);
 	}
 	//start check all children timer
 	dcnode_timer_callback_t hb_cheker = [dc](){
-		time_t tNow = dcsutil::time_unixtime_s();
+		time_t tNow = dcs::time_unixtime_s();
 		if (dc->parent_hb_expire_time > 0 &&
 			dc->parent_hb_expire_time < tNow){
 			GLOG_TRA("parent node is expired ...");
@@ -614,7 +614,7 @@ static int _response_msg(dcnode_t * dc, int sockfd, uint64_t msgqpid, dcnode_msg
 	dm.set_src(dc->conf.name);
 	dm.set_dst(dmsrc.src());
 	dm.set_type(dmsrc.type());
-	dm.mutable_ext()->set_unixtime(dcsutil::time_unixtime_s());
+	dm.mutable_ext()->set_unixtime(dcs::time_unixtime_s());
 	dm.mutable_ext()->set_opt(dcnode::MSG_OPT_RSP);
 	GLOG_TRA("response msg from:%s dst:%s", dmsrc.src().c_str(), dm.dst().c_str());
 	bool ret = dm.Pack(dc->send_buffer);
@@ -675,14 +675,14 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 						string ftime;
 						GLOG_TRA("request name:%s session:%lu is collision [%lu] expired time:%lds(%s) ...",
 							dm.src().c_str(), dm.reg_name().session(), entry->id,
-							expireit->second - dcsutil::time_unixtime_s(),
-								dcsutil::strftime(ftime, expireit->second));
+							expireit->second - dcs::time_unixtime_s(),
+								dcs::strftime(ftime, expireit->second));
                         ret = -2;
                         error_msg = "request register name is collision ! check others name !";
 					}
 					else{
 						//expired , name available
-						dc->smq_hb_expire_time[entry->id] = dcsutil::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
+						dc->smq_hb_expire_time[entry->id] = dcs::time_unixtime_s() + dc->conf.max_children_heart_beat_expired;
 					}
 				}
 			}
@@ -725,7 +725,7 @@ static int _fsm_update_name(dcnode_t * dc, int sockfd, uint64_t msgsrcid,const d
 //node handle msg
 static int _handle_msg(dcnode_t * dc, const dcnode_msg_t & dm, int sockfd, uint64_t msgqpid){
 	PROFILE_FUNC();
-	if (dm.ext().unixtime() > 0 && dm.ext().unixtime() + dc->conf.max_msg_expired_time < dcsutil::time_unixtime_s() ) {
+	if (dm.ext().unixtime() > 0 && dm.ext().unixtime() + dc->conf.max_msg_expired_time < dcs::time_unixtime_s() ) {
 		//expired msg
 		GLOG_TRA("expired msg :%s",dm.Debug());
 		return -1;
@@ -952,7 +952,7 @@ void      dcnode_destroy(dcnode_t* dc){
 }
 static	void _check_timer_callback(dcnode_t * dc){
 	PROFILE_FUNC();
-	uint64_t currentms = dcsutil::time_unixtime_ms();
+	uint64_t currentms = dcs::time_unixtime_ms();
 	std::vector<std::pair<uint64_t, uint64_t> >		addagin;
 	for (auto it = dc->expiring_callbacks.begin(); it != dc->expiring_callbacks.end();)
 	{
@@ -1082,7 +1082,7 @@ int      dcnode_send(dcnode_t* dc, const std::string & dst, const char * buff, i
     dm.set_dst(dst);
     dm.set_type(dcnode::MSG_DATA);
     dm.set_msg_data(buff, sz);
-    dm.mutable_ext()->set_unixtime(dcsutil::time_unixtime_s());
+    dm.mutable_ext()->set_unixtime(dcs::time_unixtime_s());
     return _send_msg(dc, dst, dm);
 }
 int      dcnode_update(dcnode_t* dc, int timout_us) {
@@ -1132,7 +1132,7 @@ int      dcnode_reply(dcnode_t* dc, const char * buff, int sz){
 	}
 	dm.set_type(dcnode::MSG_DATA);
 	dm.set_msg_data(buff, sz);
-	dm.mutable_ext()->set_unixtime(dcsutil::time_unixtime_s());
+	dm.mutable_ext()->set_unixtime(dcs::time_unixtime_s());
 	if (!dm.Pack(dc->send_buffer)){
 		//error
 		GLOG_ERR("dcnode pack msg error !");
@@ -1169,7 +1169,7 @@ int       dcnode_dump(dcnode_t * dc, const char * fname, dcnode_dump_format_type
     //file format protobuf
     dump.set_name(dc->conf.name);
     dump.set_format(_dcnode_dump_format_type(dtype));
-    dcsutil::strftime(*dump.mutable_time());//now
+    dcs::strftime(*dump.mutable_time());//now
     {//begin dump
         _dcnode_dump_send_queue(dc, dump.mutable_send_queue());
     }
@@ -1189,12 +1189,12 @@ int       dcnode_dump(dcnode_t * dc, const char * fname, dcnode_dump_format_type
         filebuffer.valid_size = writesbuffer.length();
     }
     else if (dtype == DCNODE_DUMP_JSON){
-        return dcsutil::protobuf_msg_to_json_file(dump, fname);
+        return dcs::protobuf_msg_to_json_file(dump, fname);
     }
     else if (dtype == DCNODE_DUMP_XML){
-        return dcsutil::protobuf_msg_to_xml_file(dump, fname);
+        return dcs::protobuf_msg_to_xml_file(dump, fname);
     }
-    int wsz = dcsutil::writefile(fname, filebuffer.buffer, filebuffer.valid_size);
+    int wsz = dcs::writefile(fname, filebuffer.buffer, filebuffer.valid_size);
     if (wsz != filebuffer.valid_size){
         GLOG_ERR("dump file error  ret: %d", wsz);
         filebuffer.destroy();

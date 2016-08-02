@@ -6,7 +6,7 @@
 
 #include "dcxml.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 struct xml_node_t : public rapidxml::xml_node<>{};
 struct xml_attribute_t : public  rapidxml::xml_attribute<>{};
@@ -33,7 +33,7 @@ int					xml_doc_t::parse_file(const char * file){
 		GLOG_TRA("create file buffer error !");
 		return -1;
 	}
-	size_t readn = dcsutil::readfile(file, parse_file_buffer.buffer, parse_file_buffer.max_size);
+	size_t readn = dcs::readfile(file, parse_file_buffer.buffer, parse_file_buffer.max_size);
 	if (readn <= 0){
 		GLOG_TRA("read file :%s error ! ", file);
 		return -2;
@@ -43,7 +43,7 @@ int					xml_doc_t::parse_file(const char * file){
 int					xml_doc_t::dump_file(const char * file, bool pretty ){
     UNUSED(pretty);
     string s;
-	return dcsutil::writefile(file, dumps(s));
+	return dcs::writefile(file, dumps(s));
 }
 const	char *		xml_doc_t::pretty(std::string & str){
 	std::ostringstream 	oss;

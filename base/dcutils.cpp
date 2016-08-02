@@ -43,7 +43,7 @@ namespace {
 
 };
 
-namespace dcsutil {
+namespace dcs {
     uint64_t	time_unixtime_us() {
         timeval tv;
         gettimeofday(&tv, NULL);

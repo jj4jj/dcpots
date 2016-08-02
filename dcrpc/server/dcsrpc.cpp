@@ -231,7 +231,7 @@ int    RpcServer::init(const std::string & addr, dctcp_t * stcp){
 }
 int    RpcServer::update(int tick_us){
     int ret = 0;
-    uint64_t t_now_us = dcsutil::time_unixtime_us();
+    uint64_t t_now_us = dcs::time_unixtime_us();
     if (impl->update_tick_time + tick_us > t_now_us){
         return 0;
     }

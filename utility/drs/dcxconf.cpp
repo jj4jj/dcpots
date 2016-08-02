@@ -9,7 +9,7 @@
 ///////////////////////////////////////////////////
 #include "dcxconf.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 int  dcxconf_load(::google::protobuf::Message & msg, const char * file, dcxconf_file_type type) {
     std::string error;
     int ret = 0;
@@ -102,13 +102,13 @@ convert_to_cmdline_pattern(const string & name, const ::google::protobuf::Messag
     break;
     case VISIT_VALUE:
     if (!ctx->path.empty()) {
-        dcsutil::strjoin(full_field_path, "-", ctx->path);
-        dcsutil::strprintf(pattern, "conf-%s-%s:r::dcxconf option:%s;", 
+        dcs::strjoin(full_field_path, "-", ctx->path);
+        dcs::strprintf(pattern, "conf-%s-%s:r::dcxconf option:%s;", 
                            full_field_path.c_str(), name.c_str(),
                            protobuf_msg_field_get_value(msg, name, idx).c_str());
     }
     else {
-        dcsutil::strprintf(pattern, "conf-%s:r::dcxconf option:%s;",
+        dcs::strprintf(pattern, "conf-%s:r::dcxconf option:%s;",
                            name.c_str(),
                            protobuf_msg_field_get_value(msg, name, idx).c_str());
     }
@@ -201,7 +201,7 @@ int  dcxcmdconf_t::reload() {
                 ++option_idx;
             }
         }
-        dcsutil::strreplace(path, "-", ".");
+        dcs::strreplace(path, "-", ".");
         if (option_idx > 0) {
             path.append(":");
             path.append(std::to_string(option_idx));

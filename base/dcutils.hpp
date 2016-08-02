@@ -1,6 +1,6 @@
 #pragma  once
 #include "stdinc.h"
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
     //-----------------lock-------------------------------
     template<bool threadsafe>
     struct lock_mixin;

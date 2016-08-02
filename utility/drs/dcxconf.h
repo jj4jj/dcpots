@@ -5,7 +5,7 @@ namespace google {
     }
 }
 struct cmdline_opt_t;
-namespace dcsutil {
+namespace dcs {
     enum dcxconf_file_type {
         DCXCONF_XML,
         DCXCONF_JSON,

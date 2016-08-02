@@ -772,7 +772,7 @@ int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc){
     //next call epoll wait time
     ///////////////////////////////////////////////////////
     if (nproc == 0){//it's idle state, so limit next poll time
-        uint64_t t_timeus_now = dcsutil::time_unixtime_us();
+        uint64_t t_timeus_now = dcs::time_unixtime_us();
         if (t_timeus_now < stcp->next_evt_poll_time){
             return 0;
         }
@@ -795,7 +795,7 @@ int				dctcp_send(dctcp_t * stcp, int fd, const dctcp_msg_t & msg){
 }
 int				dctcp_listen(dctcp_t * stcp, const string & addr, const char * fproto , dctcp_event_cb_t evcb, void * ud){ //return a fd >= 0when success
     sockaddr_in addrin;
-    int ret = dcsutil::socknetaddr(addrin, addr);
+    int ret = dcs::socknetaddr(addrin, addr);
     if (ret){
         GLOG_ERR("listen addr :%s is invlaid !", addr.c_str());
         return -1;
@@ -819,7 +819,7 @@ int				dctcp_listen(dctcp_t * stcp, const string & addr, const char * fproto , d
 
 int             dctcp_connect(dctcp_t * stcp, const string & addr, int retry, const char * fproto, dctcp_event_cb_t cb, void * ud ){
     sockaddr_in saddr;
-    int ret = dcsutil::socknetaddr(saddr, addr);
+    int ret = dcs::socknetaddr(saddr, addr);
     if (ret){
         GLOG_ERR("connect sock addr error :%s", addr.c_str());
         return -1;

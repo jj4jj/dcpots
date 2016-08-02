@@ -3,7 +3,7 @@
 #include "dcmath.hpp"
 #include "dcbitset.hpp"
 
-namespace dcsutil {
+namespace dcs {
 
 //////////////////////////////////////////////////////////////////////////////
 size_t              prime_n(size_t n, std::unordered_set<size_t> & pn){

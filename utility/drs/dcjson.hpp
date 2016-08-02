@@ -15,7 +15,7 @@
 typedef	typename rapidjson::Value			        json_obj_t;
 typedef typename rapidjson::Value::MemberIterator	json_obj_kv_itr_t;
 typedef typename rapidjson::Value::ValueIterator	json_obj_list_itr_t;
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 class json_doc_t : public rapidjson::Document {
 	#define MAX_CONF_BUFF_SIZE		(1024*1024)
 	msg_buffer_t					parse_file_buffer;
@@ -54,7 +54,7 @@ public:
 			rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
 			Accept(writer);    // Accept() traverses the DOM and generates Handler events.
 		}
-		return dcsutil::writefile(file, sb.GetString(), sb.GetSize());
+		return dcs::writefile(file, sb.GetString(), sb.GetSize());
 	}
 	const	char *		pretty(std::string & str){
 		str = "";

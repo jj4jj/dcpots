@@ -2,7 +2,7 @@
 #include "../../base/msg_buffer.hpp"
 #include "dcmysqlc.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 struct mysqlclient_pool_t {
     struct command_t {

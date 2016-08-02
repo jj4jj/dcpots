@@ -70,7 +70,7 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
     if (pattern){
         pattern_ex += pattern;
     }
-	dcsutil::strsplit(pattern_ex.c_str(), ";", sopts);
+	dcs::strsplit(pattern_ex.c_str(), ";", sopts);
 	std::vector<struct option>	longopts;
 	std::vector<std::string>	longoptnames;
 	longoptnames.reserve(128);
@@ -78,7 +78,7 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 	string short_opt;
 	for (auto & sopt : sopts){
 		std::vector<std::string>	soptv;
-		dcsutil::strsplit(sopt, ":", soptv, false, 5);
+		dcs::strsplit(sopt, ":", soptv, false, 5);
 		if (soptv.size() < 4){
 			std::cerr << "error format option:" << sopt << " size:" << soptv.size() << " but < 4" << std::endl;
 			std::cerr << "pattern opt must be format of '[<long name>]:[rno]:[<short name>]:[desc]:[default];' " << std::endl;
@@ -114,7 +114,7 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 			//std::cout << "add dbg:" << opt_.name << ":val:" << opt_.val << std::endl;
 		}
 		//////////////////////////////////////////////////////////
-		dcsutil::strrepeat(impl_->usage, " ", 4);
+		dcs::strrepeat(impl_->usage, " ", 4);
 		int length = 4;
 		if (soptv[2][0]){
 			impl_->usage += "-";
@@ -141,7 +141,7 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 		}
 		if (soptv[3][0]){
 			if (length < MAX_OPT_SHOW_TEXT_WIDTH){
-				dcsutil::strrepeat(impl_->usage, " ", MAX_OPT_SHOW_TEXT_WIDTH - length);
+				dcs::strrepeat(impl_->usage, " ", MAX_OPT_SHOW_TEXT_WIDTH - length);
 			}
 			impl_->usage += "\t";
 			impl_->usage += soptv[3];

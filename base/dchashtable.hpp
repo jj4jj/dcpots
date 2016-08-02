@@ -8,7 +8,7 @@
 //collision strategy : 
 //1.create a link list in multiple layer
 //2.in last max layer linear probe solving
-namespace dcsutil {
+namespace dcs {
 template<class T, size_t cmax, size_t layer = 3, class HcfT = ::std::hash<T>>
 struct hashtable_t {
     struct hashmap_entry_t {

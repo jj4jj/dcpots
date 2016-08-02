@@ -11,7 +11,7 @@
 
 using namespace dcorm;
 using namespace std;
-using namespace dcsutil;
+using namespace dcs;
 
 struct mongoproxy_t {
 	string					proxyaddr;
@@ -204,14 +204,14 @@ int		mongoproxy_find(const google::protobuf::Message & msg, const char * fields 
        reqfind.mutable_find()->set_skip(skip);
     if (fields){
         std::vector<string> vs;
-        dcsutil::strsplit(fields,",", vs);
+        dcs::strsplit(fields,",", vs);
         for (auto & f : vs){
             reqfind.mutable_find()->add_projection(f);
         }
     }
     if (sort){
         std::vector<string> vs;
-        dcsutil::strsplit(fields, ",", vs);
+        dcs::strsplit(fields, ",", vs);
         for (auto & s : vs){
             reqfind.mutable_find()->add_sort(s);
         }
@@ -221,7 +221,7 @@ int		mongoproxy_find(const google::protobuf::Message & msg, const char * fields 
 int		mongoproxy_update(const google::protobuf::Message & msg, const std::string & fields, const char * cb_data, int cb_size){
     MongoOPReq requpdate;
     std::vector<string> vs;
-    dcsutil::strsplit(fields, ",", vs);
+    dcs::strsplit(fields, ",", vs);
     if (vs.empty()){
         GLOG_ERR("not found the fields define :%s", fields.c_str());
         return -1;

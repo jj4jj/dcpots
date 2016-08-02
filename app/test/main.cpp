@@ -7,7 +7,7 @@
 #include "base/msg_proto.hpp"
 #include "utility/mysql/dcmysqlc.h"
 #include "utility/script/dcscript_vm.h"
-using namespace dcsutil;
+using namespace dcs;
 
 static int max_ping_pong = 100000;
 static int max_ppsz = 0;
@@ -20,7 +20,7 @@ int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 	max_ppsz += msg.sz;
 	pingpong++;
 	if (pingpong == 1){
-		start_us = dcsutil::time_unixtime_us();
+		start_us = dcs::time_unixtime_us();
 	}
 	dcsmq_send(mq, src, msg);
 	if (pingpong > 5){
@@ -28,7 +28,7 @@ int mq_cb(dcsmq_t * mq, uint64_t src, const dcsmq_msg_t & msg, void * ud)
 	}
 	if (pingpong >= max_ping_pong)
 	{
-		start_us = dcsutil::time_unixtime_us() - start_us;
+		start_us = dcs::time_unixtime_us() - start_us;
 		GLOG_TRA("mq cb msg size:%d src:%lu total:%d MB time:%ldus pingpong:%d",
 			msg.sz, src, max_ppsz / 1048576, start_us, max_ping_pong);
 		exit(0);
@@ -60,7 +60,7 @@ int test_mq(const char * ap)
 	dcsmq_msg_cb(p, mq_cb, nullptr);
 	if (!sc.passive)
 	{
-		start_us = dcsutil::time_unixtime_us();
+		start_us = dcs::time_unixtime_us();
 		pingpong = 1;
 		dcsmq_send(p, getpid(), dcsmq_msg_t(test_msg, test_msg_len));
 	}
@@ -80,7 +80,7 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 		for (int i = 0; i < 60; i++){
 			dctcp_send(stc, ev.fd, dctcp_msg_t(stmsg));
 		}
-		start_us = dcsutil::time_unixtime_us();
+		start_us = dcs::time_unixtime_us();
 	}
 
 	if (ev.type == dctcp_event_type::DCTCP_READ){
@@ -89,7 +89,7 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 		
 		pingpong++;
 		if (pingpong == 1 && tcp_server_mode){
-			start_us = dcsutil::time_unixtime_us();
+			start_us = dcs::time_unixtime_us();
 		}
 		//LOGP("mq cb msg size:%d src:%lu", msg.sz, src);		
 		max_ppsz += ev.msg->buff_sz;
@@ -102,7 +102,7 @@ int _dctcp_cb(dctcp_t* stc, const dctcp_event_t & ev, void * ud)
 			if (!tcp_server_mode){
 				dctcp_send(stc, ev.fd, *ev.msg);
 			}
-			start_us = dcsutil::time_unixtime_us() - start_us;
+			start_us = dcs::time_unixtime_us() - start_us;
 			GLOG_TRA("mq cb msg size:%d total:%d MB time:%ldus pingpong:%d",
 				ev.msg->buff_sz,  max_ppsz / 1048576, start_us, max_ping_pong);
 			exit(0);
@@ -249,7 +249,7 @@ int log_test(){
 int perf_test(const char * arg){
 	
 	typedef msgproto_t<dcnode::MsgDCNode>	msg_t;
-	start_us = dcsutil::time_unixtime_us();
+	start_us = dcs::time_unixtime_us();
 	int pack_unpack_times = 1000000;
 	msg_buffer_t msgbuf;
 	const char * s_test_msg = "hello,worlddfffxxxxxfggggggggggggggdfxsfsddddddddddddddddddfxxxxxxxxxxxxxxxffffffffffffffffffffffffff";
@@ -261,7 +261,7 @@ int perf_test(const char * arg){
 		msg.set_src("heffff");
 		msg.set_type(dcnode::MSG_DATA);
 		msg.set_msg_data(s_test_msg, strlen(s_test_msg)+1);
-		msg.mutable_ext()->set_unixtime(dcsutil::time_unixtime_ms() / 1000);
+		msg.mutable_ext()->set_unixtime(dcs::time_unixtime_ms() / 1000);
 		if (!msg.Pack(msgbuf))
 		{
 			printf("error pack!\n");
@@ -272,7 +272,7 @@ int perf_test(const char * arg){
 		//
 		packsize += msg.PackSize();
 	}
-	int64_t cost_time = dcsutil::time_unixtime_us() - start_us;
+	int64_t cost_time = dcs::time_unixtime_us() - start_us;
 	double speed = pack_unpack_times*1000000.0 / cost_time ;
 	GLOG_TRA("print pack size:%lu msg size:%zd cost time:%ld total times:%d speed:%lf /s", 
 		packsize, strlen(s_test_msg)+1,
@@ -352,7 +352,7 @@ static int xml_test(const char * xmlfile){
 }
 static int lock_test(const char * pidfile){
 
-	int pid = dcsutil::lockpidfile(pidfile, SIGTERM);
+	int pid = dcs::lockpidfile(pidfile, SIGTERM);
 	if (pid <= 0){
 		GLOG_TRA("error:%d lock errno:%d for:%s",pid, errno, strerror(errno));
 		return -2;
@@ -369,18 +369,18 @@ static int lock_test(const char * pidfile){
 	return 0;
 }
 static int daemon_test(const char * arg){
-	//dcsutil::daemonlize(0);
+	//::dcs::daemonlize(0);
 	std::vector<std::string> vs;
 	std::vector<std::string> vss;
-	int n = dcsutil::strsplit("..b.abc..def..", ".", vs);
-	int m = dcsutil::strsplit("ffffdccvf", ".", vss);
+	int n = dcs::strsplit("..b.abc..def..", ".", vs);
+	int m = dcs::strsplit("ffffdccvf", ".", vss);
 	GLOG_TRA("split test ret:%d [0]:%s [1]:%s [2]:%s", n, vs[0].c_str(), vs[1].c_str(), vs[2].c_str());
 	GLOG_TRA("split test ret:%d [0]:%s", m, vss[0].c_str());
 	std::string str;
-	GLOG_TRA("strtime:%s", dcsutil::strftime(str));
-	GLOG_TRA("from_strtime:%lu", dcsutil::stdstrtime());
+	GLOG_TRA("strtime:%s", dcs::strftime(str));
+	GLOG_TRA("from_strtime:%lu", dcs::stdstrtime());
     if(arg){
-        GLOG_TRA("format time:%s [%s]", arg, dcsutil::strftime(str, time(NULL), arg));
+        GLOG_TRA("format time:%s [%s]", arg, dcs::strftime(str, time(NULL), arg));
     }
 	while (true){
 		//LOGP("test ....");
@@ -389,7 +389,7 @@ static int daemon_test(const char * arg){
 	return 0;
 }
 static int mysql_test(const char * p){
-	using namespace dcsutil;
+	using namespace dcs;
 	mysqlclient_t	mc;
 	mysqlclient_t::cnnx_conf_t	conf;
 	conf.ip = "127.0.0.1";
@@ -422,7 +422,7 @@ static int mysql_test(const char * p){
 		return -1;
 	}
 	struct _test {
-		static void 	cb(void* ud, INOUT bool & need_more, const dcsutil::mysqlclient_t::table_row_t & row){
+		static void 	cb(void* ud, INOUT bool & need_more, const dcs::mysqlclient_t::table_row_t & row){
 			GLOG_TRA("cb ud:%p row:%s (%zu) name:%s total:%zu offset:%zu! more:%d",
 				ud,row.row_data[0],row.row_length[0],row.fields_name[0],row.row_total, row.row_offset, need_more);
 			if (row.row_offset > 5){
@@ -440,8 +440,8 @@ static int mysql_test(const char * p){
 }
 #include "utility/mongo/dcmongoc.h"
 static int mongo_test(const char * p){
-	dcsutil::mongo_client_config_t conf;
-	dcsutil::mongo_client_t		mg;
+	dcs::mongo_client_config_t conf;
+	dcs::mongo_client_t		mg;
 	conf.mongo_uri = "mongodb://127.0.0.1:27017";
 	conf.multi_thread = 1;
 	int ret = mg.init(conf);
@@ -449,7 +449,7 @@ static int mongo_test(const char * p){
 		GLOG_TRA("init error :%d!", ret);
 		return -1;
 	}
-	using namespace dcsutil;
+	using namespace dcs;
 	string cmd = "{\"ping\": 1}";
 	cmd = "{\"insert\": \"test\",\"documents\" : [{\"execute\":1}]}";
 	struct _test_cb {
@@ -512,7 +512,7 @@ static int pbxml_test(const char* arg){
 	mdn.set_src("src-----");
 	mdn.set_type(dcnode::MSG_HEART_BEAT);
 	mdn.mutable_ext()->set_unixtime(time(NULL));
-	dcsutil::protobuf_msg_to_xml_file(mdn, "dcnode.xml");
+	dcs::protobuf_msg_to_xml_file(mdn, "dcnode.xml");
 	return 0;
 }
 #include "base/dcdebug.h"
@@ -520,7 +520,7 @@ struct test_st1 {
     static void f(int n){
         string str;
         if (n <= 0){
-            std::cout << dcsutil::stacktrace(str) << std::endl;
+            std::cout << dcs::stacktrace(str) << std::endl;
         }
         else {
             f(n - 1);
@@ -549,7 +549,7 @@ static int stacktrace_test(const char * arg){
     }
     return 0;
 }
-using namespace dcsutil;
+using namespace dcs;
 static int http_test(const char * arg){
     if (!arg){
         arg = "baidu.com";
@@ -558,16 +558,16 @@ static int http_test(const char * arg){
     uri += arg;
     uri += ":80";
     cout << "open:" << uri << endl;
-    int fd = dcsutil::openfd(uri);
+    int fd = dcs::openfd(uri);
     cout << "connect uri:" << uri << " fd:" << fd << endl;
     if (fd < 0){
         return -2;
     }
     string cmd = "GET / HTTP/1.1\r\n\r\n";
-    int n = dcsutil::writefd(fd, cmd.c_str(), cmd.length());
+    int n = dcs::writefd(fd, cmd.c_str(), cmd.length());
     cout << "write size:" << n << endl;
     static char buffer[102400];
-    //n = dcsutil::readfd(fd, buffer, sizeof(buffer), "end");
+    //n = ::dcs::readfd(fd, buffer, sizeof(buffer), "end");
     n = readfd(fd, buffer, sizeof(buffer), "token:\r\n");
     cout << "read size:" << n << endl;
     cout << buffer << endl;
@@ -577,13 +577,13 @@ static int uri_test(const char * arg){
     if (!arg){
         arg = "http://qq.com";
     }    
-    int fd = dcsutil::openfd(arg);
+    int fd = dcs::openfd(arg);
     cout << "connect uri:" << arg << " fd:" << fd << endl;
     if (fd < 0){
         return -2;
     }
     static char buffer[102400];
-    int n = dcsutil::readfd(fd, buffer, sizeof(buffer), "end");
+    int n = dcs::readfd(fd, buffer, sizeof(buffer), "end");
     //n = readfd(fd, buffer, sizeof(buffer), "token:\r\n");
     cout << "read size:" << n << endl;
     cout << buffer << endl;
@@ -593,7 +593,7 @@ static int uri_test(const char * arg){
 #include "base/app.hpp"
 #include "base/dcshmobj.hpp"
 static int app_test(int argc, const char * argv[]){
-    struct TestApp : dcsutil::App {
+    struct TestApp : dcs::App {
         string options(){
             return ""
                 "crash:n::crash;"
@@ -645,7 +645,7 @@ static int app_test(int argc, const char * argv[]){
                 default_logger_init(lgconf);
                 std::string ds;
                 while (true){
-                    GLOG_DBG("%s",dcsutil::strcharsetrandom(ds, 1024));
+                    GLOG_DBG("%s",dcs::strcharsetrandom(ds, 1024));
                     usleep(1000*10);
                 }
             }
@@ -657,13 +657,13 @@ static int app_test(int argc, const char * argv[]){
 }
 #include "utility/drs/dcxconf.h"
 #include "test_conf.pb.h"
-using namespace dcsutil;
+using namespace dcs;
 int xconf_test(int argc, const char * argv[]){
 
     std::string sxml = "\n\n    \n \t \t \t\n\n\n";
     std::cout << sxml << std::endl;
     std::cout << "=========================" << std::endl;
-    dcsutil::strrereplace(sxml, "^[\\s]*$", "");
+    dcs::strrereplace(sxml, "^[\\s]*$", "");
     std::cout << sxml << std::endl ;
 
     TestConf tc;
@@ -677,7 +677,7 @@ int xconf_test(int argc, const char * argv[]){
     readfile("dcxconf_test.xml", sxml);
     cout << sxml << endl;
     cout << "replaced" << endl;
-    dcsutil::strrereplace(sxml, "^[ \t]*$", "");
+    dcs::strrereplace(sxml, "^[ \t]*$", "");
     cout << sxml << endl;
 
     dcxcmdconf_t    dxc(tc);
@@ -689,7 +689,7 @@ int xconf_test(int argc, const char * argv[]){
     return 0;
 }
 static int xapp_test(int argc, const char * argv[]){
-    struct XTestApp : dcsutil::App {
+    struct XTestApp : dcs::App {
         TestConf    conf;
         dcxcmdconf_t * dxc{ nullptr };
         virtual int on_create(int argc, const char * argv[]){

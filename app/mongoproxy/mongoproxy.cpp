@@ -7,7 +7,7 @@
 #include "mongoproxy_msg.h"
 
 struct dispatch_param {
-	dcsutil::mongo_client_t * mc;
+	dcs::mongo_client_t * mc;
 	dcnode_t *		 dc;
 	string			 src;
 	dcorm::MongoOP	 op;
@@ -16,7 +16,7 @@ struct dispatch_param {
 msg_buffer_t g_msg_buffer;
 
 static  void 
-on_mongo_result(void * ud, const dcsutil::mongo_client_t::result_t & result, const dcsutil::mongo_client_t::command_t & cmd){
+on_mongo_result(void * ud, const dcs::mongo_client_t::result_t & result, const dcs::mongo_client_t::command_t & cmd){
 	dispatch_param * cbp = (dispatch_param*)ud;
 	mongo_msg_t msg;
 	msg.set_op(cbp->op);
@@ -68,13 +68,13 @@ dispatch_query(void * ud, const char * src, const msg_buffer_t & msg_buffer){
             std::vector<string>     projects;
             std::transform(msg.req().find().projection().begin(), msg.req().find().projection().end(),
                 projects.begin(), [](const string & v){return "\"" + v + "\": 1"; });
-            dcsutil::strjoin(projection, ",", projects);
+            dcs::strjoin(projection, ",", projects);
             //----------------------------------------------------------------------------
             string sort;
             std::vector<string>     sorts;
             std::transform(msg.req().find().sort().begin(), msg.req().find().sort().end(),
                 sorts.begin(), [](const string & v){return "\"" + v + "\": 1"; });
-            dcsutil::strjoin(sort, ",", sorts);
+            dcs::strjoin(sort, ",", sorts);
             //----------------------------------------------------------------------------
             cbp->mc->find(msg.db(), msg.coll(), msg.req().q(), on_mongo_result, cbp,
                 projection.c_str(), sort.c_str(), msg.req().find().skip(), msg.req().find().limit());
@@ -132,15 +132,15 @@ int main(int argc, const char * argv[]){
 	else {
 		default_logger_init(logger_config_t());
 	}
-	dcsutil::protobuf_logger_init();
+	dcs::protobuf_logger_init();
 
 	const char * listen = cmdline.getoptstr("listen");
 	bool daemon = cmdline.hasopt("daemon");
 	////////////////////////////////////////////////
-	dcsutil::mongo_client_config_t	mconf;
+	dcs::mongo_client_config_t	mconf;
 	mconf.mongo_uri = cmdline.getoptstr("mongo-uri");
 	mconf.multi_thread = cmdline.getoptint("workers");
-	dcsutil::mongo_client_t mongo;
+	dcs::mongo_client_t mongo;
 	if (mongo.init(mconf)){
 		cerr << "mongo client init error !" << endl;
 		return -4;
@@ -167,10 +167,10 @@ int main(int argc, const char * argv[]){
 
 	/////////////////////////////////////////////
 	if (daemon){
-		dcsutil::daemonlize();
+		dcs::daemonlize();
 	}
 	//////////////////////////////////////////////////////////////////////////////////
-	if (dcsutil::lockpidfile("./mongoproxy.pid") != getpid()){
+	if (dcs::lockpidfile("./mongoproxy.pid") != getpid()){
 		cerr << "lock file error !" << endl;
 		return -2;
 	}

@@ -1,6 +1,6 @@
 #pragma once
 #include "../../base/stdinc.h"
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 //////////////////////////////////////////////////////////////////////
 struct mongo_client_config_t {
 	string	mongo_uri;//mongodb://localhost:27017

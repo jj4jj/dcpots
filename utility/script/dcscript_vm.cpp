@@ -11,7 +11,7 @@ extern "C" {
 #endif
 
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 struct python_vm_t {
 	bool	myown;

@@ -21,7 +21,7 @@ int main(int argc,const char ** argv){
 	using namespace std;
 	cmdline_opt_t cmdopt(argc, argv);
 	cmdopt.parse("path:r:p:proxy communication msgq path:/tmp");
-	dcsutil::protobuf_logger_init();
+	dcs::protobuf_logger_init();
 	//path
 	if (!cmdopt.hasopt("path")){
 		std::cerr << "no path option" << endl;

@@ -7,8 +7,8 @@
 #include "../../base/dcseqnum.hpp"
 #include "dcredis.h"
 
-NS_BEGIN(dcsutil)
-typedef dcsutil::sequence_number_t<>	redis_evsn;
+NS_BEGIN(dcs)
+typedef dcs::sequence_number_t<>	redis_evsn;
 
 enum CommandOptions {
     COMMAND_FLAG_NO_EXPIRED = 1,
@@ -85,7 +85,7 @@ static inline int _commandv(RedisAsyncAgentImpl * impl, redisAsyncContext* ctx, 
     }
 
     impl->callback_pool[sn].cb = cb;
-    impl->callback_pool[sn].timestamp = dcsutil::time_unixtime_s();
+    impl->callback_pool[sn].timestamp = dcs::time_unixtime_s();
     impl->callback_pool[sn].opt = opt;
 
     return 0;
@@ -221,7 +221,7 @@ static void default_disconnectCallback(const redisAsyncContext *c, int status) {
 }
 static redisAsyncContext * _create_redis_context(RedisAsyncAgentImpl * impl, redisConnectCallback onconn, redisDisconnectCallback ondisconn){
     std::vector<std::string> vs;
-    dcsutil::strsplit(impl->addrs, ":", vs);
+    dcs::strsplit(impl->addrs, ":", vs);
     if (vs.size() != 2){
         GLOG_ERR("error redis address :%s", impl->addrs.c_str());
         return nullptr;
@@ -284,7 +284,7 @@ int	RedisAsyncAgent::init(const string & addrs, const char * passwd){
 }
 static inline void redis_check_time_expired_callback(RedisAsyncAgentImpl * impl){
 	auto it = impl->callback_pool.begin();
-	uint32_t now = dcsutil::time_unixtime_s();
+	uint32_t now = dcs::time_unixtime_s();
 	while (it != impl->callback_pool.end()){
 		auto nowit = it++;
         if (!(nowit->second.opt & COMMAND_FLAG_NO_EXPIRED) &&
@@ -296,7 +296,7 @@ static inline void redis_check_time_expired_callback(RedisAsyncAgentImpl * impl)
 	}
 }
 int RedisAsyncAgent::update(){
-    uint32_t time_now = dcsutil::time_unixtime_s();
+    uint32_t time_now = dcs::time_unixtime_s();
     if (impl->rc == nullptr && 
         (time_now > impl->last_reconnect_time + 10)) {
         impl->last_reconnect_time = time_now;

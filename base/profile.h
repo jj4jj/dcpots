@@ -11,7 +11,7 @@ struct		profile_t {
 	uint64_t			 start_time;
 	profile_t(const char * file_, const char * funcname_, int line_) :
 		file(file_), funcname(funcname_), line(line_){
-			start_time = dcsutil::time_unixtime_us();
+			start_time = dcs::time_unixtime_us();
 			if (!is_on(start_time)){
 				return;
 			}
@@ -19,7 +19,7 @@ struct		profile_t {
 			level_s.push_back('\t');
 		}
 	~profile_t(){
-		uint64_t now_us = dcsutil::time_unixtime_us();
+		uint64_t now_us = dcs::time_unixtime_us();
 		if (!is_on(now_us)){
 			return;
 		}
@@ -34,7 +34,7 @@ private:
 	}
 public:
 	static void on(int time_s){
-		s_prof_time_end = dcsutil::time_unixtime_us() + time_s * 1000000;
+		s_prof_time_end = dcs::time_unixtime_us() + time_s * 1000000;
 	}
 
 };

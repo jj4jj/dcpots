@@ -3,7 +3,7 @@
 #include "../../base/dcutils.hpp"
 #include "../../base/cmdline_opt.h"
 
-using namespace dcsutil;
+using namespace dcs;
 using namespace dcrpc;
 int main(int argc, char ** argv){
     RpcServer server;

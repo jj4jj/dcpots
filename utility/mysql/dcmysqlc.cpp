@@ -4,7 +4,7 @@ extern "C" {
 #include "../../base/logger.h"
 #include "dcmysqlc.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 ///////////////////////////////////////////////////////////////
 static const int MAX_MYSQL_ERR_MSG_SZ = 1024;

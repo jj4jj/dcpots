@@ -3,7 +3,7 @@
 #include "../../base/dcobjects.hpp"
 #include "dcmysqlc_pool.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 
 #define MAX_MYSQL_CLIENT_THREAD_NUM     (128)

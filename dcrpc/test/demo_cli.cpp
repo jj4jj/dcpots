@@ -4,7 +4,7 @@
 #include "../../base/logger.h"
 #include "../share/dcrpc.h"
 
-using namespace  dcsutil;
+using namespace  dcs;
 using namespace dcrpc;
 int fire=0;
 static void sigh(int sig, siginfo_t * sig_info, void * ucontex){

@@ -22,10 +22,10 @@ struct dagent_t
 	unordered_map<int, dagent_cb_t>		cbs;
 	msg_buffer_t						send_msgbuffer;
 	std::vector<dagent_plugin_t>		plugins;
-    dcsutil::script_vm_t	*			vms[dcsutil::script_vm_enm_type::SCRIPT_VM_MAX];
+    ::dcs::script_vm_t	*			vms[::dcs::script_vm_enm_type::SCRIPT_VM_MAX];
 
 	unordered_map<int, PyObject*>		py_cbs;
-    dcsutil::script_vm_python_export_t			py_export;
+    ::dcs::script_vm_python_export_t			py_export;
 	dagent_t(){
 		bzero(vms,sizeof(vms));
 		node = nullptr;
@@ -164,7 +164,7 @@ static PyObject * _py_ext_destroy(PyObject *, PyObject *){
 	return Py_None;
 }
 
-static  int _init_py_vm(dcsutil::script_vm_t * vm){
+static  int _init_py_vm(::dcs::script_vm_t * vm){
 	if (!vm){
 		return -1;
 	}	
@@ -215,14 +215,14 @@ static int _dispatcher(void * ud, const char * src, const msg_buffer_t & msg){
 }
 
 void dagent_export_python(bool for_ext){
-    dcsutil::script_vm_python_export_t & vmexport = AGENT.py_export;
+    ::dcs::script_vm_python_export_t & vmexport = AGENT.py_export;
 	if (!vmexport.entries.empty()){
 		GLOG_ERR("repeat export python ...");
 		return;
 	}
 
 	vmexport.module = "dagent";
-    dcsutil::script_vm_python_export_t::export_entry_t	pyee;
+    ::dcs::script_vm_python_export_t::export_entry_t	pyee;
 	pyee.func = (void*)(_py_push_cb);
 	pyee.name = "push_cb";
 	pyee.desc = "void push_cb(int type, int(const char* src, const char* msg, int sz)) add a cb with type...";
@@ -287,13 +287,13 @@ int     dagent_init(const dagent_config_t & conf){
 	dcnode_set_dispatcher(node, _dispatcher, &AGENT);
 	AGENT.conf = conf;
 	AGENT.node = node;
-    for (int i = dcsutil::script_vm_enm_type::SCRIPT_VM_NONE; !conf.extmode &&
-        i < dcsutil::script_vm_enm_type::SCRIPT_VM_MAX; ++i){
-        dcsutil::script_vm_config_t	vmc;
-        vmc.type = (dcsutil::script_vm_enm_type)i;
+    for (int i = ::dcs::script_vm_enm_type::SCRIPT_VM_NONE; !conf.extmode &&
+        i < ::dcs::script_vm_enm_type::SCRIPT_VM_MAX; ++i){
+        ::dcs::script_vm_config_t	vmc;
+        vmc.type = (::dcs::script_vm_enm_type)i;
 		vmc.path = conf.plugin_path.c_str();
 		AGENT.vms[i] = script_vm_create(vmc);
-        if (i == dcsutil::script_vm_enm_type::SCRIPT_VM_PYTHON){
+        if (i == ::dcs::script_vm_enm_type::SCRIPT_VM_PYTHON){
 			_init_py_vm(AGENT.vms[i]);
 		}
 	}
@@ -307,7 +307,7 @@ void    dagent_destroy(){
 	}
 	AGENT.cbs.clear();
 	AGENT.send_msgbuffer.destroy();
-    for (int i = 0; i < dcsutil::script_vm_enm_type::SCRIPT_VM_MAX; ++i){
+    for (int i = 0; i < ::dcs::script_vm_enm_type::SCRIPT_VM_MAX; ++i){
 		if (AGENT.vms[i]){
 			script_vm_destroy(AGENT.vms[i]);
 			AGENT.vms[i] = nullptr;
@@ -349,17 +349,17 @@ int     dagent_cb_pop(int type){
 	return -1;
 }
 int     dagent_load_plugin(const char * file){
-    dcsutil::script_vm_t * vm = nullptr;
+    ::dcs::script_vm_t * vm = nullptr;
 	if (strstr(file, ".py") + 3 == file + strlen(file)){
 		//python
-		vm = AGENT.vms[dcsutil::script_vm_enm_type::SCRIPT_VM_PYTHON];
+		vm = AGENT.vms[::dcs::script_vm_enm_type::SCRIPT_VM_PYTHON];
 	}
 	else if (strstr(file, ".lua") + 4 == file + strlen(file)){
 		//lua
-        vm = AGENT.vms[dcsutil::script_vm_enm_type::SCRIPT_VM_LUA];
+        vm = AGENT.vms[::dcs::script_vm_enm_type::SCRIPT_VM_LUA];
 	}
 	else if (strstr(file, ".js") + 3 == file + strlen(file)){
-        vm = AGENT.vms[dcsutil::script_vm_enm_type::SCRIPT_VM_JS];
+        vm = AGENT.vms[::dcs::script_vm_enm_type::SCRIPT_VM_JS];
 	}
 	if(!vm){
 		GLOG_TRA("not found plugin vm file:%s or plugin vm not load", file);

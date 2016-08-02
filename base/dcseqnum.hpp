@@ -3,7 +3,7 @@
 #include "dcbitset.hpp"
 #include <atomic>
 #include <cstdio>
-namespace dcsutil {
+namespace dcs {
     struct sequence_type {
     };
     template<int max_class_2e = 6, int max_hz_2e = 26, bool multi_thread = false, class SEQT = sequence_type>
@@ -28,7 +28,7 @@ namespace dcsutil {
 			s_circle_seq.compare_exchange_strong(cmp_seq_value, 0);
 			int seq = s_circle_seq.fetch_add(1);
 			if (seq == 1 || s_sec_timestamp == 0){
-				s_sec_timestamp = dcsutil::time_unixtime_s();
+				s_sec_timestamp = dcs::time_unixtime_s();
 			}
 			unsigned long long nseq = s_sec_timestamp;
 			nseq <<= max_class_2e;
@@ -47,7 +47,7 @@ namespace dcsutil {
 			}
 			++s_circle_seq;
 			if (s_circle_seq == 1 || s_sec_timestamp == 0){
-				s_sec_timestamp = dcsutil::time_unixtime_s();
+				s_sec_timestamp = dcs::time_unixtime_s();
 			}
 			unsigned long long nseq = s_sec_timestamp;
 			nseq <<= max_class_2e;

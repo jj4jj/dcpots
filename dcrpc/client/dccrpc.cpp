@@ -12,7 +12,7 @@
 NS_BEGIN(dcrpc)
 //using namespace google::protobuf;
 using dcrpc::RpcValues;
-typedef dcsutil::sequence_number_t<2, 30>    rpcall_transaction_sn;
+typedef dcs::sequence_number_t<2, 30>    rpcall_transaction_sn;
 typedef msgproto_t<RpcMsg>  dcrpc_msg_t;
 
 ////////////////////////////////////////////////////////////////////
@@ -143,7 +143,7 @@ int RpcClient::init(const std::string & svraddrs, int queue_size, dctcp_t * stcp
         impl->stcp = stcp;
     }
     impl->queue_max_size = queue_size;
-    dcsutil::strsplit(svraddrs, ",", impl->rpc_server_addrs);
+    dcs::strsplit(svraddrs, ",", impl->rpc_server_addrs);
     return dctcp_connect(impl->stcp, impl->select_server(), impl->connect_server_retry, "msg:sz32",
         _rpc_client_stcp_dispatch, impl);
 }
@@ -168,7 +168,7 @@ static inline void _check_connections(RpcClientImpl * impl){
         return;
     }
     else {
-        uint32_t t_times_now = dcsutil::time_unixtime_s();
+        uint32_t t_times_now = dcs::time_unixtime_s();
         if (t_times_now > impl->next_check_connx_time){
             impl->next_check_connx_time = t_times_now + CHECK_CNNX_TIME_INTERVAL;
             GLOG_ERR("rpc connection lost , reconnecting ...");

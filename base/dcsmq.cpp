@@ -27,27 +27,27 @@ struct dcsmq_t {
 };
 
 #define STAT_ON_RECV(mtype, msize)  do{\
-    smq->stat.msg_rtime = dcsutil::time_unixtime_us(); \
+    smq->stat.msg_rtime = ::dcs::time_unixtime_us(); \
     ++smq->stat.recv_num; \
     smq->stat.recv_size += msize; \
     smq->stat.recv_last = mtype; \
 }while (false)
 
 #define STAT_ON_RECV_ERROR()  do{\
-    smq->stat.msg_rtime = dcsutil::time_unixtime_us(); \
+    smq->stat.msg_rtime = ::dcs::time_unixtime_us(); \
     ++smq->stat.recv_num; \
     ++smq->stat.recv_error;\
 }while (false)
 
 #define STAT_ON_SEND(mtype, msize)  do{\
-    smq->stat.msg_stime = dcsutil::time_unixtime_us(); \
+    smq->stat.msg_stime = ::dcs::time_unixtime_us(); \
     ++smq->stat.send_num; \
     smq->stat.send_size += msize; \
     smq->stat.send_last = mtype; \
 }while (false)
 
 #define STAT_ON_SEND_ERROR()  do{\
-    smq->stat.msg_stime = dcsutil::time_unixtime_us(); \
+    smq->stat.msg_stime = ::dcs::time_unixtime_us(); \
     ++smq->stat.send_num; \
     ++smq->stat.send_error; \
 }while (false)
@@ -99,7 +99,7 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
         send_queue_buff_size = conf.min_queue_buff_size;
     }
     if (send_queue_buff_size > 0){
-        if (dcsutil::strisint(conf.keypath)){
+        if (dcs::strisint(conf.keypath)){
             sender_key = stoi(conf.keypath) + prj_id[0] - 1;
         }
         else {
@@ -123,7 +123,7 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
             conf.keypath.c_str(), sender_key, prj_id[0]);
     }
     if (recv_queue_buff_size > 0){
-        if (dcsutil::strisint(conf.keypath)){
+        if (dcs::strisint(conf.keypath)){
             receiver_key = stoi(conf.keypath) + prj_id[1] - 1;
         }
         else {
@@ -229,7 +229,7 @@ RETRY_RECV:
 int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){	
 	PROFILE_FUNC();
 	int64_t past_us = 0, start_us, now_us;
-	start_us = dcsutil::time_unixtime_us();
+	start_us = dcs::time_unixtime_us();
 	int nproc = 0, ntotal_proc = 0;
     dcsmq_msg_t dcmsg;
     uint64_t recvmsgid;
@@ -244,7 +244,7 @@ int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){
         ++nproc;
 		++ntotal_proc;
 		if (nproc >= 16){
-			now_us = dcsutil::time_unixtime_us();
+			now_us = dcs::time_unixtime_us();
 			past_us +=  (now_us - start_us);
 			start_us = now_us;
 			nproc = 0;

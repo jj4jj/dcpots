@@ -1,6 +1,6 @@
 #pragma  once
 
-namespace dcsutil {
+namespace dcs {
 struct logfile_impl_t;
 struct logfile_t {
     void    init(const char * file);

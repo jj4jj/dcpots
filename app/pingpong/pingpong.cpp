@@ -13,7 +13,7 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 		if (start_time == 0){
 			logger_set_level(nullptr, LOG_LVL_PROF);
 		}
-		start_time = dcsutil::time_unixtime_us();
+		start_time = dcs::time_unixtime_us();
 	}
 	if (ncur < 3){
 		GLOG_TRA("recv msg from src:%s size:%d", src, msg.valid_size);
@@ -25,7 +25,7 @@ static int pingpong(void * ud, const char* src, const msg_buffer_t & msg)
 		dcnode_send(dc, src, msg.buffer, msg.valid_size);
 	}
 	else {
-		uint64_t current_time = dcsutil::time_unixtime_us();
+		uint64_t current_time = dcs::time_unixtime_us();
 		uint64_t cost_time = current_time - start_time;
 		double speed = total / cost_time;
 		printf("pingpong test result msg length:%d count:%d time:%luus speed qpus:%lf qps:%lf\n",
@@ -76,7 +76,7 @@ int main(int argc, char * argv[]){
     total = stoi(argv[2]);
     bool ping = false;
     string name = "pingpong";
-    dcsutil::strcharsetrandom(name, 4);
+    dcs::strcharsetrandom(name, 4);
     if (strstr(argv[1], "push")){
         ping = true;
     }
@@ -90,7 +90,7 @@ int main(int argc, char * argv[]){
     }
     int n = 0;
     string s_send_msg;
-    dcsutil::strcharsetrandom(s_send_msg, 64);
+    dcs::strcharsetrandom(s_send_msg, 64);
     bool start = false;
 	while (true)
 	{
@@ -100,7 +100,7 @@ int main(int argc, char * argv[]){
 			dcnode_send(dc, "", s_send_msg.c_str(), s_send_msg.length());
 			start = true;
 			ncur = 1;
-			start_time = dcsutil::time_unixtime_us();
+			start_time = dcs::time_unixtime_us();
 		}
 		if (dcnode_ready(dc) == -1){
 			GLOG_TRA("dcnode stoped ....");

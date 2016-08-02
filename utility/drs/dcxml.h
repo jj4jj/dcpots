@@ -2,7 +2,7 @@
 #include "../../base/stdinc.h"
 #include "../../base/msg_buffer.hpp"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 struct xml_node_t;
 struct xml_attribute_t;

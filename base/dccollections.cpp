@@ -2,7 +2,7 @@
 
 #include "dccollections.hpp"
 
-namespace dcsutil {
+namespace dcs {
 struct mempool_impl_t {
     mempool_conf_t  conf;    
 };

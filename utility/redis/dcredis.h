@@ -2,7 +2,7 @@
 #include <string>
 
 struct redisReply;
-namespace dcsutil{
+namespace dcs{
 struct RedisAsyncAgentImpl;
 using std::string;
 struct RedisAsyncAgent {

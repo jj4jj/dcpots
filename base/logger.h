@@ -88,7 +88,7 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
     char _s_time_alloc_[40]; struct tm _tmp_sftm_; \
     localtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
     strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%FT%X%z", &_tmp_sftm_); \
-    dcsutil::strprintf((str), RAW_LOG_MSG_FORMAT_PREFIX format, RAW_LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
+    ::dcs::strprintf((str), RAW_LOG_MSG_FORMAT_PREFIX format, RAW_LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
 } while (0)
 #endif
 
@@ -104,7 +104,7 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
     char _s_time_alloc_[40]; struct tm _tmp_sftm_;\
     localtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
     strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%FT%X%z", &_tmp_sftm_); \
-    dcsutil::strprintf((str), LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
+    ::dcs::strprintf((str), LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
 } while (0)
 #endif
 

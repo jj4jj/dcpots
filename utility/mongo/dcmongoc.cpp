@@ -9,7 +9,7 @@
 
 #include "dcmongoc.h"
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 ///////////////////////////////////////////////////////////////
 #define	MAX_MOGNO_THREAD_POOL_SIZE	(128)

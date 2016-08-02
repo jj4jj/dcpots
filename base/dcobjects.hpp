@@ -1,6 +1,6 @@
 #pragma once
 
-namespace dcsutil{
+namespace dcs {
 //object pool
 template<class T, unsigned int count_max = 1024>
 class object_pool_t {

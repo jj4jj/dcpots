@@ -3,7 +3,7 @@
 #include "dclogfile.h"
 
 
-NS_BEGIN(dcsutil)
+NS_BEGIN(dcs)
 
 struct logfile_impl_t {
     FILE	*	pf{ nullptr };
@@ -15,11 +15,12 @@ logfile_t::logfile_t(){
 }
 logfile_t::~logfile_t(){
     close();
-    if (impl)
+    if (impl){
         delete impl;
+    }
 }
 void logfile_t::init(const char * file){
-    if (file && *file) impl->logfile = file;
+    if (file && *file){impl->logfile = file;}
 }
 int logfile_t::open(){
     if (impl->logfile.empty()){
