@@ -13,14 +13,15 @@ namespace dcs {
 			MAX_CLASS_ID = (1 << max_class_2e) - 1,
 		};
 	public:
+        //if store to uint32 . just sequence
 		static unsigned long long next(int id=0){
 			typename std::conditional<multi_thread, int, char>::type val = 0;
 			return next_dispatch(id, val);
 		}
 	private:
-		//type dispatch (overload)
+		//for thread safe
 		static unsigned long long next_dispatch(int id, int){
-			assert(sizeof(unsigned long long) >= 8);
+			assert(sizeof(unsigned long long) == 8);
 			assert(id <= MAX_CLASS_ID);
 			static std::atomic<int>	s_circle_seq(0);
 			static std::atomic<uint32_t> s_sec_timestamp(0);
@@ -38,7 +39,7 @@ namespace dcs {
 			return nseq;
 		}
 		static unsigned long long next_dispatch(int id, char){
-			assert(sizeof(unsigned long long) >= 8);
+			assert(sizeof(unsigned long long) == 8);
 			assert(id <= MAX_CLASS_ID);
 			static int	s_circle_seq{ 0 };
 			static uint32_t s_sec_timestamp{ 0 };

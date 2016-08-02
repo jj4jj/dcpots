@@ -12,7 +12,7 @@
 NS_BEGIN(dcrpc)
 //using namespace google::protobuf;
 using dcrpc::RpcValues;
-typedef dcs::sequence_number_t<2, 30>    rpcall_transaction_sn;
+typedef dcs::sequence_number_t<16, 16>    rpcall_transaction_sn;
 typedef msgproto_t<RpcMsg>  dcrpc_msg_t;
 
 ////////////////////////////////////////////////////////////////////
@@ -42,7 +42,7 @@ public:
 
 public:
     uint64_t append_callback(RpcClient::RpcCallNotify cb, int expired = 0){
-        uint64_t sn = rpcall_transaction_sn::next();
+        uint64_t sn = rpcall_transaction_sn::next(getpid());
         rpcall_cbs[sn] = cb;
 		UNUSED(expired);
         return sn;

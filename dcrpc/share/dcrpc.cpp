@@ -51,6 +51,52 @@ namespace dcrpc {
     void RpcValues::addb(const char * buff, int ibuf){
         return data_->Add()->set_b(buff, ibuf);
     }
+    static inline RpcMsg_ValueItem * _mutable_named_item(RpcValuesImpl * data_, const char * name){
+        for (int i = 0; i < data_->size(); ++i){
+            if (!strcmp(data_->Get(i).name().c_str(),name)){
+                return data_->Mutable(i);
+            }
+        }
+        RpcMsg_ValueItem * itemp = data_->Add();
+        itemp->set_name(name);
+        return itemp;
+    }
+    void RpcValues::seti(int64_t i, const std::string & name){
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        itemp->set_i(i);
+    }
+    void RpcValues::sets(const std::string & s, const std::string & name){
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        itemp->set_s(s);
+    }
+    void RpcValues::setf(double f, const std::string & name){
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        itemp->set_f(f);
+    }
+    void RpcValues::setb(const std::string & b, const std::string & name){
+        setb(b.data(), b.length(), name);
+    }
+    void RpcValues::setb(const char * b, int len, const std::string & name) {
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        itemp->set_b(b, len);
+    }
+    /////////////////////////////////////////////////////////
+    int64_t RpcValues::geti(const std::string & name) const {
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        return itemp->i();
+    }
+    const std::string & RpcValues::gets(const std::string & name) const {
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        return itemp->s();
+    }
+    double RpcValues::getf(const std::string & name) const {
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        return itemp->f();
+    }
+    const std::string & RpcValues::getb(const std::string & name) const {
+        auto itemp = _mutable_named_item(data_, name.c_str());
+        return itemp->b();
+    }
     RpcValues::RpcValues(const RpcValuesImpl & data){
         this->data_ = const_cast<RpcValuesImpl*>(&data);
         this->own_ = false;
