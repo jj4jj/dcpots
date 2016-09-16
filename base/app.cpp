@@ -10,12 +10,10 @@
 #include "dcshm.h"
 #include "dcdebug.h"
 #include "dcshmobj.hpp"
+#include "datetime.h"
 ///////////////////////////////////////////////////
 #include "app.hpp"
 
-extern char * tzname[2];
-extern long timezone;
-extern int daylight;
 
 NS_BEGIN(dcs)
 
@@ -33,9 +31,7 @@ struct AppImpl {
 	int				maxtptick{ 500 };
 	uint64_t		next_tick_time{ 0 };
     dcshmobj_pool   shm_pool;
-    int             adjust_timestamp_offset{ 0 };
-    int             gmt_time_zone_offset;
-    int             gmt_time_zone{ 0 };
+	DateTime		datetime;
 };
 
 static App * s_app_instance{ nullptr };
@@ -445,10 +441,7 @@ static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_,
 }
 //////////////////////////////////////////////////////////
 static inline void _app_reload_env(AppImpl * impl_){
-    tzset();
-    impl_->gmt_time_zone = -timezone;//west of utc 
-    GLOG_IFO("reload env timezone:%ld daylight:%d time zone name:[%s]",
-        -timezone, daylight, tzname[0]);
+	UNUSED(impl_);
 }
 int App::init(int argc, const char * argv[]){
     int ret = on_create(argc, argv);
@@ -566,63 +559,29 @@ void             App::tick_maxproc(int maxproc){
 int             App::tick_maxproc() const{
     return impl_->maxtptick;
 }
-time_t          App::utctime() const{
-    return dcs::time_unixtime_s() + impl_->adjust_timestamp_offset;
-}
-time_t          App::adjust_time_reset(int seconds){
-    impl_->adjust_timestamp_offset = seconds;
-    return utctime();
-}
-time_t          App::adjust_time_extra(int seconds){
-    impl_->adjust_timestamp_offset += seconds;
-    return utctime();
-}
+
 int             App::gmt_tz_offset() const{
-    if (impl_->gmt_time_zone_offset == 0){
-        return 0;
-    }
-    int hourof = impl_->gmt_time_zone_offset > 0 ?
-        impl_->gmt_time_zone_offset / 3600:
-        (-impl_->gmt_time_zone_offset) / 3600;
-    int minof = impl_->gmt_time_zone_offset > 0 ?
-                (impl_->gmt_time_zone_offset/60) % 60:
-                (-impl_->gmt_time_zone_offset/60) % 60;
-    if (impl_->gmt_time_zone_offset > 0){
-        return hourof * 100 + minof;
-    }
-    else {
-        return -(hourof * 100 + minof);
-    }
+	int n = impl_->datetime.gmt_offset();
+	return n/3600*100 + n/60%60;
 }
 void            App::gmt_tz_offset(int tzo){
     int hourof = (tzo / 100) % 100;
-    int minof = (tzo > 0) ? tzo % 100: (-tzo)%100;
-    if (hourof <= 12 && hourof >= -12 && minof >= 0 && minof < 60){
-        impl_->gmt_time_zone_offset = (hourof * 60 + minof) * 60;
-    }
-    else {
-        GLOG_ERR("error gmt tz offset :%+04d", tzo);
+    int minof = tzo%100;
+    if (impl_->datetime.set_gmt_offset(hourof*3600 + minof*60)){
+		GLOG_ERR("error gmt tz offset :%+05d", tzo);
+		return;
     }
     GLOG_IFO("set time zone gmt offset to east of UTC:[%+05d]", tzo);
 }
-struct tm    *  App::localtime(struct tm & ttm, time_t ttime){
-    if (0 == ttime){
-        ttime = utctime();
-    }
-    if (impl_->gmt_time_zone_offset != impl_->gmt_time_zone){
-        ttime += (impl_->gmt_time_zone_offset - impl_->gmt_time_zone);
-    }
-    struct tm * ptm = localtime_r(&ttime, &ttm);
-    if (!ptm){
-        GLOG_SER("localtime_r error utc:%zu!", ttime);
-    }
-	return ptm;
+int				App::time_offset() const {
+	return impl_->datetime.time_offset();
 }
-const char *    App::strtime(std::string & str, time_t stmtmp, const char * fmt){
-    struct tm rtm;
-    localtime(rtm, stmtmp);
-    return dcs::strftime(str, rtm, fmt);
+void			App::add_time_offset(int seconds) {
+	if (impl_->datetime.add_time_offset(seconds)) {
+		GLOG_ERR("error set time offset :%d", seconds);
+		return;
+	}
+	GLOG_IFO("add time seconds offset %d", seconds);
 }
-
 
 NS_END()
