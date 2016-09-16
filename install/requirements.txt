@@ -1,0 +1,6 @@
+#protobuf-2.6(9)-dev
+#mysqlclient-dev
+#python2.7-dev
+#libssl-dev
+#mongo-c-driver install
+wget https://github.com/mongodb/mongo-c-driver/releases/download/1.4.0/mongo-c-driver-1.4.0.tar.gz

@@ -16,7 +16,7 @@ LIBS = [
         {
             'name':'dcnode',
             'subdir':'dcnode',
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
+            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
             'src_dirs':['dcnode/proto','3rd/pbjson'],
             'preobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.pb.cc',
@@ -27,7 +27,7 @@ LIBS = [
         {
             'name':'dcagent',
             'subdir':'dcagent',
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
+            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
             'src_dirs':['dcagent/proto'],
             'preobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.pb.cc',
@@ -38,14 +38,14 @@ LIBS = [
         {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
-            'includes':['/usr/local/include/libbson-1.0','3rd'],
+            'includes':['/usr/local/include/libmongoc-1.0','3rd'],
             'linkpaths':['/usr/local/lib'],
             'src_dirs': ['app/mongoproxy/proto'],
         },
         {
             'name': 'dcrepoter',
             'subdir': 'reporter',
-            'includes': ['base','dcnode','dcagent','/usr/local/include/libbson-1.0','3rd'],
+            'includes': ['base','dcnode','dcagent','/usr/local/include/libmongoc-1.0','3rd'],
         },
         {
             'name': 'pbjson',
@@ -84,7 +84,7 @@ LIBS = [
             'name':'dcutil-mongo',
             'subdir':'utility/mongo',
             'linklibs' : [],
-            'includes':['/usr/local/include/libbson-1.0','3rd'],
+            'includes':['/usr/local/include/libmongoc-1.0','3rd'],
         },
         {
             'name':'dcutil-drs',
@@ -108,7 +108,7 @@ EXES = [
         {
             'name':'dctest',
             'subdir':'app/test',
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
             'linkpaths':['/usr/local/lib'],
             'linklibs' : [
                 'dcnode',
@@ -134,7 +134,7 @@ EXES = [
         {
             'name':'mongoproxy',
             'subdir':'app/mongoproxy',
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
             'linkpaths':['/usr/local/lib'],
             'src_dirs': ['app/mongoproxy/proto'],
             'linklibs' : [
@@ -174,7 +174,7 @@ EXES = [
         {
             'name':'reporter',
             'subdir':'app/reporter',
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
             'linklibs' : [
                 'dcrepoter',
                 'dcagent',
@@ -190,7 +190,7 @@ EXES = [
         {
             'name':'collector',
             'subdir':'app/collector',
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
             'linklibs' : [
                 'dcrepoter',
                 'dcagent',
@@ -206,7 +206,7 @@ EXES = [
         {
             'name':'pingpong',
             'subdir':'app/pingpong',
-            'includes':['/usr/local/include','/usr/local/include/libbson-1.0'],
+            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
             'linklibs' : [
                 'dcnode',
                 'dcutil-drs',
