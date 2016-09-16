@@ -18,12 +18,22 @@ LIBS = [
             'subdir':'dcnode',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
             'src_dirs':['dcnode/proto','3rd/pbjson'],
+            'preobj': {
+                'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.pb.cc',
+                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.proto',
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto'
+            }
         },
         {
             'name':'dcagent',
             'subdir':'dcagent',
             'includes':['/usr/local/include','/usr/local/include/libbson-1.0','3rd'],
             'src_dirs':['dcagent/proto'],
+            'preobj': {
+                'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.pb.cc',
+                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.proto',
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto'
+            }
         },
         {
             'name':'mongoproxyapi',
@@ -45,13 +55,18 @@ LIBS = [
         {
             'name': 'dcutil-redis',
             'subdir': 'utility/redis',
-            'includes': [],
+            'includes': ['3rd'],
         },
         {
             'name': 'dcrpc',
             'subdir': 'dcrpc',
             'includes': [],
             'src_dirs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/','./dcrpc/share/dcrpc.pb.cc'],
+            'preobj': {
+                'out':'${CMAKE_CURRENT_SOURCE_DIR}/share/dcrpc.pb.cc',
+                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcrpc.proto',
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcrpc.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/share'
+            }
         },
         {
             'name':'dcutil-mysql',

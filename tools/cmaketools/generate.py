@@ -98,12 +98,7 @@ def generate(desc , root_path):
 
         extra_statements = ''
         if lib.has_key('preobj'):
-            #preobj.out/dep/cmd
-            extra_statements += 'add_custom_command(OUTPUT %s\n\
-COMMAND %s\n\
-DEPENDS %s\n)\n\
-add_dependencies(%s %s)\n' % (lib["preobj"]["out"], lib["preobj"]["cmd"],
-                lib["preobj"]["dep"], lib["name"], lib["preobj"]["out"],)
+            extra_statements += 'add_custom_target(%s_preobj COMMAND %s\nDEPENDS %s\n)\nadd_dependencies(%s %s_preobj)\n' % (lib["name"],lib["preobj"]["cmd"],lib["preobj"]["dep"], lib["name"], lib["name"])
 
         copy_replace_file(libf, subf,
             {'<lib_name>': lib['name'],
@@ -140,11 +135,7 @@ add_dependencies(%s %s)\n' % (lib["preobj"]["out"], lib["preobj"]["cmd"],
 
         extra_statements = ''
         if exe.has_key('preobj'):
-            extra_statements += 'add_custom_command(OUTPUT %s\n\
-COMMAND %s\n\
-DEPENDS %s\n)\n\
-add_dependencies(%s %s)\n' % (exe["preobj"]["out"], exe["preobj"]["cmd"],
-                exe["preobj"]["dep"], exe["name"], exe["preobj"]["out"],)
+            extra_statements += 'add_custom_target(%s_preobj COMMAND %s\nDEPENDS %s\n)\nadd_dependencies(%s %s_preobj)\n' % (exe["name"],exe["preobj"]["cmd"],exe["preobj"]["dep"], exe["name"], exe["name"])
 
         copy_replace_file(exef, subf,
             {'<exe_name>': exe['name'],

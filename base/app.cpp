@@ -616,6 +616,7 @@ struct tm    *  App::localtime(struct tm & ttm, time_t ttime){
     if (!ptm){
         GLOG_SER("localtime_r error utc:%zu!", ttime);
     }
+	return ptm;
 }
 const char *    App::strtime(std::string & str, time_t stmtmp, const char * fmt){
     struct tm rtm;
