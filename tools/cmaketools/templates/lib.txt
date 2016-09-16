@@ -1,6 +1,4 @@
-
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} cur_aSRCS)
-set(cur_SRCS "${cur_aSRCS}")
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} CSRCS)
 
 <extra_srcs>
 
@@ -9,7 +7,8 @@ ${PROJECT_SOURCE_DIR}
 /usr/include
 <includes>)
 
-add_library(<lib_name> <lib_type> ${cur_SRCS})
+<extra_statements>
+add_library(<lib_name> <lib_type> ${CSRCS})
 
 link_directories(<linkpaths>
 /usr/local/lib)
@@ -18,4 +17,3 @@ target_link_libraries(<lib_name>
 <linklibs>)
 
 
-<extra_statements>

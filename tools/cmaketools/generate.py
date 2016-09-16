@@ -1,5 +1,5 @@
 #!/bin/python
-#-*-coding:utf8-*-
+#-*-coding:utf8-*- 
 import sys
 import os
 
@@ -24,14 +24,14 @@ def src_files(path):
     incpath = path
     if path.find('/') != 0:
         incpath = '${PROJECT_SOURCE_DIR}'+'/'+path;
-    aux_source='aux_source_directory(' + incpath + ' cur_aSRCS)\nset(cur_SRCS "${cur_SRCS};${cur_aSRCS}")'
+    aux_source='aux_source_directory(' + incpath + ' CSRCS)\nlist(APPEND CSRCS "${extra}")'
     return aux_source
 
 def src_extra_files(path):
     incpath = path
     if path.find('/') != 0:
         incpath = '${PROJECT_SOURCE_DIR}'+'/'+path;
-    aux_source='set(cur_SRCS "${cur_SRCS};' + incpath + '")'
+    aux_source='list(APPEND CSRCS "' + incpath + '")'
     return aux_source
 
 
@@ -42,11 +42,9 @@ def generate(desc , root_path):
     definations = '\n'.join(map(lambda s:'ADD_DEFINITIONS(-D'+s+')',desc.DEFS))
     if len(desc.DEFS) == 0 :
         definations=''
-
     if len(desc.LIBS) == 0 and len(desc.EXES) == 0:
         print("not found lib or exe modules")
         sys.exit(-1)
-
     subdirs = ''
     if len(desc.LIBS) > 0 :
         subdirs = subdirs + '\n'.join(map(lambda l:'add_subdirectory('+l['subdir']+')', desc.LIBS))
@@ -97,8 +95,8 @@ def generate(desc , root_path):
             lib_type = lib['type']
 
         extra_statements = ''
-        if lib.has_key('preobj'):
-            extra_statements += 'add_custom_target(%s_preobj COMMAND %s\nDEPENDS %s\n)\nadd_dependencies(%s %s_preobj)\n' % (lib["name"],lib["preobj"]["cmd"],lib["preobj"]["dep"], lib["name"], lib["name"])
+        if lib.has_key('genobj'):
+            extra_statements += 'add_custom_command(OUTPUT %s\nCOMMAND %s\nDEPENDS %s\n)\nlist(APPEND CSRCS %s)\n' % (lib["genobj"]["out"],lib["genobj"]["cmd"],lib["genobj"]["dep"], lib["genobj"]["out"])
 
         copy_replace_file(libf, subf,
             {'<lib_name>': lib['name'],
@@ -116,7 +114,7 @@ def generate(desc , root_path):
         if exe.has_key('includes') and len(exe['includes']) > 0:
             extra_includes.extend(exe['includes'])
         includes = '\n'.join(map(path_fixing,extra_includes))
-
+ 
         linkpats = ''
         if exe.has_key('linkpaths') and len(exe['linkpaths']) > 0:
             linkpaths = '\n'.join(map(path_fixing,exe['linkpaths']))
@@ -134,8 +132,8 @@ def generate(desc , root_path):
             extra_srcs += '\n'.join(map(src_extra_files, exe['extra_srcs']))
 
         extra_statements = ''
-        if exe.has_key('preobj'):
-            extra_statements += 'add_custom_target(%s_preobj COMMAND %s\nDEPENDS %s\n)\nadd_dependencies(%s %s_preobj)\n' % (exe["name"],exe["preobj"]["cmd"],exe["preobj"]["dep"], exe["name"], exe["name"])
+        if exe.has_key('genobj'):
+            extra_statements += 'add_custom_command(OUTPUT %s\nCOMMAND %s\nDEPENDS %s\n)\nlist(APPEND CSRCS %s)\n' % (exe["genobj"]["out"],exe["genobj"]["cmd"],exe["genobj"]["dep"], exe["genobj"]["out"])
 
         copy_replace_file(exef, subf,
             {'<exe_name>': exe['name'],
@@ -156,7 +154,7 @@ def main(desc_file_path):
     if desc_file_path and len(desc_file_path) > 0:
         sys.path.append(desc_file_path)
     else:
-        sys.path.append('.')
+        sys.path.append('.') 
     desc=__import__(modf)
     generate(desc, desc_file_path or '.')
 

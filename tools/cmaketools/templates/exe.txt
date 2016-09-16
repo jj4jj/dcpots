@@ -1,6 +1,5 @@
 #projects genearte by cmaketools
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} cur_aSRCS)
-set(cur_SRCS "${cur_aSRCS}")
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} CSRCS)
 <extra_srcs>
 
 #base dir depend on itself and some otherlib
@@ -14,9 +13,9 @@ link_directories(
 /usr/local/lib
 ${PROJECT_SOURCE_DIR}/lib)
 
+<extra_statements>
 #it will generate a exe
-
-ADD_EXECUTABLE(<exe_name> ${cur_SRCS})
+ADD_EXECUTABLE(<exe_name> ${CSRCS})
 
 #assign custrom link lib
 target_link_libraries(<exe_name>
@@ -29,4 +28,3 @@ pthread)
 #installing
 INSTALL(TARGETS <exe_name> DESTINATION bin/)
 
-<extra_statements>

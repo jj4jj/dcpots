@@ -3,4 +3,5 @@
 #python2.7-dev
 #libssl-dev
 #mongo-c-driver install
+#libev-dev(github make install)
 wget https://github.com/mongodb/mongo-c-driver/releases/download/1.4.0/mongo-c-driver-1.4.0.tar.gz

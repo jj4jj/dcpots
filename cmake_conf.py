@@ -18,7 +18,7 @@ LIBS = [
             'subdir':'dcnode',
             'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
             'src_dirs':['dcnode/proto','3rd/pbjson'],
-            'preobj': {
+            'genobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.pb.cc',
                 'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.proto',
                 'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto'
@@ -29,7 +29,7 @@ LIBS = [
             'subdir':'dcagent',
             'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
             'src_dirs':['dcagent/proto'],
-            'preobj': {
+            'genobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.pb.cc',
                 'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.proto',
                 'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto'
@@ -62,7 +62,7 @@ LIBS = [
             'subdir': 'dcrpc',
             'includes': [],
             'src_dirs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/','./dcrpc/share/dcrpc.pb.cc'],
-            'preobj': {
+            'genobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/share/dcrpc.pb.cc',
                 'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcrpc.proto',
                 'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcrpc.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/share'
@@ -84,7 +84,7 @@ LIBS = [
             'name':'dcutil-mongo',
             'subdir':'utility/mongo',
             'linklibs' : [],
-            'includes':['/usr/local/include/libmongoc-1.0','3rd'],
+            'includes':['/usr/local/include/libbson-1.0','3rd'],
         },
         {
             'name':'dcutil-drs',
@@ -100,8 +100,6 @@ LIBS = [
             'src_dirs':[],
             'extra_srcs': [],
         },
-
-
 
 ]
 EXES = [
@@ -125,7 +123,7 @@ EXES = [
                 'mongoc-1.0',
                 'bson-1.0',
             ],
-            'preobj': {
+            'genobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/test_conf.pb.cc',
                 'dep':'${CMAKE_CURRENT_SOURCE_DIR}/test_conf.proto',
                 'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/test_conf.proto -I${CMAKE_CURRENT_SOURCE_DIR} --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}'
