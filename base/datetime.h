@@ -16,6 +16,7 @@ public:
 	struct tm  *		localtime(uint32_t tmstp, struct tm * tmbuff = nullptr) const;
 	uint32_t			mktime(const struct tm & ) const;
 	uint32_t			parse(const char * datetime, const char * fmt = "%Y-%m-%d %H:%M:%S") const;
+	std::string			format(uint32_t tmstp, const char * fmt = "%Y-%m-%d %H:%M:%S") const;
 	const char *		format(std::string & str, uint32_t tmstp, const char * fmt = "%Y-%m-%d %H:%M:%S") const;
 	const char *		timezone() const;
 	int					gmt_offset() const;

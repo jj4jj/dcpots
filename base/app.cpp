@@ -559,7 +559,9 @@ void             App::tick_maxproc(int maxproc){
 int             App::tick_maxproc() const{
     return impl_->maxtptick;
 }
-
+const DateTime &	App::datetime() const {
+	return impl_->datetime;
+}
 int             App::gmt_tz_offset() const{
 	int n = impl_->datetime.gmt_offset();
 	return n/3600*100 + n/60%60;
@@ -571,7 +573,8 @@ void            App::gmt_tz_offset(int tzo){
 		GLOG_ERR("error gmt tz offset :%+05d", tzo);
 		return;
     }
-    GLOG_IFO("set time zone gmt offset to east of UTC:[%+05d]", tzo);
+    GLOG_IFO("set time zone gmt offset to east of UTC:[%+05d] now:[%s] timezone:[%s]",
+	 tzo, datetime().format(datetime().now()).c_str(), datetime().timezone());
 }
 int				App::time_offset() const {
 	return impl_->datetime.time_offset();

@@ -18,7 +18,7 @@ struct DateTimeImpl {
 	int timeoffset {0};
 };
 static inline void timezone_str_format(char * str, size_t sz, int gmtoff) {
-	int n = gmtoff / 3600;
+	int n = 100*(gmtoff / TIME_RATIO_HOUR_SECONDS);
 	n += (gmtoff/60) % 60;
 	snprintf(str, sz-1, "%+05d", n);
 }
@@ -109,6 +109,11 @@ uint32_t			DateTime::parse(const char * datetime, const char * fmt /*= "%Y-%m-%d
 		return -1;
 	}
 	return mktime(ttm);
+}
+std::string			DateTime::format(uint32_t tmstp, const char * fmt /*= "%Y-%m-%d %H:%M:%S"*/) const {
+	std::string dstr;
+	format(dstr, tmstp, fmt);
+	return dstr;
 }
 const char *		DateTime::format(std::string & str, uint32_t tmstp, const char * fmt /* = "%Y-%m-%d %H:%M:%S"*/) const {
 	str.reserve(64);
