@@ -11,7 +11,7 @@ public:
 	static App & instance();
 public:
     virtual int				on_create(int argc, const char * argv[]);//once, 0 is ok , error code
-    virtual int				on_command();
+    virtual int				on_cmd_opt();//return != 0 : processd , >0 ok , < 0 error, return 0 is not processd
     virtual int				on_init();//once, 0 is ok , error code
     virtual int				on_loop();//running return for procssing
     virtual void			on_idle();//when idle

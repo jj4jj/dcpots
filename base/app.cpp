@@ -65,7 +65,7 @@ App::~App(){
         delete impl_;
     }
 }
-int	App::on_command(){
+int	App::on_cmd_opt(){
     return 0;
 }
 int	App::on_create(int argc, const char * argv[]){//once, 0 is ok , error code
@@ -239,7 +239,7 @@ static inline int init_command(App & app, const char * pidfile){
     if (ret > 0){
         return 1;
     }
-	return app.on_command();
+	return app.on_cmd_opt();
 }
 static inline int 
 app_console_command(AppImpl * , const char * msg, int msgsz, int fd, dctcp_t * dc){

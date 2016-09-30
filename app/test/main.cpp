@@ -702,7 +702,7 @@ static int xapp_test(int argc, const char * argv[]){
             cmdopt(dxc->cmdopt());
             return 0;
         }
-        virtual int on_command(){
+        virtual int on_cmd_opt(){
             return dxc->command();
         }
         virtual int on_init(){
