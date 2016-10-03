@@ -718,6 +718,62 @@ static int xapp_test(int argc, const char * argv[]){
     };
     return AppMain<XTestApp>(argc, argv);
 }
+#include "base/dccollections.hpp"
+struct hmp_entry {
+	int a,b,c,d;
+	char xxx[4];
+};
+static void hmp_init(void * d) {
+	hmp_entry* e = (hmp_entry*)d;
+	e->c = e->d = 246;
+	strcpy(e->xxx, "Elf");
+}
+static size_t hmp_hash(const void * d) {
+	const hmp_entry * e = (const hmp_entry*)d;
+	return e->a;
+}
+static int hmp_cmp(const void * d1, const void * d2) {
+	const hmp_entry * e1 = (const hmp_entry*)d1;
+	const hmp_entry * e2 = (const hmp_entry*)d2;
+	if (e1->a == e2->a &&  e1->b == e2->b) {
+		return 0;
+	}
+	return e1->a > e2->a ?1: -1;
+}
+
+static int hashmp_test(int argc, const char * argv[]) {
+	cout << "hashmp testing ..." << endl;
+	using dcs::hashmap_t;
+	using dcs::mempool_t;
+	hashmap_t hmp;
+	mempool_t mmp;
+	static char buff[692400000];
+	hashmap_conf_t hmc;
+	hmc.data_size = sizeof(buff);
+	hmc.data = buff;
+	hmc.init = hmp_init;
+	hmc.hash = hmp_hash;
+	hmc.comp = hmp_cmp;
+	hmc.block_size = sizeof(hmp_entry);
+	hmc.block_max = 1000*1000;
+	int ret = hmp.init(hmc);
+	if (ret) {
+		GLOG_ERR("init error !");
+		return -1;
+	}
+	for (int i = 0; i < 1000*1000*10 ; ++i) {
+		struct hmp_entry he;
+		he.a = rand();//% 1000;
+		he.b = rand()% 100;
+		hmp.insert(&he);
+	}
+	std::string dstr;
+	cout << "stat:"<< 
+	hmp.stat(dstr) << endl;
+
+
+	return 0;
+}
 int main(int argc, const char* argv[])
 {
 	default_logger_init(logger_config_t());
@@ -749,7 +805,9 @@ int main(int argc, const char* argv[])
         if (!strcasecmp(argv[1], "xapp")){
             return xapp_test(argc, argv);
         }
-
+		if (!strcasecmp(argv[1], "hashmp")) {
+			return hashmp_test(argc, argv);
+		}
 		switch (argv[1][0])
 		{
 		case 'm':

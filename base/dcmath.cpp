@@ -27,7 +27,8 @@ size_t              prime_n(size_t n, std::unordered_set<size_t> & pn){
 }
 bool   is_a_prime(size_t n){
     if (n < 2){ return false; }
-    for (size_t i = 2; i < n / 2; ++i){
+	size_t nq = sqrt(n);
+    for (size_t i = 2; i < nq; ++i){
         if (n % i == 0){
             return false;
         }

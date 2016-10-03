@@ -24,6 +24,9 @@ namespace dcs {
         size_t  used() const;
         size_t  capacity() const;
 		void *  next(void * blk);
+	public:
+		const char * stat(::std::string & str) const;
+	public:
         static size_t  size(mempool_conf_t::strategy stg, size_t nblk, size_t blksz);
     public:
         mempool_t();
@@ -44,7 +47,7 @@ namespace dcs {
         block_init  init;
         block_hash  hash;
         block_comp  comp;
-		int			level;
+		int			layer;
         hashmap_conf_t();
     };
 
@@ -55,11 +58,22 @@ namespace dcs {
         void        remove(const void * blk);
         void *      next(void * blk);
         size_t      capacity() const;
+		size_t		buckets() const;
         size_t      used() const;
-        static size_t   size(int level, size_t nblk, size_t blksz);
+	public:
+		//statistic
+		int         load(int rate = 100) const;
+		int         factor() const;
+		int         hit(int rate = 100) const;
+		int         collision() const;
+		const char * layers(::std::string & str) const;
+		const char * stat(::std::string & str) const;
+	public:
+		//static size
+		static size_t   size(int level, size_t nblk, size_t blksz);
     public:
         hashmap_t();
-        hashmap_impl_t  * impl_;
+        hashmap_impl_t  * impl_{nullptr};
     };
 };
 

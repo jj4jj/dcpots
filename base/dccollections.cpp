@@ -64,7 +64,7 @@ static inline int mmpool_blklist_init(mempool_impl_head::block_list_t * bkl, siz
 	return 0;
 }
 int     mempool_t::init(const mempool_conf_t & conf){
-	size_t total_size = size(conf);
+	size_t total_size = size(conf.stg, conf.block_max, conf.block_size);
 	if (total_size == 0 || conf.data_size < total_size) {
 		GLOG_ERR("config data size :%zu need %zu error !", conf.data_size, total_size);
 		return -1;
@@ -225,8 +225,6 @@ void *  mempool_t::next(void * blk) {
 		size_t blkidx = blkid/64;
 		size_t bitidx = blkid%64;
 		size_t bitmap_count = impl_->block_max / 64;
-		//find first 1
-		size_t ffo = 0;
 		for (; blkidx < bitmap_count; ++blkidx) {
 			for (int i = bitidx; i < 64; ++i) {
 				if (bmp[blkid] & (1ULL << i)) {
@@ -265,6 +263,13 @@ size_t  mempool_t::size(mempool_conf_t::strategy stg, size_t nblk, size_t blksz)
 		return 0;
 	}
 }
+const char * mempool_t::stat(::std::string & str) const {
+	str += "bytes size:" + ::std::to_string(impl_->data_size) +
+		" used:" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
+		" usage:" + ::std::to_string(this->used() * 100 / this->capacity());
+	return str.c_str();
+}
+
 mempool_t::mempool_t(){
     impl_ = nullptr;
 }
@@ -276,11 +281,11 @@ hashmap_conf_t::hashmap_conf_t() {
     comp = nullptr;
 	data_size = block_max = block_size = 0;
 	attach = false;
-	level = 3;
+	layer = 3;
 }
 #define  HASHMAP_MAGIC		("hashmap-magic")
-#define HASHMAP_MAX_LEVEL	(11)
-//multi level hash
+#define HASHMAP_MAX_LAYER	(11)
+//multi layer hash
 //cmax(count)
 struct hashmap_impl_t {
 	hashmap_conf_t::block_init  init;
@@ -288,9 +293,16 @@ struct hashmap_impl_t {
 	hashmap_conf_t::block_comp  comp;
 	mempool_t					mmpool;
 	char						magic[16];
-	int							level;
-	size_t						level_offset[HASHMAP_MAX_LEVEL];
-	size_t						level_size[HASHMAP_MAX_LEVEL];
+	int							layer;
+	size_t						layer_offset[HASHMAP_MAX_LAYER];
+	size_t						layer_size[HASHMAP_MAX_LAYER];
+	size_t						stat_probe_insert;
+	size_t						stat_insert;
+	size_t						stat_probe_read;
+	size_t						stat_hit_read;
+	size_t						total_size;
+	size_t						block_size;
+	size_t						block_count;
 	size_t						table_start;
 	size_t						table_size;
 	size_t						mmpool_start;
@@ -307,8 +319,9 @@ struct hashmap_impl_t {
 	};
 };
 int         hashmap_t::init(const hashmap_conf_t & conf){
-	size_t total_size = size(conf.level, conf.block_max, conf.block_size);
+	size_t total_size = size(conf.layer, conf.block_max, conf.block_size);
 	if (total_size == 0 || conf.data_size < total_size) {
+		GLOG_ERR("total size:%zu data size:%zu", total_size, conf.data_size);
 		return -1;
 	}
 	impl_ = (hashmap_impl_t *)conf.data;
@@ -318,12 +331,18 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 		impl_->hash = conf.hash;
 		//check
 		if (strcmp(impl_->magic, HASHMAP_MAGIC)) {
+			GLOG_ERR("attach check head magic error [%s]", impl_->magic);
 			return -1;
 		}
 		if (strcmp((char*)impl_ + impl_->mmpool_end, HASHMAP_MAGIC)) {
+			GLOG_ERR("attach check tail magic error [%s]", (char*)impl_ + impl_->mmpool_end);
 			return -1;
 		}
-		if (impl_->level != conf.level) {
+		if (impl_->layer != conf.layer || impl_->block_count != conf.block_max ||
+			impl_->block_size != conf.block_size) {
+			GLOG_ERR("attach check layer:%zu,%zu block count:%zu,%zu max block:%zu,%zu block size:%zu,%zu ", 
+				impl_->layer , conf.layer , impl_->block_count , conf.block_max ,
+				impl_->block_size , conf.block_size);
 			return -1;
 		}
 	}
@@ -332,27 +351,32 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 		impl_->comp = conf.comp;
 		impl_->init = conf.init;
 		impl_->hash = conf.hash;
-		size_t prime_n = dcs::prime_next(conf.block_max);
-		impl_->level = conf.level;
-		impl_->level_size[conf.level-1] = prime_n;
+		impl_->total_size = total_size;
+		impl_->block_count = conf.block_max;
+		impl_->block_size = conf.block_size;
+		impl_->stat_hit_read = impl_->stat_insert = impl_->stat_probe_insert = \
+		impl_->stat_probe_read = 1;
+		size_t prime_n = dcs::prime_next(2*conf.block_max);
 		size_t table_size = prime_n;
-		for (int i = conf.level-2;i >= 0; ++i) {
+		impl_->layer = conf.layer;
+		impl_->layer_size[conf.layer - 1] = prime_n;
+		for (int i = conf.layer-2;i >= 0; --i) {
 			prime_n = dcs::prime_prev(prime_n);
-			impl_->level_size[i] = prime_n;
+			impl_->layer_size[i] = prime_n;
 			table_size += prime_n;
 		}
-		for (int i = 1; i < conf.level; ++i) {
-			impl_->level_offset[i] = impl_->level_offset[i-1] + impl_->level_size[i-1];
+		for (int i = 1; i < conf.layer; ++i) {
+			impl_->layer_offset[i] = impl_->layer_offset[i-1] + impl_->layer_size[i-1];
 		}
 		//code -> id
-		hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
-		memset(table, 0 , sizeof(*table)*table_size);
 		impl_->table_start = sizeof(hashmap_impl_t);
 		impl_->table_size = table_size;
-		impl_->mmpool_start = impl_->table_start + sizeof(*table)*table_size;
+		impl_->mmpool_start = impl_->table_start + sizeof(hashmap_impl_t::table_item_t)*table_size;
 		impl_->mmpool_end = impl_->mmpool_start + mempool_t::size(mempool_conf_t::MEMPOOL_STRATEGY_BITMAP, conf.block_max, conf.block_size);
 		strcpy(impl_->magic, HASHMAP_MAGIC);
 		strcpy((char*)impl_ + impl_->mmpool_end, HASHMAP_MAGIC);
+		hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+		memset(table, 0 , sizeof(hashmap_impl_t::table_item_t)*table_size);
 	}
 	mempool_conf_t mpc;
 	mpc.stg = mempool_conf_t::MEMPOOL_STRATEGY_BITMAP;
@@ -379,8 +403,9 @@ void *      hashmap_t::insert(const void * blk, bool unique){
 	size_t code = impl_->hash(blk);
 	size_t lidx = 0;
 	bool inserted = false;
-	for (int i = 0;i < impl_->level; ++i) {
-		lidx = impl_->level_offset[i] + code % impl_->level_size[i];
+	for (int i = 0;i < impl_->layer; ++i) {
+		lidx = impl_->layer_offset[i] + code % impl_->layer_size[i];
+		++impl_->stat_probe_insert;
 		if (table[lidx].id == 0) {
 			table[lidx].id = id;
 			table[lidx].code = code;
@@ -393,8 +418,9 @@ void *      hashmap_t::insert(const void * blk, bool unique){
 		size_t retry = capacity();
 		while (table[lidx].id && retry-->0) {
 			 ++lidx;
-			 if (lidx >= impl_->level_offset[impl_->level - 1] + impl_->level_size[impl_->level - 1]) {
-				 lidx = impl_->level_offset[impl_->level - 1];
+			 ++impl_->stat_probe_insert;
+			 if (lidx >= impl_->layer_offset[impl_->layer - 1] + impl_->layer_size[impl_->layer - 1]) {
+				 lidx = impl_->layer_offset[impl_->layer - 1];
 			 }
 		}
 		if (table[lidx].id) {
@@ -407,17 +433,21 @@ void *      hashmap_t::insert(const void * blk, bool unique){
 			table[lidx].code = code;
 		}
 	}
-	if (p && impl_->init) {
-		impl_->init(p);
+	if (p) {
+		memcpy(p, blk, impl_->block_size);
+		++impl_->stat_insert;
+		if (impl_->init) {
+			impl_->init(p);
+		}
 	}
     return p;
 }
 static inline size_t _list_tail(hashmap_impl_t * impl_, size_t code) {
 	size_t lidx = -1, plidx = -1;
 	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
-	for (int i = 0; i < impl_->level; ++i) {
+	for (int i = 0; i < impl_->layer; ++i) {
 		plidx = lidx;
-		lidx = impl_->level_offset[i] + code % impl_->level_size[i];
+		lidx = impl_->layer_offset[i] + code % impl_->layer_size[i];
 		if (table[lidx].id == 0) {
 			return plidx;
 		}
@@ -427,8 +457,8 @@ static inline size_t _list_tail(hashmap_impl_t * impl_, size_t code) {
 	while (table[lidx].id && retry-->0) {
 		plidx = lidx;
 		++lidx;
-		if (lidx >= impl_->level_offset[impl_->level - 1] + impl_->level_size[impl_->level - 1]) {
-			lidx = impl_->level_offset[impl_->level - 1];
+		if (lidx >= impl_->layer_offset[impl_->layer - 1] + impl_->layer_size[impl_->layer - 1]) {
+			lidx = impl_->layer_offset[impl_->layer - 1];
 		}
 	}
 	if (table[lidx].id) {
@@ -442,32 +472,37 @@ static inline size_t _list_tail(hashmap_impl_t * impl_, size_t code) {
 static inline void * _list_find(size_t & lidx, hashmap_impl_t * impl_, size_t code, const void * blk) {
 	size_t retry = impl_->mmpool.capacity();
 	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
-	while (retry-- > 0 && table[lidx].id) {
+	int last_layer_idx = impl_->layer - 1;
+	lidx = impl_->layer_offset[last_layer_idx] + code % impl_->layer_size[impl_->layer-1];
+	while (retry-- > 0 && table[lidx].id > 0) {
+		++impl_->stat_probe_read;
 		if (table[lidx].code == code) {
 			void * p = impl_->mmpool.ptr(table[lidx].id);
 			if (0 == impl_->comp(blk, p)) {
+				++impl_->stat_hit_read;
 				return p;
 			}
 		}
 		++lidx;
-		if (lidx >= impl_->level_offset[impl_->level - 1] + impl_->level_size[impl_->level - 1]) {
-			lidx = impl_->level_offset[impl_->level - 1];
+		if (lidx >= impl_->layer_offset[last_layer_idx] + impl_->layer_size[last_layer_idx]) {
+			lidx = impl_->layer_offset[last_layer_idx];
 		}
 	}
 	return nullptr;
 }
-static inline void * _find(size_t & level, size_t & lidx, hashmap_impl_t * impl_, const void * blk) {
+static inline void * _find(size_t & layer, size_t & lidx, hashmap_impl_t * impl_, const void * blk) {
 	size_t code = impl_->hash(blk);
 	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
 	lidx = 0;
-	level = 0;
-	for (int i = 0;i < impl_->level; ++i) {
-		lidx = impl_->level_offset[i] + code % impl_->level_size[i];
+	layer = 0;
+	for (int i = 0;i < impl_->layer; ++i) {
+		lidx = impl_->layer_offset[i] + code % impl_->layer_size[i];
+		++impl_->stat_probe_read;
 		if (table[lidx].id) {
 			if (table[lidx].code == code) {
 				void * p = impl_->mmpool.ptr(table[lidx].id);
 				if (0 == impl_->comp(blk, p)) {
-					level = i;
+					layer = i;
 					return p;
 				}
 			}
@@ -476,18 +511,18 @@ static inline void * _find(size_t & level, size_t & lidx, hashmap_impl_t * impl_
 			return nullptr;
 		}
 	}
-	assert(lidx >= impl_->level_offset[impl_->level - 1]);
-	level = impl_->level-1;
+	assert(lidx >= impl_->layer_offset[impl_->layer - 1]);
+	layer = impl_->layer-1;
 	return _list_find(lidx, impl_, code, blk);
 }
 
 void *      hashmap_t::find(const void * blk){
-	size_t lidx, level;
-    return _find(level, lidx, impl_, blk);
+	size_t lidx, layer;
+    return _find(layer, lidx, impl_, blk);
 }
 void        hashmap_t::remove(const void * blk){
-	size_t lidx, level;
-	void * p = _find(level, lidx, impl_, blk);
+	size_t lidx, layer;
+	void * p = _find(layer, lidx, impl_, blk);
 	if (!p) {
 		return ;
 	}
@@ -508,20 +543,23 @@ void *      hashmap_t::next(void * blk){
 size_t      hashmap_t::capacity() const {
 	return impl_->mmpool.capacity();
 }
+size_t		hashmap_t::buckets() const {
+	return impl_->table_size;
+}
 size_t      hashmap_t::used() const {
     return impl_->mmpool.used();
 }
-size_t      hashmap_t::size(int level, size_t nblk, size_t blksz){
-	if (level < 1 || level > HASHMAP_MAX_LEVEL) {
+size_t      hashmap_t::size(int layer, size_t nblk, size_t blksz){
+	if (layer < 1 || layer > HASHMAP_MAX_LAYER) {
 		return 0;
 	}
 	size_t mpsz = mempool_t::size(mempool_conf_t::MEMPOOL_STRATEGY_BITMAP, nblk, blksz);
 	if (mpsz == 0) {
 		return 0;
 	}
-	size_t prime_n = dcs::prime_next(nblk);
+	size_t prime_n = dcs::prime_next(2*nblk);
 	size_t table_size = prime_n;
-	for (int i = 1; i < level; ++i) {
+	for (int i = 1; i < layer; ++i) {
 		prime_n = dcs::prime_prev(prime_n);
 		table_size += prime_n;
 	}
@@ -529,8 +567,41 @@ size_t      hashmap_t::size(int level, size_t nblk, size_t blksz){
 	mpsz += sizeof(hashmap_impl_t);
     return mpsz;
 }
+int         hashmap_t::load(int rate) const {
+	return used() * rate / buckets();
+}
+int         hashmap_t::factor() const {
+	return capacity() * 100 / buckets();
+}
+int         hashmap_t::hit(int rate) const {
+	return impl_->stat_hit_read * rate / impl_->stat_probe_read;
+}
+int         hashmap_t::collision() const {
+	return impl_->stat_probe_insert / impl_->stat_insert;
+}
+const char * hashmap_t::layers(::std::string & str) const {
+	for (int i = 0; i < impl_->layer; ++i) {
+		str.append("[" +
+			::std::to_string(impl_->layer_offset[i]) + "," +
+			::std::to_string(impl_->layer_size[i]) + ")");
+	}
+	return str.c_str();
+}
+const char * hashmap_t::stat(::std::string & str) const {
+	str += "mbytes size:" + ::std::to_string(impl_->total_size) +
+		" mused:" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
+		" musage:" + ::std::to_string(this->used() * 100 / this->capacity()) +
+		" iload:" + ::std::to_string(this->load()) +
+		" ihit:" + ::std::to_string(this->hit()) +
+		" ifactor:" + ::std::to_string(this->factor()) +
+		" icollision:" + ::std::to_string(this->collision()) +
+		" ilayers:" + ::std::to_string(impl_->layer);
+	return this->layers(str);
+}
 
-
+hashmap_t::hashmap_t() {
+	impl_ = nullptr;
+}
 
 
 

@@ -3,7 +3,7 @@ VERSION='0.0.1'
 DEBUG = 1    #0/1
 DEFS = []
 VERBOSE = 'on'    #on/off
-EXTRA_C_FLAGS = ''
+EXTRA_C_FLAGS = '-Wno-unused-parameter'
 EXTRA_CXX_FLAGS = '--std=c++11'
 LIBS = [
         {
