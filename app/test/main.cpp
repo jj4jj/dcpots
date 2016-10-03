@@ -718,7 +718,7 @@ static int xapp_test(int argc, const char * argv[]){
     };
     return AppMain<XTestApp>(argc, argv);
 }
-#include "base/dccollections.hpp"
+#include "base/dccollections.h"
 struct hmp_entry {
 	int a,b,c,d;
 	char xxx[4];

@@ -1,6 +1,6 @@
 #include "logger.h"
 #include "dcmath.hpp"
-#include "dccollections.hpp"
+#include "dccollections.h"
 ///////////////////////////////////////////////////////////////////////////////////////////
 #define MMPOOL_MAGIC	("mmpool-magic")
 #define DIV_CEIL(s,n)		(((s)+(n-1))/n)
