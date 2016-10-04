@@ -72,11 +72,11 @@ int     mempool_t::init(const mempool_conf_t & conf){
 	impl_ = (mempool_impl_t*)conf.data;
 	mempool_impl_head * mphead = (mempool_impl_head*)&(impl_[1]);
 	if (conf.attach) {
-		if (!strcmp(MMPOOL_MAGIC, impl_->magic)) {
+		if (strcmp(MMPOOL_MAGIC, impl_->magic)) {
 			GLOG_ERR("mmpool magic head error [%s] !", impl_->magic);
 			return -1;
 		}
-		if (!strcmp(MMPOOL_MAGIC, (char *)impl_ + impl_->data_end)) {
+		if (strcmp(MMPOOL_MAGIC, (char *)impl_ + impl_->data_end)) {
 			GLOG_ERR("mmpool magic tail error [%s] !", (char *)impl_ + impl_->data_end);
 			return -1;
 		}
@@ -121,19 +121,21 @@ void *  mempool_t::alloc(){
 		return nullptr;
 	}
 	if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
-		size_t idx = impl_->last_alloc_id/64;
+		size_t bidx = impl_->last_alloc_id/64;
 		uint64_t * bmp = ((mempool_impl_head*)(&impl_[1]))->bmp;
-		size_t bitmap_count = impl_->block_max/64;
+		size_t bitmap_count = DIV_CEIL(impl_->block_max,64);
 		//find first 0
 		size_t ffo = 0;
-		for (size_t i = 0; i < bitmap_count; ++i, idx = (idx+1)% bitmap_count) {			
-			if ((ffo = __builtin_ffsll(~(bmp[idx])))) {
+		for (size_t i = 0; i < bitmap_count; ++i, bidx = (bidx+1)% bitmap_count) {			
+			if ((ffo = __builtin_ffsll(~(bmp[bidx])))) {
 				break;
 			}
 		}
 		assert(ffo);
-		p = (char*)impl_ + impl_->data_begin + (idx*64+ffo)*impl_->block_size;
-		bmp[idx] |= (1ULL << (ffo - 1));//set 1
+		p = (char*)impl_ + impl_->data_begin + (bidx*64+ffo-1)*impl_->block_size;
+		bmp[bidx] |= (1ULL << (ffo - 1));//set 1
+		++impl_->used;
+		impl_->last_alloc_id = bidx * 64 + ffo;
 	}
 	else if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BLKLST) {
 		//free head alloc
@@ -149,10 +151,8 @@ void *  mempool_t::alloc(){
 		bkl->list[bkl->busy.rear].next = idx;
 		bkl->list[idx].busy = 1;
 		p = (char*)impl_ + impl_->data_begin + idx*impl_->block_size;
-	}
-	if (p) {
 		++impl_->used;
-		impl_->last_alloc_id = this->id(p);
+		impl_->last_alloc_id = idx + 1;
 	}
     return p;
 }
@@ -169,8 +169,9 @@ void    mempool_t::free(void * p){
 	if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
 		uint64_t * bmp = ((mempool_impl_head*)(&impl_[1]))->bmp;
 		uint64_t  mask = (1ULL << (idx % 64));
-		if (bmp[idx / 64] & mask) {
-			bmp[idx / 64] &= ~(mask);
+		size_t bidx = idx / 64;
+		if (bmp[bidx] & mask) {
+			bmp[bidx] &= (~mask);
 			ret = 0;
 		}
 		else {
@@ -189,6 +190,7 @@ void    mempool_t::free(void * p){
 			bkl->list[idx].busy = 0;
 			bkl->list[bkl->free.rear].next = idx;
 			bkl->free.rear = idx;
+			ret = 0;
 		}
 		else {
 			ret = -1;
@@ -264,9 +266,9 @@ size_t  mempool_t::size(mempool_conf_t::strategy stg, size_t nblk, size_t blksz)
 	}
 }
 const char * mempool_t::stat(::std::string & str) const {
-	str += "bytes size:" + ::std::to_string(impl_->data_size) +
-		" used:" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
-		" usage:" + ::std::to_string(this->used() * 100 / this->capacity());
+	str += "Total size:" + ::std::to_string(impl_->data_size) +
+		" Bytes, Used (count):" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
+		", Usage (percentage):" + ::std::to_string(this->used() * 100 / this->capacity()) + "%";
 	return str.c_str();
 }
 
@@ -571,13 +573,13 @@ int         hashmap_t::load(int rate) const {
 	return used() * rate / buckets();
 }
 int         hashmap_t::factor() const {
-	return capacity() * 100 / buckets();
+	return buckets() / capacity();
 }
 int         hashmap_t::hit(int rate) const {
 	return impl_->stat_hit_read * rate / impl_->stat_probe_read;
 }
-int         hashmap_t::collision() const {
-	return impl_->stat_probe_insert / impl_->stat_insert;
+int         hashmap_t::collision(int rate) const {
+	return impl_->stat_probe_insert * rate / impl_->stat_insert;
 }
 const char * hashmap_t::layers(::std::string & str) const {
 	for (int i = 0; i < impl_->layer; ++i) {
@@ -588,14 +590,14 @@ const char * hashmap_t::layers(::std::string & str) const {
 	return str.c_str();
 }
 const char * hashmap_t::stat(::std::string & str) const {
-	str += "mbytes size:" + ::std::to_string(impl_->total_size) +
-		" mused:" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
-		" musage:" + ::std::to_string(this->used() * 100 / this->capacity()) +
-		" iload:" + ::std::to_string(this->load()) +
-		" ihit:" + ::std::to_string(this->hit()) +
-		" ifactor:" + ::std::to_string(this->factor()) +
-		" icollision:" + ::std::to_string(this->collision()) +
-		" ilayers:" + ::std::to_string(impl_->layer);
+	str += "memory total size:" + ::std::to_string(impl_->total_size) +
+		" Bytes, mempool used:" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
+		", mempool usage (percentage):" + ::std::to_string(this->used() * 100 / this->capacity()) +
+		"%, load (percentage):" + ::std::to_string(this->load()) +
+		"%, hit rate (percentage):" + ::std::to_string(this->hit()) +
+		"%, bucket factor:" + ::std::to_string(this->factor()) +
+		", collision (percentage):" + ::std::to_string(this->collision()) +
+		"%, layers size:" + ::std::to_string(impl_->layer);
 	return this->layers(str);
 }
 

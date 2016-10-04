@@ -749,11 +749,11 @@ static int hashmp_test(int argc, const char * argv[]) {
 	mempool_t mmp;
 	static char buff[692400000];
 	hashmap_conf_t hmc;
-	hmc.data_size = sizeof(buff);
-	hmc.data = buff;
 	hmc.init = hmp_init;
 	hmc.hash = hmp_hash;
 	hmc.comp = hmp_cmp;
+	hmc.data_size = sizeof(buff);
+	hmc.data = buff;
 	hmc.block_size = sizeof(hmp_entry);
 	hmc.block_max = 1000*1000;
 	int ret = hmp.init(hmc);
@@ -770,7 +770,52 @@ static int hashmp_test(int argc, const char * argv[]) {
 	std::string dstr;
 	cout << "stat:"<< 
 	hmp.stat(dstr) << endl;
-
+	hashmap_t hmca;
+	hmc.attach = true;
+	ret = hmca.init(hmc);
+	if (ret) {
+		GLOG_ERR("hashmp attach error !");
+		return -1;
+	}
+	else {
+		GLOG_IFO("hashmap attach success !");
+	}
+	mempool_t mp;
+	mempool_conf_t mpc;
+	mpc.data_size = sizeof(buff);
+	mpc.data = buff;
+	mpc.block_size = sizeof(hmp_entry);
+	mpc.block_max = 1000 * 1000* 10;
+	mpc.stg = mempool_conf_t::MEMPOOL_STRATEGY_BLKLST;
+	ret = mp.init(mpc);
+	GLOG_IFO("mempool bitmap total size:%zu (%zu)", 
+		mempool_t::size(mempool_conf_t::MEMPOOL_STRATEGY_BITMAP, 1000*1000*10, sizeof(hmp_entry)), sizeof(hmp_entry));
+	GLOG_IFO("mempool bitmap total size:%zu (%zu)", 
+		mempool_t::size(mempool_conf_t::MEMPOOL_STRATEGY_BLKLST, 1000 * 1000 * 10, sizeof(hmp_entry)), sizeof(hmp_entry));
+	if (ret) {
+		GLOG_ERR("mempool init error !");
+		return -1;
+	}
+	for (int i = 0; i < 1000 * 1000 * 10; ++i) {
+		struct hmp_entry he;
+		he.a = rand();//% 1000;
+		he.b = rand() % 100;
+		hmp_entry * p = (hmp_entry*)(mp.alloc());
+		*p = he;
+		mp.free(p);
+	}
+	dstr = "";
+	cout << "stat:" <<
+		mp.stat(dstr) << endl;
+	mpc.attach = true;
+	ret = mp.init(mpc);
+	if (ret) {
+		GLOG_ERR("mempool attach error !");
+		return -1;
+	}
+	else {
+		GLOG_ERR("mempool attach success !");
+	}
 
 	return 0;
 }

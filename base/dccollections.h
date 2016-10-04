@@ -65,7 +65,7 @@ namespace dcs {
 		int         load(int rate = 100) const;
 		int         factor() const;
 		int         hit(int rate = 100) const;
-		int         collision() const;
+		int         collision(int rate = 100) const;
 		const char * layers(::std::string & str) const;
 		const char * stat(::std::string & str) const;
 	public:
