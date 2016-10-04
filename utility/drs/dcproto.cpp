@@ -789,7 +789,7 @@ protobuf_msg_to_msgb_file(const google::protobuf::Message & msg, const std::stri
 int             
 protobuf_msg_from_msgb_file(google::protobuf::Message & msg, const std::string & msgbfile) {
     string sfile;
-    int sz = dcs::filesize(msgbfile);
+    int sz = dcs::file_size(msgbfile);
     sfile.reserve(sz);
     int n = dcs::readfile(msgbfile.c_str(), (char*)sfile.data(), sfile.capacity());
     if (n <= 0) {
@@ -806,7 +806,7 @@ protobuf_msg_from_msgb_file(google::protobuf::Message & msg, const std::string &
 int 
 protobuf_msg_from_json_file(google::protobuf::Message & msg, const std::string & jsonfile, std::string & error){
     string sfile;
-    int sz = dcs::filesize(jsonfile);
+    int sz = dcs::file_size(jsonfile);
     sfile.reserve(sz);
     int n = dcs::readfile(jsonfile.c_str(), (char*)sfile.data(), sfile.capacity());
     if (n <= 0){

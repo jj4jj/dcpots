@@ -26,7 +26,9 @@ NS_BEGIN(dcs)
 	int					readfile(const std::string & file, char * buffer , size_t sz);
     int					writefile(const std::string & file, const char * buffer, size_t sz = 0);
 	bool				file_exists(const std::string & file);
-	size_t              filesize(const std::string & file);
+	size_t              file_size(const std::string & file);
+	time_t				file_access_time(const std::string & file);
+	time_t				file_modify_time(const std::string & file);
 	const char *		path_base(const char * path);
     //file://<path>
     //tcp://<ip:port>

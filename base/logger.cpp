@@ -55,11 +55,11 @@ logger_t *	logger_create(const logger_config_t & conf){
 	if (!conf.pattern.empty()){
 		//debug log
 		filepath += "/" + conf.pattern + ".all.log";
-		em->logfile.init(filepath.c_str());
+		em->logfile.init(filepath.c_str(), conf.max_roll, conf.max_file_size);
 		em->logfile.open();
 		//error log
 		error_filepath += "/" + conf.pattern + ".err.log";
-		em->errfile.init(error_filepath.c_str());
+		em->errfile.init(error_filepath.c_str(), conf.max_roll, conf.max_file_size);
 		em->errfile.open();
 	}
 	return em;
@@ -145,11 +145,11 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 			dcs::stacktrace(strstack, 2));
 	}
 
-	if (logger->logfile.write(msg_start, logger->conf.max_roll, logger->conf.max_file_size)){
+	if (logger->logfile.write(msg_start)){
         fputs(msg_start, stderr);
     }
     if (loglv == LOG_LVL_ERROR || loglv == LOG_LVL_FATAL){
-		logger->errfile.write(msg_start, logger->conf.max_roll, logger->conf.max_file_size);
+		logger->errfile.write(msg_start);
     }
     logger_unlock(logger);
 	return n;

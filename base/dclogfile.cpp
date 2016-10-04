@@ -1,14 +1,16 @@
 
-#include "stdinc.h"
+#include "dcutils.hpp"
 #include "dclogfile.h"
-
 
 NS_BEGIN(dcs)
 
 struct logfile_impl_t {
     FILE	*	pf{ nullptr };
-    int			next_rollid{ 0 };
     string		logfile;
+	int			max_roll {10};
+	int			max_file_size {1024*1024*20};
+	logfile_roll_order order {LOGFILE_ROLL_ASC};
+	int			next_rollid { 0 };
 };
 logfile_t::logfile_t(){
     impl = new logfile_impl_t();
@@ -19,9 +21,55 @@ logfile_t::~logfile_t(){
         delete impl;
     }
 }
-void logfile_t::init(const char * file){
-    if (file && *file){impl->logfile = file;}
+void logfile_t::init(const char * file, int max_roll, int max_file_size, logfile_roll_order order){
+    if (file && *file){
+		impl->logfile = file;
+		impl->max_roll = max_roll;
+		impl->max_file_size = max_file_size;
+		impl->order = order;
+	}
 }
+static inline void _init_open_logfile(logfile_impl_t * impl) {
+	if(impl->order == LOGFILE_ROLL_ASC){
+		if (impl->next_rollid == 0) { //init , get the next roll id
+			uint32_t last_modify_time = 0, mt = 0;
+			impl->next_rollid = 1;
+			std::string file_name;
+			for (int i = 1; i <= impl->max_roll; ++i) {
+				file_name = impl->logfile + "." + std::to_string(i);
+				mt = dcs::file_modify_time(file_name);
+				if (mt > last_modify_time) {
+					last_modify_time = mt;
+					impl->next_rollid = (i%impl->max_roll) + 1;
+				}
+			}
+		}
+		else {
+			fseek(impl->pf, 0, SEEK_SET);
+			ftruncate(fileno(impl->pf), 0);
+		}
+	}
+	else {
+		//nothing need do in this way
+	}
+}
+static inline void _shift_logfile(logfile_impl_t * impl) {
+	if(impl->order == LOGFILE_ROLL_ASC){
+		string nextfile = impl->logfile + "." + std::to_string(impl->next_rollid);
+		rename(impl->logfile.c_str(), nextfile.c_str());
+		impl->next_rollid = impl->next_rollid % impl->max_roll + 1;
+	}
+	else {
+		string src_file_name, dst_file_name;
+		for (int i = impl->max_roll; i > 1; --i) {
+			src_file_name = impl->logfile + "." + std::to_string(i - 1);
+			dst_file_name = impl->logfile + "." + std::to_string(i);
+			rename(src_file_name.c_str(), dst_file_name.c_str());
+		}
+		rename(impl->logfile.c_str(), src_file_name.c_str());
+	}
+}
+
 int logfile_t::open(){
     if (impl->logfile.empty()){
         fputs("log file config file is empty!\n", stderr);
@@ -35,33 +83,7 @@ int logfile_t::open(){
 			impl->logfile.c_str(), strerror(errno));
         return -2;
     }
-    if (impl->next_rollid == 0){ //init , get the next roll id
-        char nextfileid[32] = { 0 };
-        FILE* rfp = fopen(impl->logfile.c_str(), "r");
-        if (rfp){ //reading
-            size_t sz = sizeof(nextfileid)-1;
-            char * pnxf = (char*)nextfileid;
-            if (getline(&pnxf, &sz, rfp) > 0){
-                char * converted = nullptr;
-                impl->next_rollid = strtoul(nextfileid, &converted, 10);
-                if (nextfileid == converted){
-                    impl->next_rollid = 0;
-                }
-            }
-            fclose(rfp);
-        }
-        //read done
-        if (impl->next_rollid == 0){ //init write 
-            fseek(impl->pf, 0, SEEK_SET);
-            fprintf(impl->pf, "1\n");
-        }
-        impl->next_rollid = impl->next_rollid > 0 ? impl->next_rollid : 1;
-    }
-    else {
-		fseek(impl->pf, 0, SEEK_SET);
-		ftruncate(fileno(impl->pf), 0);
-		fprintf(impl->pf, "%d\n", impl->next_rollid);
-    }
+	_init_open_logfile(impl);
     return 0;
 }
 void logfile_t::close(){
@@ -71,16 +93,13 @@ void logfile_t::close(){
         impl->pf = nullptr;
     }
 }
-int logfile_t::write(const char * logmsg, int max_roll, int max_file_size){
+int logfile_t::write(const char * logmsg){
     if (!impl || !impl->pf) return -1;
     fputs(logmsg, impl->pf);
     fflush(impl->pf);
-    if (ftell(impl->pf) >= max_file_size){
+    if (ftell(impl->pf) >= impl->max_file_size){
         close();//current , open next
-        string nextfile = impl->logfile + "." + std::to_string(impl->next_rollid);
-        rename(impl->logfile.c_str(), nextfile.c_str());
-        impl->next_rollid = (impl->next_rollid + 1) % max_roll;
-        if (impl->next_rollid == 0) { impl->next_rollid = max_roll; };
+		_shift_logfile(impl);
         return open();
     }
     return 0;

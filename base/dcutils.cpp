@@ -185,7 +185,45 @@ namespace dcs {
         fclose(fp);
         return -2;
     }
-    size_t      filesize(const std::string & file) {
+#if 0
+	struct stat {
+		dev_t     st_dev;         /* ID of device containing file */
+		ino_t     st_ino;         /* inode number */
+		mode_t    st_mode;        /* protection */
+		nlink_t   st_nlink;       /* number of hard links */
+		uid_t     st_uid;         /* user ID of owner */
+		gid_t     st_gid;         /* group ID of owner */
+		dev_t     st_rdev;        /* device ID (if special file) */
+		off_t     st_size;        /* total size, in bytes */
+		blksize_t st_blksize;     /* blocksize for filesystem I/O */
+		blkcnt_t  st_blocks;      /* number of 512B blocks allocated */
+
+								  /* Since Linux 2.6, the kernel supports nanosecond
+								  precision for the following timestamp fields.
+								  For the details before Linux 2.6, see NOTES. */
+
+		struct timespec st_atim;  /* time of last access */
+		struct timespec st_mtim;  /* time of last modification */
+		struct timespec st_ctim;  /* time of last status change */
+#endif
+	time_t		file_modify_time(const std::string & file) {
+		struct stat lfst;
+		int ret = stat(file.c_str(), &lfst);
+		if (ret) {
+			return 0;
+		}
+		return lfst.st_mtime;//.tv_sec;
+	}
+	time_t		file_access_time(const std::string & file) {
+		struct stat lfst;
+		int ret = stat(file.c_str(), &lfst);
+		if (ret) {
+			return 0;
+		}
+		return lfst.st_atime;//.tv_sec;
+	}
+
+    size_t      file_size(const std::string & file) {
         FILE * fp = fopen(file.c_str(), "r");
         if (!fp) {
             return 0;//not exist 
