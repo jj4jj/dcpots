@@ -53,17 +53,17 @@ def generate(desc , root_path):
         subdirs = subdirs + '\n'.join(map(lambda l:'add_subdirectory('+l['subdir']+')', desc.EXES))
         extra_statements = ''
 
-        copy_replace_file(rootf, root_path+'/CMakeLists.txt',
-            {'<definations>': definations,
-             '<debug_mode>': desc.DEBUG,
-             '<project_name>': desc.PROJECT,
-             '<extra_c_flags>': desc.EXTRA_C_FLAGS,
-             '<extra_cxx_flags>': desc.EXTRA_CXX_FLAGS,
-             '<verbose>': desc.VERBOSE,
-             #'<extra_ld_flags>': desc.EXTRA_LD_FLAGS,
-             '<add_subdirectory_area>': subdirs,
-             '<project_version>': desc.VERSION,
-                         '<extra_statements>':extra_statements})
+    copy_replace_file(rootf, root_path+'/CMakeLists.txt',
+        {'<definations>': definations,
+         '<debug_mode>': desc.DEBUG,
+         '<project_name>': desc.PROJECT,
+         '<extra_c_flags>': desc.EXTRA_C_FLAGS,
+         '<extra_cxx_flags>': desc.EXTRA_CXX_FLAGS,
+         '<verbose>': desc.VERBOSE,
+         #'<extra_ld_flags>': desc.EXTRA_LD_FLAGS,
+         '<add_subdirectory_area>': subdirs,
+         '<project_version>': desc.VERSION,
+                     '<extra_statements>':extra_statements})
 
     for lib in desc.LIBS:
         extra_includes = getattr(desc, 'EXTRA_INCLUDES', None) or []
