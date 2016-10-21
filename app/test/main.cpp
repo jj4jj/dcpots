@@ -821,6 +821,11 @@ static int hashmp_test(int argc, const char * argv[]) {
 }
 int main(int argc, const char* argv[])
 {
+
+	std::string dssx,adssx=" sffs,sfxx   fs   ";
+	dssx = adssx;
+	cout<<"org:["<< adssx <<"]=>["<<dcs::strtrim(dssx," \t\r\n") <<"]"<<std::endl;
+
 	default_logger_init(logger_config_t());
 	int agent_mode = 0;
 	msgqpath = argv[0];

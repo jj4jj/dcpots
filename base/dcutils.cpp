@@ -1103,20 +1103,22 @@ namespace dcs {
                 return str;
             }
         }
+		str.clear();
         return str;
     }
     std::string &       strrtrim(std::string & str, const char * charset){
         if (str.empty() || !charset || !*charset){
             return str;
         }
-        for (size_t i = str.length() - 1; ((long int)i) >= 0; --i){            
+        for (size_t i = str.length() - 1; (long int)i >= 0; --i){            
             if (!strchr(charset, str[i])){
-                if (i > 0){
-                    str.erase(i, str.length()-i);
+                if (i+1 < str.length()){
+                    str.erase(i+1, str.length() - 1 - i);
                 }
                 return str;
             }
         }
+		str.clear();
         return str;
     }
 
