@@ -383,6 +383,8 @@ static inline int init_facilities(App & app, AppImpl * impl_){
     }
     impl_->interval = app.cmdopt().getoptint("tick-interval");
     impl_->maxtptick = app.cmdopt().getoptint("tick-maxproc");
+    //tzo set
+    app.gmt_tz_offset(impl_->cmdopt->getoptint("tzo"));    
     //////////////////////////////////////////////////////////////////////////////////
     std::vector<dcshmobj_user_t*>   shmusers = app.shm_users();
     if (!shmusers.empty()){
@@ -401,6 +403,7 @@ static inline int init_facilities(App & app, AppImpl * impl_){
             return -7;
         }
     }
+
     return 0;
 }
 static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_, App & app){
@@ -436,7 +439,6 @@ static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_,
     }
     impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
     /////////////////////////////////////////////////////////////////////
-    app.gmt_tz_offset(impl_->cmdopt->getoptint("tzo"));    
     return 0;
 }
 //////////////////////////////////////////////////////////
