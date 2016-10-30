@@ -41,6 +41,11 @@ LIBS = [
             'includes':['/usr/local/include/libmongoc-1.0','3rd'],
             'linkpaths':['/usr/local/lib'],
             'src_dirs': ['app/mongoproxy/proto'],
+            'genobj': {
+                'out':'${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.pb.cc',
+                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.proto',
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/mongo.proto -I${CMAKE_CURRENT_SOURCE_DIR}/../proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/../proto'
+            }
         },
         {
             'name': 'dcrepoter',
