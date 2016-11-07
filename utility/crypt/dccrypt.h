@@ -10,7 +10,7 @@ namespace dcs {
         AES_ENC_OFB,
     };
     //ECB,CBC, CFB, OFB
-    void *  aes_create(const unsigned char * key, int key_bytes = 16, aes_encrypt_mode mode = AES_ENC_CBC);
+    void *  aes_create(const unsigned char * key, int key_bytes = 16, aes_encrypt_mode mode = AES_ENC_ECB);
     int     aes_destroy(void * aes);
     int     pkcs7_padding_size(int ibuffer, unsigned char align);
     int     pkcs7_unpadding_size(const unsigned char * buffer, int ibuffer, unsigned char align);
