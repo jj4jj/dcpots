@@ -819,6 +819,20 @@ static int hashmp_test(int argc, const char * argv[]) {
 
 	return 0;
 }
+#include "utility/crypt/dccrypt.h"
+#include "utility/crypt/dcrsa.h"
+static int aes_test() {
+    void * aes = aes_create("1234567890abcdef");
+    char data[20]="hello,world!";
+    char buff[24];
+    char buff3[24];
+    int ret = aes_encrypt(aes, buff, data, strlen(data));
+    cout << "encrypt:ret:" << ret << endl;
+    aes_decrypt(aes, buff3, buff, ret);
+    cout << "decrypt:ret:" << ret << endl;
+    return 0;
+
+}
 int main(int argc, const char* argv[])
 {
 
@@ -858,6 +872,9 @@ int main(int argc, const char* argv[])
 		if (!strcasecmp(argv[1], "hashmp")) {
 			return hashmp_test(argc, argv);
 		}
+        if (!strcasecmp(argv[1], "aes")) {
+            return aes_test();
+        }
 		switch (argv[1][0])
 		{
 		case 'm':
