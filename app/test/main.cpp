@@ -821,14 +821,15 @@ static int hashmp_test(int argc, const char * argv[]) {
 }
 #include "utility/crypt/dccrypt.h"
 #include "utility/crypt/dcrsa.h"
+using namespace dcs;
 static int aes_test() {
-    void * aes = aes_create("1234567890abcdef");
+    void * aes = aes_create((const unsigned char  *)"1234567890abcdef");
     char data[20]="hello,world!";
     char buff[24];
     char buff3[24];
-    int ret = aes_encrypt(aes, buff, data, strlen(data));
+    int ret = aes_encrypt(aes, (unsigned char *)buff, (unsigned char *)data, strlen(data));
     cout << "encrypt:ret:" << ret << endl;
-    aes_decrypt(aes, buff3, buff, ret);
+    aes_decrypt(aes, (unsigned char *)buff3, (unsigned char *)buff, ret);
     cout << "decrypt:ret:" << ret << endl;
     return 0;
 

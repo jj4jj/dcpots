@@ -44,7 +44,7 @@ LIBS = [
             'genobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.pb.cc',
                 'dep':'${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.proto',
-                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/mongo.proto -I${CMAKE_CURRENT_SOURCE_DIR}/../proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/../proto'
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.proto -I${CMAKE_CURRENT_SOURCE_DIR}/../proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/../proto'
             }
         },
         {
@@ -100,10 +100,6 @@ LIBS = [
         {
             'name':'dcutil-crypt',
             'subdir':'utility/crypt',
-            'linklibs' : [],
-            'includes':[],
-            'src_dirs':[],
-            'extra_srcs': [],
         },
 
 ]
