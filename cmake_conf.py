@@ -116,6 +116,7 @@ EXES = [
                 'dcutil-mysql',
                 'dcutil-mongo',
                 'dcutil-script',
+                'dcutil-crypt',
                 'dcbase',
                 'pbjson',
                 'python2.7',
@@ -123,6 +124,8 @@ EXES = [
                 'mysqlclient',
                 'mongoc-1.0',
                 'bson-1.0',
+                'ssl',
+                'crypto',
             ],
             'genobj': {
                 'out':'${CMAKE_CURRENT_SOURCE_DIR}/test_conf.pb.cc',
@@ -168,7 +171,12 @@ EXES = [
                 'libprotobuf.a',
                 'mongoc-1.0',
                 'bson-1.0'
-            ]
+            ],
+            'genobj': {
+                'out':'${CMAKE_CURRENT_SOURCE_DIR}/test.pb.cc',
+                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/test.proto',
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/test.proto -I${CMAKE_CURRENT_SOURCE_DIR} --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}'
+            }
         },
         {
             'name':'reporter',

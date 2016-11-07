@@ -824,13 +824,24 @@ static int hashmp_test(int argc, const char * argv[]) {
 using namespace dcs;
 static int aes_test() {
     void * aes = aes_create((const unsigned char  *)"1234567890abcdef");
-    char data[20]="hello,world!";
-    char buff[24];
-    char buff3[24];
+    static char data[20]="hello,world!";
+    static char buff[24];
+    static char buff3[24];
     int ret = aes_encrypt(aes, (unsigned char *)buff, (unsigned char *)data, strlen(data));
-    cout << "encrypt:ret:" << ret << endl;
-    aes_decrypt(aes, (unsigned char *)buff3, (unsigned char *)buff, ret);
-    cout << "decrypt:ret:" << ret << endl;
+    cout << "cbc encrypt:ret:" << ret <<":"<<buff<< endl;
+    ret=aes_decrypt(aes, (unsigned char *)buff3, (unsigned char *)buff, ret);
+    cout << "cbc decrypt:ret:" << ret<<":"<<buff3 << endl;
+    aes_destroy(aes);
+
+    aes = aes_create((const unsigned char  *)"1234567890abcdef", 16, AES_ENC_ECB);
+    ret = aes_encrypt(aes, (unsigned char *)buff, (unsigned char *)data, strlen(data));
+    cout << "ecb encrypt:ret:" << ret <<":"<<buff<< endl;
+    ret = aes_decrypt(aes, (unsigned char *)buff3, (unsigned char *)buff, ret);
+    cout << "ecb decrypt:ret:" << ret<<":"<<buff3 << endl;
+
+
+
+
     return 0;
 
 }
