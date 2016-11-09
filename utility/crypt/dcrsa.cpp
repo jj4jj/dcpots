@@ -165,14 +165,14 @@ bool    rsa_verify(const std::string & signature, void * r, RSASignAlgoType meth
     bool ret = false;
 	switch (meth){
 	case RSA_SIGN_SHA1:
-        hash = SHA256((unsigned char*)buff, ibuff, (unsigned char *)rsa->hashbuff.buffer);
-        ret = RSA_verify(NID_sha256, hash, SHA256_DIGEST_LENGTH,
-            (const unsigned char*)signature.data(), signature.length(), rsa->rsa) == 1;
-		break;
-	case RSA_SIGN_SHA256:
         hash = SHA1((unsigned char*)buff, ibuff, (unsigned char *)rsa->hashbuff.buffer);
         ret = RSA_verify(NID_sha1, hash, SHA_DIGEST_LENGTH,
             (const unsigned char*)signature.data(), signature.length(), rsa->rsa) == 1;
+		break;
+	case RSA_SIGN_SHA256:
+		hash = SHA256((unsigned char*)buff, ibuff, (unsigned char *)rsa->hashbuff.buffer);
+		ret = RSA_verify(NID_sha256, hash, SHA256_DIGEST_LENGTH,
+			(const unsigned char*)signature.data(), signature.length(), rsa->rsa) == 1;
 		break;
 	default:
 		GLOG_ERR("error method :%d not support yet !", meth);
