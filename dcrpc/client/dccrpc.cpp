@@ -226,7 +226,7 @@ int RpcClient::notify(const string & svc, RpcCallNotify cb){
 }
 static inline int _rpc_send_msg(RpcClientImpl * impl, const dcrpc_msg_t & rpc_msg){
     if (impl->cnnxfd < 0 && (int)impl->sending_queue.size() >= impl->queue_max_size){
-        GLOG_ERR("connection not ready error send msg to svc:%s", rpc_msg.path().c_str());
+        GLOG_ERR("connection fd:%d qsize:%d not ready error send msg to svc:%s", impl->cnnxfd, (int)impl->sending_queue.size(), rpc_msg.path().c_str());
         return -1;
     }
 	_check_sending_queue(impl); //checking queue

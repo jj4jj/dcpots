@@ -1,5 +1,5 @@
 #pragma once
-#include "stdinc.h"
+#include <string>
 
 struct dctcp_msg_t {
     const char * buff{ nullptr };
@@ -46,19 +46,31 @@ struct dctcp_event_t {
 };
 
 struct dctcp_t;
-
+struct msg_buffer_t;
+struct dctcp_msg_codec_t {
+    //encode 0:success, otherwise error
+    typedef int(*encoder_t)(msg_buffer_t & buff, const msg_buffer_t & msg);
+    //return >0: success, return the costed buffer msg length , = 0, need more, < 0 error.
+    typedef int(*decoder_t)(msg_buffer_t & msg, const msg_buffer_t & buff);
+    //////////////////////////////////////////////////////////////////////////
+    encoder_t   encoder;
+    decoder_t   decoder;
+};
 typedef int(*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
-
-
+////////////////////////////////////////////////////////////////////////////
 dctcp_t *           dctcp_default_loop();
 dctcp_t *	        dctcp_create(const dctcp_config_t & conf);
 void				dctcp_destroy(dctcp_t * );
 void				dctcp_event_cb(dctcp_t*, dctcp_event_cb_t cb, void *ud);
 //return proced events
 int					dctcp_poll(dctcp_t *, int timeout_us, int max_tick_proc = 100);
-//fproto:msg:sz32,msg:sz16,msg:sz8,token:xxx
-int					dctcp_listen(dctcp_t *, const std::string & addr, const char * fproto = "msg:sz32", dctcp_event_cb_t listener = nullptr, void * ud = nullptr); //return a fd >= 0when success
-int					dctcp_connect(dctcp_t *, const std::string & addr, int retry = 0, const char * fproto = "msg:sz32", dctcp_event_cb_t listener = nullptr, void * ud = nullptr);
+//fproto:msg:sz32,msg:sz16,msg:sz8,token:xxx,pack,
+int					dctcp_listen(dctcp_t *, const std::string & addr, const char * fproto = "msg:sz32",
+                                 dctcp_event_cb_t listener = nullptr, void * ud = nullptr,
+                                 const dctcp_msg_codec_t * codec = nullptr); //return a fd >= 0when success
+int					dctcp_connect(dctcp_t *, const std::string & addr, int retry = 0, const char * fproto = "msg:sz32" ,
+                                  dctcp_event_cb_t handler = nullptr, void * ud = nullptr,
+                                  const dctcp_msg_codec_t * codec = nullptr);
 int					dctcp_send(dctcp_t *, int fd, const dctcp_msg_t & msg);
 void				dctcp_close(dctcp_t *, int fd);
 

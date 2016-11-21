@@ -1,4 +1,7 @@
 #pragma  once
+#include <string>
+#include <vector>
+#include <functional>
 //a general app framwork
 struct cmdline_opt_t;
 struct dctcp_t;
@@ -63,17 +66,16 @@ protected:
 	AppImpl * impl_{ nullptr};
 };
 
-template <class CAPP>
+template <class AppT>
 int AppMain(int argc, const char * argv[]){
-    CAPP app;
+    static AppT app;
     int ret = app.init(argc, argv);
     if (ret){
-        GLOG_ERR("App(%s) init error:%d ", typeid(CAPP).name(), ret);
+        fprintf(stderr, "App(%s) init error:%d ", typeid(AppT).name(), ret);
         return ret;
     }
     return app.start();
 }
-
 };
 
 

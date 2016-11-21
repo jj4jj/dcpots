@@ -297,7 +297,6 @@ static inline void app_tick_update(AppImpl * impl_){
 	uint64_t t_time_now = dcs::time_unixtime_us();
 	if (t_time_now > impl_->next_tick_time){
 		eztimer_update();
-		dctcp_poll(impl_->stcp, impl_->maxtptick);
 		impl_->next_tick_time = t_time_now + impl_->interval;
 	}
 }
@@ -521,6 +520,9 @@ int App::start(){
             impl_->reloading = false;
         }
         //running
+        if (impl_->stcp) { //one tick , one us ?
+            iret += dctcp_poll(impl_->stcp, impl_->maxtptick, impl_->maxtptick);
+        }
         iret = on_loop();
         if (iret == 0){
             on_idle();
