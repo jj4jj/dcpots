@@ -49,12 +49,12 @@ struct dctcp_t;
 struct msg_buffer_t;
 struct dctcp_msg_codec_t {
     //encode 0:success, otherwise error
-    typedef int(*encoder_t)(msg_buffer_t & buff, const msg_buffer_t & msg);
+    typedef int(*encode_func_t)(msg_buffer_t & buff, const msg_buffer_t & msg);
     //return >0: success, return the costed buffer msg length , = 0, need more, < 0 error.
-    typedef int(*decoder_t)(msg_buffer_t & msg, const msg_buffer_t & buff);
+    typedef int(*decode_func_t)(msg_buffer_t & msg, const msg_buffer_t & buff);
     //////////////////////////////////////////////////////////////////////////
-    encoder_t   encoder;
-    decoder_t   decoder;
+    encode_func_t   encode;
+    decode_func_t   decode;
 };
 typedef int(*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
 ////////////////////////////////////////////////////////////////////////////
