@@ -233,6 +233,10 @@ namespace dcs {
         fclose(fp);
         return sz;
     }
+    std::string         path_dir(const char * path){
+        std::string strpath = path;
+        return  basename((char *)strpath.data());
+    }
     const char *		path_base(const char * path) {
         return basename(path);
     }

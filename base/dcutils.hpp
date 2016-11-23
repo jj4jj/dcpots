@@ -30,6 +30,7 @@ NS_BEGIN(dcs)
 	time_t				file_access_time(const std::string & file);
 	time_t				file_modify_time(const std::string & file);
 	const char *		path_base(const char * path);
+    std::string         path_dir(const char * path);
     //file://<path>
     //tcp://<ip:port>
     //udp://<ip:port>

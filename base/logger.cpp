@@ -50,16 +50,21 @@ logger_t *	logger_create(const logger_config_t & conf){
 	if (!em) return nullptr;
 	em->last_msg.reserve(conf.max_msg_size);
 	em->conf = conf;
-	string filepath = conf.dir;
-	string error_filepath = conf.dir;
+    string log_all_filepath = conf.dir;
+    if(em->conf.pattern.find(".all.log") != string::npos){
+        log_all_filepath += "/" + conf.pattern;        
+    }
+    else {
+        log_all_filepath += "/" + conf.pattern + ".all.log";
+    }
+    string log_err_filepath = log_all_filepath;
+    log_err_filepath.replace(log_err_filepath.find(".all."),5,".err.");
 	if (!conf.pattern.empty()){
-		//debug log
-		filepath += "/" + conf.pattern + ".all.log";
-		em->logfile.init(filepath.c_str(), conf.max_roll, conf.max_file_size);
+		//all log
+		em->logfile.init(log_all_filepath.c_str(), conf.max_roll, conf.max_file_size);
 		em->logfile.open();
 		//error log
-		error_filepath += "/" + conf.pattern + ".err.log";
-		em->errfile.init(error_filepath.c_str(), conf.max_roll, conf.max_file_size);
+		em->errfile.init(log_err_filepath.c_str(), conf.max_roll, conf.max_file_size);
 		em->errfile.open();
 	}
 	return em;
