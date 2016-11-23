@@ -51,7 +51,7 @@ NS_BEGIN(dcs)
     int                 waitfd_writable(int fd, int timeout_ms);
     int                 ipfromhostname(OUT uint32_t * ip, INOUT int & ipnum, const std::string & hostname);
     int                 socknetaddr(struct sockaddr_in & addr, const std::string & saddr);
-    uint32_t            localhost_getipv4(const char * nic="eth0");
+    uint32_t            host_getipv4(const char * nic="eth0");
     string              stripfromu32v4(uint32_t ip);
     uint32_t            u32fromstripv4(const string & ip);
     string              host_getmac(const char * nic="eth0");

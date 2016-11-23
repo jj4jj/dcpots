@@ -347,7 +347,7 @@ static inline msg_buffer_t * _get_sock_msg_buffer(dctcp_t * stcp, int fd, bool f
 	}
 }
 static inline void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type reason, int listenfd){
-	GLOG_TRA("close fd:%d for reason:%d", fd, reason);
+    GLOG_TRA("close fd:%d for reason:%d errno:%d error:%s", fd, reason, errno, strerror(errno));
 	int error = _get_sockerror(fd);
 	_op_poll(stcp, EPOLL_CTL_DEL, fd);
 	close(fd);

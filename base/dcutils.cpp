@@ -7,9 +7,9 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include <dlfcn.h>
-
 #include "dcbitset.hpp"
-//#include <libgen.h>
+#define FS_PATH_SEP ('/')
+//////////////////////////////////////////////////////////////////////////////////
 
 namespace {
     static const char s_b64_lookup_c2d[] = ""
@@ -233,28 +233,26 @@ namespace dcs {
         fclose(fp);
         return sz;
     }
-    std::string         path_dir(const char * path){
-        std::string strpath = path;
-        return  basename((char *)strpath.data());
-    }
     const char *		path_base(const char * path) {
-        return basename(path);
+        if(!path || !*path){
+            return ".";
+        }
+        const char * p = path + strlen(path) - 1;
+        while(*p != FS_PATH_SEP && p != path){--p;}
+        if(*p == FS_PATH_SEP) ++p;
+        if(*p == 0){
+            return ".";
+        }
+        return p;
     }
-#if 0
-    //include by libgen
-    string		path_base(const string & path){
-#define MAX_PATH_LENGTH	 256
-        char path_buff[MAX_PATH_LENGTH] = { 0 };
-        strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
-        return basename(path_buff);
+    string 				path_dir(const char * path){
+        std::string strpath = path;
+        strpath.erase(strpath.find_last_of(FS_PATH_SEP));
+        if(strpath.empty()){
+            return ".";
+        }
+        return strpath;
     }
-    string 				path_dir(const string & path){
-#define MAX_PATH_LENGTH	 256
-        char path_buff[MAX_PATH_LENGTH] = { 0 };
-        strncpy(path_buff, path.c_str(), MAX_PATH_LENGTH - 1);
-        return dirname(path_buff);
-    }
-#endif
     int			writefile(const std::string & file, const char * buffer, size_t sz) {
         FILE * fp = fopen(file.c_str(), "w");
         if (!fp) {
@@ -715,7 +713,7 @@ namespace dcs {
         }
         return 0;
     }
-    uint32_t    localhost_getipv4(const char * nic) {
+    uint32_t    host_getipv4(const char * nic) {
         struct ifreq _temp;
         struct sockaddr_in *soaddr;
         int fd = 0;
