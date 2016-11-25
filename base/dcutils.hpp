@@ -31,6 +31,19 @@ NS_BEGIN(dcs)
 	time_t				file_modify_time(const std::string & file);
 	const char *		path_base(const char * path);
     std::string         path_dir(const char * path);
+    typedef void(*path_walker_t)(const char * dirname, const char * basename, bool is_dir, void * ud);
+    int                 path_walk(const char * path, path_walker_t walker, void * ud, int depth = 0);
+    enum  path_entry_filter {
+        PATH_IS_FILE    = 0x01,
+        PATH_IS_DIR     = 0x02,
+        PATH_IS_BLK     = 0x04,
+        PATH_IS_FIFO    = 0x08,
+        PATH_IS_SOCKET  = 0x10,
+        PATH_IS_LINK    = 0X20,
+        PATH_IS_CHAR    = 0x40,
+    };
+    int                 path_list(std::vector<std::string> & file_list, const char * path, int filter = PATH_IS_FILE);
+
     //file://<path>
     //tcp://<ip:port>
     //udp://<ip:port>

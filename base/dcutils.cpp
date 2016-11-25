@@ -7,6 +7,8 @@
 #include<arpa/inet.h>
 #include<netinet/in.h>
 #include <dlfcn.h>
+#include <dirent.h>
+
 #include "dcbitset.hpp"
 #define FS_PATH_SEP ('/')
 //////////////////////////////////////////////////////////////////////////////////
@@ -272,6 +274,79 @@ namespace dcs {
             return -2;
         }
     }
+    int                 path_list(std::vector<std::string> & file_list, const char * path, int filter){
+        file_list.clear();
+        DIR *dfd = opendir(path);
+        if (!dfd) {
+            fprintf(stderr, "open dir = %s error !", path);
+            return -1;
+        }
+#if 0
+        struct dirent {
+            ino_t          d_ino;       /* inode number */
+            off_t          d_off;       /* offset to the next dirent */
+            unsigned short d_reclen;    /* length of this record */
+            unsigned char  d_type;      /* type of file; not supported
+                                            by all file system types */
+            char           d_name[256]; /* filename */
+        };
+        DT_BLK      This is a block device.
+        DT_CHR      This is a character device.
+        DT_DIR      This is a directory.
+        DT_FIFO     This is a named pipe(FIFO).
+        DT_LNK      This is a symbolic link.
+        DT_REG      This is a regular file.
+        DT_SOCK     This is a UNIX domain socket.
+        DT_UNKNOWN  The file type is unknown.
+#endif
+        int dtype_filter = 0;
+        if(filter&PATH_IS_BLK){
+            dtype_filter |= DT_BLK;
+        }
+        if (filter&PATH_IS_CHAR) {
+            dtype_filter |= DT_CHR;
+        }
+        if (filter&PATH_IS_DIR) {
+            dtype_filter |= DT_DIR;
+        }
+        if (filter&PATH_IS_FIFO) {
+            dtype_filter |= DT_FIFO;
+        }
+        if (filter&PATH_IS_LINK) {
+            dtype_filter |= DT_LNK;
+        }
+        if (filter&PATH_IS_FILE) {
+            dtype_filter |= DT_REG;
+        }
+        if (filter&PATH_IS_SOCKET) {
+            dtype_filter |= DT_SOCK;
+        }
+        //////////////////////////////////////////////////////////////////////////
+        int name_max = pathconf(path, _PC_NAME_MAX);
+        if (name_max == -1)         /* Limit not defined, or error */
+            name_max = 255;         /* Take a guess */
+        int len = offsetof(struct dirent, d_name) + name_max + 1;
+        struct dirent * entryp = (struct dirent * )malloc(len);
+        struct dirent *dp_itr = NULL;
+        int ret = 0;
+        while(true){
+            ret = readdir_r(dfd, entryp, &dp_itr);
+            if(ret){
+                break;
+            }
+            if (strcmp(dp_itr->d_name, ".") == 0
+                || strcmp(dp_itr->d_name, "..") == 0) {
+                continue;    /* skip self and parent */
+            }
+            if((dp_itr->d_type)&dtype_filter){
+                file_list.push_back(dp_itr->d_name);
+            }
+        }
+        free(entryp);
+        closedir(dfd);
+        return ret;
+    }
+
     //write size , return > 0 wirte size, <= 0 error
     static inline	int  _writefd(int fd, const char * buffer, size_t sz, int timeout_ms) {
         if (fd < 0 || sz == 0) { return -1; }
