@@ -7,6 +7,7 @@
 #include "base/msg_proto.hpp"
 #include "utility/mysql/dcmysqlc.h"
 #include "utility/script/dcscript_vm.h"
+#include "base/coroutine.h"
 using namespace dcs;
 
 static int max_ping_pong = 100000;
@@ -845,6 +846,24 @@ static int aes_test() {
     return 0;
 
 }
+void co_test_f(void * ud, CoroutineScheduler * cs) {
+	GLOG_DBG("co test1");
+	cs->yield();
+	GLOG_DBG("co test2");
+	cs->yield();
+	GLOG_DBG("co test3");
+	cs->yield();
+	cout << (char*)ud <<endl;
+}
+static int co_test() {
+	CoroutineScheduler cs;
+	int coid = cs.spawn(co_test_f, (void*)"hello,world");
+	while (cs.status(coid) != COROUTINE_STATE_DEAD) {
+		cs.resume(coid);
+		GLOG_DBG("after resumed");
+	}
+	return 0;
+}
 int main(int argc, const char* argv[])
 {
 
@@ -887,6 +906,9 @@ int main(int argc, const char* argv[])
         if (!strcasecmp(argv[1], "aes")) {
             return aes_test();
         }
+		if (!strcasecmp(argv[1], "co")) {
+			return co_test();
+		}
 		switch (argv[1][0])
 		{
 		case 'm':
