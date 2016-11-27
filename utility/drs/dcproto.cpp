@@ -424,8 +424,15 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 			do {
 				auto ev = field->enum_type()->FindValueByName(value);
 				if (!ev){
-					strnprintf(error, 64, "enum value:%s not found", value.c_str());
-					return -1;
+					char * p = (char*)value.data();
+					int nve = strtoll(value.data(), &p, 10);
+					if (p != value.data()) {
+						ev = field->enum_type()->FindValueByNumber(stoi(value));
+					}
+					if (!ev) {
+						strnprintf(error, 128, "enum field value:%s not found in descriptor !", value.c_str());
+						return -1;
+					}
 				}
 				reflection->SetRepeatedEnum(&msg, field, idx, ev);
 				break;
