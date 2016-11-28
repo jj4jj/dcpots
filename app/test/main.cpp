@@ -846,13 +846,26 @@ static int aes_test() {
     return 0;
 
 }
+
+void co_test_h(void * ud, CoroutineScheduler * cs) {
+	GLOG_IFO("ok info:%s %d", cs->backtrace(), cs->pending());
+}
+
+void co_test_g(void * ud, CoroutineScheduler * cs) {
+	GLOG_DBG("X");
+	//cs->start(co_test_h, (void*)"TESTh", "h()");
+	cs->yield();
+	GLOG_IFO("ok info:%s %d", cs->backtrace(), cs->pending());
+}
 void co_test_f(void * ud, CoroutineScheduler * cs) {
 	GLOG_DBG("co test1");
 	cs->yield();
 	GLOG_DBG("co test2");
+	cs->start(co_test_g, (void*)"TESTG", "g()");
 	cs->yield();
 	GLOG_DBG("co test3");
 	cs->yield();
+	GLOG_IFO("ok info:%s %d", cs->backtrace(), cs->pending());
 	cout << (char*)ud <<endl;
 }
 static int co_test() {

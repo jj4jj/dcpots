@@ -8,14 +8,20 @@ enum CoroutineState {
 };
 struct CoroutineSchedulerImpl;
 struct CoroutineScheduler {
-	typedef void(*coroutine_func)(void *ud, CoroutineScheduler * _cs);
-	int			spawn(coroutine_func func, void * ud);
-	void		yield();
-	void		resume(int id);
-	int			status(int id);
-	int			running();
-	////////////////////////////////////////////////////////////////
+	//coroutine func
+	typedef void(*coroutine)(void *ud, CoroutineScheduler *);
+	//coroutine id >= 0
+	int				spawn(coroutine func, void * ud, const char * name = nullptr);
+	int				start(coroutine func, void * ud, const char * name = nullptr);
+	void			yield();
+	void			resume(int id);
+	int				status(int id);
+	int				running();
+	const char *	backtrace();
+	int				pending(int * cos = nullptr);
+	const char *	name(int co);
 public:
+	static CoroutineScheduler * default_scheduler();
 	CoroutineScheduler(int init_co_num = 16);
 	~CoroutineScheduler();
 	CoroutineSchedulerImpl * impl;
