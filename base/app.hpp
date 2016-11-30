@@ -41,7 +41,7 @@ public:
 	int						gmt_tz_offset() const;
 	void					gmt_tz_offset(int tzo);
 	int						time_offset() const;
-	void					time_offset(int seconds);
+	void					add_time_offset(int seconds);
 
 public:
     int			init(int argc, const char * argv[]);
@@ -56,7 +56,7 @@ public:
     typedef std::function<void()>   timer_task_t;
     //ms: > 0 (just after ms excute once),0:(excute now),<0(period ms excute);
     void		                    schedule(timer_task_t task, int ms);
-    void                            cmdopt(cmdline_opt_t & cmdopt);	
+    void                            cmdopt(cmdline_opt_t & cmdopt);
 
 protected:
 	App(const char * version = __DATE__);

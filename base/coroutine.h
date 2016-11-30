@@ -15,7 +15,7 @@ struct CoroutineScheduler {
 	int				start(coroutine func, void * ud, const char * name = nullptr);
 	void			yield();
 	void			resume(int id);
-	int				status(int id);
+	CoroutineState	status(int id);
 	int				running();
 	const char *	backtrace();
 	int				pending(int * cos = nullptr);

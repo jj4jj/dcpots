@@ -15,37 +15,37 @@
 //this implementation of coroutine is refer to cloudwu(coroutine)
 
 struct Coroutine {
-	CoroutineScheduler::coroutine func;
-	void * ud;
-	ucontext_t ctx;
+	CoroutineScheduler::coroutine	func;
+	void *							ud;
+	ucontext_t						ctx;
 	struct CoroutineSchedulerImpl * sch;
-	ptrdiff_t cap;
-	ptrdiff_t size;
-	CoroutineState status;
-	char *stack;
-	char name[16];
-	int  from;
+	ptrdiff_t						cap;
+	ptrdiff_t						size;
+	char						   *stack;
+	char							name[16];
+	int								from;
 };
-#define MAIN_STACK_SIZE (1024*1024*4)
+//#define MAIN_STACK_SIZE (1024*1024*8)
+#define SHARE_STACK_SIZE (1024*1024*4)
 #define MAX_CO_CALL_DEPTH (64)
 #define MAX_CO_BT_BUFFER_SIZE	(MAX_CO_CALL_DEPTH*16)
 struct CoroutineSchedulerImpl {
-	char stack[MAIN_STACK_SIZE];
-	int nco;
-	int cap;
-	int running;
-	struct Coroutine main;
+	char		share_stack[SHARE_STACK_SIZE];
+	ucontext_t	ctx;
+	int			nco;
+	int			cap;
+	int			max;
+	int			running;
 	struct Coroutine ** cos;
 	char bts[MAX_CO_BT_BUFFER_SIZE];
 };
-static inline void _co_init(Coroutine * co, int id, const char * name, int from) {
+static inline void _co_init(Coroutine * co, int id, const char * name) {
 	if (name) {
 		snprintf(co->name, sizeof(co->name), "%d(%s)", id, name);
 	}
 	else {
 		snprintf(co->name, sizeof(co->name), "%d", id);
 	}
-	co->from = from;
 }
 static inline Coroutine * _co_new(struct CoroutineSchedulerImpl *S, CoroutineScheduler::coroutine func, void *ud) {
 	Coroutine * co = (Coroutine*)malloc(sizeof(*co));
@@ -54,14 +54,12 @@ static inline Coroutine * _co_new(struct CoroutineSchedulerImpl *S, CoroutineSch
 	co->sch = S;
 	co->cap = 0;
 	co->size = 0;
-	co->status = COROUTINE_STATE_READY;
 	co->stack = NULL;
 	co->name[0] = 0;
-	co->from = -1;
+	co->from = -2;
 	return co;
 }
 static inline void _co_delete(Coroutine *co) {
-	co->status = COROUTINE_STATE_DEAD;
 	//cache it ?
 	if (co->stack) {
 		free(co->stack);
@@ -95,19 +93,11 @@ CoroutineScheduler * CoroutineScheduler::default_scheduler() {
 CoroutineScheduler::CoroutineScheduler(int nmax) {
 	impl = (CoroutineSchedulerImpl*)malloc(sizeof(*impl));
 	impl->nco = 0;
-	impl->cap = nmax;
+	impl->cap = 16;
+	impl->max = nmax;
 	impl->running = -1;
 	impl->cos = (Coroutine**)malloc(sizeof(Coroutine *) * impl->cap);
 	memset(impl->cos, 0, sizeof(Coroutine*) * impl->cap);
-	//////////////////////////////////////////////////////////////////
-	impl->main.cap = MAIN_STACK_SIZE;
-	impl->main.func = nullptr;
-	impl->main.sch = impl;
-	impl->main.stack = &impl->stack[0];
-	impl->main.size = MAIN_STACK_SIZE;
-	impl->main.status = COROUTINE_STATE_RUNNING;
-	impl->main.ud = nullptr;
-	_co_init(&impl->main, -1, "main", -1);
 }
 
 CoroutineScheduler::~CoroutineScheduler() {
@@ -125,19 +115,22 @@ CoroutineScheduler::~CoroutineScheduler() {
 	}
 }
 
-int CoroutineScheduler::status(int id) {
+CoroutineState CoroutineScheduler::status(int id) {
 	assert(id >= 0 && id < impl->cap);
 	if (impl->cos[id] == NULL) {
 		return COROUTINE_STATE_DEAD;
 	}
-	return impl->cos[id]->status;
+	if (impl->running == id) {
+		return COROUTINE_STATE_RUNNING;
+	}
+	if (impl->cos[id]->from == -2) {
+		return COROUTINE_STATE_READY;
+	}
+	return COROUTINE_STATE_SUSPEND;
 }
 static inline void _save_stack(Coroutine *C, char *top) {
-	if (&(C->sch->main) == C) {
-		return;
-	}
 	char dummy = 0; //current stack top
-	assert(top - &dummy <= MAIN_STACK_SIZE);
+	assert(top - &dummy <= SHARE_STACK_SIZE);
 	if (C->cap < top - &dummy) {
 		free(C->stack);
 		C->cap = top - &dummy;
@@ -146,76 +139,66 @@ static inline void _save_stack(Coroutine *C, char *top) {
 	C->size = top - &dummy;
 	memcpy(C->stack, &dummy, C->size);
 }
-static inline void _co_switch(CoroutineScheduler * cs, int tid, bool active) {
+static inline void _co_switch(CoroutineScheduler * cs, int tid) {
 	CoroutineSchedulerImpl * impl = cs->impl;
-	int status = 0;
 	uintptr_t ptr = (uintptr_t)cs;
-	Coroutine * ctar = nullptr, * ccur = nullptr;
-	if (impl->running < 0) {
-		ccur = &impl->main;
+	Coroutine * co = nullptr;
+	CoroutineState cost = COROUTINE_STATE_DEAD;
+	ucontext * _ctx_saver = nullptr;
+	if (tid >= 0) {
+		co = impl->cos[tid];
+		cost = cs->status(tid);
+		co->from = impl->running;
 	}
 	else {
-		ccur = impl->cos[impl->running];
-	}
-	if (tid == -1) {
-		assert("tid is less than 0 , must not be active " && active == false);
-		if (ccur->from >= 0 ) {
-			assert(impl->cos[ccur->from] && impl->cos[ccur->from]->status == COROUTINE_STATE_SUSPEND);
-			ctar = impl->cos[ccur->from];
-			tid = ccur->from;
+		assert(impl->running >= 0);
+		tid = impl->cos[impl->running]->from;
+		if (tid >= 0) {
+			co = impl->cos[tid];
+			cost = cs->status(tid);
 		}
 		else {
-			ctar = &impl->main;
+			cost = COROUTINE_STATE_SUSPEND;			
 		}
 	}
-	else {
-		ctar = impl->cos[tid];
+	if (impl->running >= 0) {
+		_save_stack(impl->cos[impl->running], impl->share_stack + SHARE_STACK_SIZE);
+		_ctx_saver = &impl->cos[impl->running]->ctx;
 	}
-	///////////////////////////////////////////////////////////////////////
-	assert("current stack has been overflowed !" && (char *)&ccur > impl->stack);
-	assert("target stack has been overflowed !" && (char *)&ctar > impl->stack);
-	assert("current coroutine is same with target !" &&  ctar != ccur);
-	//save current stack
-	_save_stack(ccur, impl->stack + MAIN_STACK_SIZE);
-	ccur->status = COROUTINE_STATE_SUSPEND;
-	status = ctar->status;
-	if (active) {
-		ctar->from = impl->running;
+	else {
+		assert(tid >= 0);
+		//no need save stack
+		_ctx_saver = &impl->ctx;
 	}
 	impl->running = tid;
-	ctar->status = COROUTINE_STATE_RUNNING;
-	//////////////////////////////////////////////////////////////////////////
-	//switch (may be new) resume
-	ptr = (uintptr_t)cs;
-	switch (status) {
+	if (tid == -1) { //yield to main , just recover ctx 
+		swapcontext(_ctx_saver, &impl->ctx);
+		return ;
+	}
+	///////////////////////////////////////////////////////////////////////
+	assert("current stack has been overflowed !" && (char *)&co > impl->share_stack);
+	switch (cost) {
 	case COROUTINE_STATE_READY:
-		getcontext(&ctar->ctx); //initialize the context
-		ctar->ctx.uc_stack.ss_sp = impl->stack; //set the running stack
-		ctar->ctx.uc_stack.ss_size = MAIN_STACK_SIZE;
+		getcontext(&co->ctx); //initialize the context
+		co->ctx.uc_stack.ss_sp = impl->share_stack; //set the running stack
+		co->ctx.uc_stack.ss_size = SHARE_STACK_SIZE;
 		//ctar->ctx.uc_link = 0;
-		ctar->ctx.uc_link = &ccur->ctx; // from caller , return to caller
-										//set start entry point
-		makecontext(&ctar->ctx, (void(*)(void)) _mainfunc, 2, (uint32_t)ptr, (uint32_t)(ptr >> 32));
+		co->ctx.uc_link = _ctx_saver;
+		makecontext(&co->ctx, (void(*)(void)) _mainfunc, 2, (uint32_t)ptr, (uint32_t)(ptr >> 32));
 		//switch running , save current context (main) to curC, then start tarC 
-		swapcontext(&ccur->ctx, &ctar->ctx);
+		swapcontext(_ctx_saver, &co->ctx);
 		break;
 	case COROUTINE_STATE_SUSPEND:
 		//resume running , restore stack
-		memcpy(impl->stack + MAIN_STACK_SIZE - ctar->size, ctar->stack, ctar->size);
-		swapcontext(&ccur->ctx, &ctar->ctx);
+		memcpy(impl->share_stack + SHARE_STACK_SIZE - co->size, co->stack, co->size);
+		swapcontext(_ctx_saver, &co->ctx);
 		break;
 	default:
 		assert("error coroutine state " && false);
 	}
 }
-void CoroutineScheduler::resume(int id) { 
-	assert(id >= 0);
-	_co_switch(this, id, true);
-}
-void CoroutineScheduler::yield() { 
-	assert(impl->running >= 0 );
-	_co_switch(this, -1, false);
-}
+void CoroutineScheduler::resume(int id) { _co_switch(this, id); }
+void CoroutineScheduler::yield() { _co_switch(this, -1);}
 int CoroutineScheduler::start(coroutine func, void * ud, const char * name) { 
 	int coid = spawn(func, ud, name);
 	resume(coid);
@@ -233,7 +216,7 @@ int CoroutineScheduler::spawn(coroutine func, void *ud, const char * name) {
 		impl->cos[impl->cap] = co;
 		impl->cap *= 2;
 		++impl->nco;
-		_co_init(co, id, name, impl->running);
+		_co_init(co, id, name);
 		return id;
 	}
 	else {
@@ -242,7 +225,7 @@ int CoroutineScheduler::spawn(coroutine func, void *ud, const char * name) {
 			if (impl->cos[id] == NULL) {
 				impl->cos[id] = co;
 				++impl->nco;
-				_co_init(co, id, name, impl->running);
+				_co_init(co, id, name);
 				return id;
 			}
 		}
@@ -272,7 +255,7 @@ const char * CoroutineScheduler::backtrace() {
 int	CoroutineScheduler::pending(int * cos) {
 	int sum = 0;
 	for (int i = 0;i < impl->cap; ++i) {
-		if (impl->cos[i] && impl->cos[i]->status == COROUTINE_STATE_SUSPEND && impl->cos[i]->from == -1) {
+		if (impl->cos[i] && impl->cos[i]->from == -1) {
 			if (cos) {
 				cos[sum++] = i;
 			}

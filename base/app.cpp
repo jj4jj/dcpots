@@ -583,7 +583,7 @@ void            App::gmt_tz_offset(int tzo){
 int				App::time_offset() const {
 	return impl_->datetime.time_offset();
 }
-void			App::time_offset(int seconds) {
+void			App::add_time_offset(int seconds) {
 	if (impl_->datetime.add_time_offset(seconds)) {
 		GLOG_ERR("error set time offset :%d", seconds);
 		return;

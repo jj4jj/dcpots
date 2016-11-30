@@ -7,7 +7,6 @@
 #include "base/msg_proto.hpp"
 #include "utility/mysql/dcmysqlc.h"
 #include "utility/script/dcscript_vm.h"
-#include "base/coroutine.h"
 using namespace dcs;
 
 static int max_ping_pong = 100000;
@@ -846,7 +845,7 @@ static int aes_test() {
     return 0;
 
 }
-
+#include "base/coroutine.h"
 void co_test_h(void * ud, CoroutineScheduler * cs) {
 	GLOG_IFO("ok info:%s %d", cs->backtrace(), cs->pending());
 }
