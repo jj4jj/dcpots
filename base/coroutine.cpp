@@ -11,9 +11,7 @@
 #include <ucontext.h>
 #endif 
 #include "coroutine.h"
-
 //this implementation of coroutine is refer to cloudwu(coroutine)
-
 struct Coroutine {
 	CoroutineScheduler::coroutine	func;
 	void *							ud;
@@ -25,8 +23,8 @@ struct Coroutine {
 	char							name[16];
 	int								from;
 };
-//#define MAIN_STACK_SIZE (1024*1024*8)
 #define SHARE_STACK_SIZE (1024*1024*4)
+#define DEFAULT_COROUTINE_NUM	(64)
 #define MAX_CO_CALL_DEPTH (64)
 #define MAX_CO_BT_BUFFER_SIZE	(MAX_CO_CALL_DEPTH*16)
 struct CoroutineSchedulerImpl {
@@ -93,7 +91,7 @@ CoroutineScheduler * CoroutineScheduler::default_scheduler() {
 CoroutineScheduler::CoroutineScheduler(int nmax) {
 	impl = (CoroutineSchedulerImpl*)malloc(sizeof(*impl));
 	impl->nco = 0;
-	impl->cap = 16;
+	impl->cap = DEFAULT_COROUTINE_NUM;
 	impl->max = nmax;
 	impl->running = -1;
 	impl->cos = (Coroutine**)malloc(sizeof(Coroutine *) * impl->cap);
@@ -238,7 +236,6 @@ int CoroutineScheduler::spawn(coroutine func, void *ud, const char * name) {
 	return -1;
 }
 //////////////////////////////////////////////////////////////////////////
-
 int CoroutineScheduler::running() {
 	return impl->running;
 }

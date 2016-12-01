@@ -1,5 +1,5 @@
 #pragma once
-//couroutine implementation from cloudwu [https://github.com/cloudwu/coroutine.git]
+//couroutine implementation refer from cloudwu [https://github.com/cloudwu/coroutine.git]
 enum CoroutineState {
 	COROUTINE_STATE_DEAD = 0,
 	COROUTINE_STATE_READY = 1,
@@ -22,7 +22,7 @@ struct CoroutineScheduler {
 	const char *	name(int co);
 public:
 	static CoroutineScheduler * default_scheduler();
-	CoroutineScheduler(int init_co_num = 16);
+	CoroutineScheduler(int nmax = 1024*1024);
 	~CoroutineScheduler();
 	CoroutineSchedulerImpl * impl;
 };

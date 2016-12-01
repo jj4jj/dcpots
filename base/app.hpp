@@ -58,8 +58,13 @@ public:
     void		                    schedule(timer_task_t task, int ms);
     void                            cmdopt(cmdline_opt_t & cmdopt);
 
+public:
+	//async related
+	//void							sleep(int us);
+
+
 protected:
-	App(const char * version = __DATE__);
+	App(const char * version = __DATE__ "-" __TIME__);
 	virtual ~App();
 protected:
 	AppImpl * impl_{ nullptr};
@@ -70,7 +75,7 @@ int AppMain(int argc, const char * argv[]){
     static AppT app;
     int ret = app.init(argc, argv);
     if (ret){
-        fprintf(stderr, "App(%s) init error:%d ", typeid(AppT).name(), ret);
+        fprintf(stderr, "App(%s) init error:%d \n", typeid(AppT).name(), ret);
         return ret;
     }
     return app.start();

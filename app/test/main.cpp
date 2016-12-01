@@ -649,6 +649,13 @@ static int app_test(int argc, const char * argv[]){
                     usleep(1000*10);
                 }
             }
+			this->schedule([](){
+				GLOG_IFO("test tick schedule 5s every !");
+			},-5000);
+			this->schedule([]() {
+				GLOG_IFO("test tick schedule after 8s!");
+			}, 8000);
+
             return 0;
         }
 
