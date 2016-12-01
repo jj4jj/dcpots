@@ -128,7 +128,7 @@ CoroutineState CoroutineScheduler::status(int id) {
 	}
 	return COROUTINE_STATE_SUSPEND;
 }
-static inline void _save_stack(Coroutine *C, char *top) {
+static inline ucontext_t * _save_stack(Coroutine *C, char *top) {
 	char dummy = 0; //current stack top
 	assert(top - &dummy <= SHARE_STACK_SIZE);
 	if (C->cap < top - &dummy) {
@@ -138,79 +138,83 @@ static inline void _save_stack(Coroutine *C, char *top) {
 	}
 	C->size = top - &dummy;
 	memcpy(C->stack, &dummy, C->size);
+	return &(C->ctx);
 }
 static inline void _co_switch(CoroutineScheduler * cs, int tid) {
+	//1. all co share the stack, but save then when susspend
 	CoroutineSchedulerImpl * impl = cs->impl;
 	uintptr_t ptr = (uintptr_t)cs;
 	Coroutine * co = nullptr;
-	CoroutineState cost = COROUTINE_STATE_DEAD;
-	ucontext * _ctx_saver = nullptr;
-	if (tid >= 0) {
-		co = impl->cos[tid];
-		cost = cs->status(tid);
-		co->from = impl->running;
-	}
-	else {
-		assert(impl->running >= 0);
-		tid = impl->cos[impl->running]->from;
+	ucontext * _ctx_save = nullptr;
+	if (impl->running >= 0) { //in a co
+		_ctx_save = _save_stack(impl->cos[impl->running], impl->share_stack + SHARE_STACK_SIZE);
 		if (tid >= 0) {
+			//susppend current and switch to tid
 			co = impl->cos[tid];
-			cost = cs->status(tid);
+			if (co->from == -2) { //is ready state , need create 
+				co->from = impl->running;
+				impl->running = tid;
+				getcontext(&co->ctx); //initialize the context
+				co->ctx.uc_stack.ss_sp = impl->share_stack; //set the running stack
+				co->ctx.uc_stack.ss_size = SHARE_STACK_SIZE;
+				co->ctx.uc_link = _ctx_save;
+				makecontext(&co->ctx, (void(*)(void)) _mainfunc, 2, (uint32_t)ptr, (uint32_t)(ptr >> 32));
+				swapcontext(_ctx_save, &co->ctx);
+			}
+			else { //must be suspend , recover stack
+				co->from = impl->running;
+				impl->running = tid;
+				memcpy(impl->share_stack + SHARE_STACK_SIZE - co->size, co->stack, co->size);
+				swapcontext(_ctx_save, &co->ctx);
+			}
 		}
-		else {
-			cost = COROUTINE_STATE_SUSPEND;			
+		else { //just yield
+			if (impl->cos[impl->running]->from == -1) { //yield to main thread
+				impl->running = -1;
+				swapcontext(_ctx_save, &impl->ctx);
+			}
+			else {
+				assert(impl->cos[impl->running]->from >= 0 && "must yield then resume to a valid co !");
+				co = impl->cos[impl->cos[impl->running]->from];
+				impl->running = impl->cos[impl->running]->from;
+				memcpy(impl->share_stack + SHARE_STACK_SIZE - co->size, co->stack, co->size);
+				swapcontext(_ctx_save, &co->ctx);
+			}
 		}
 	}
-	if (impl->running >= 0) {
-		_save_stack(impl->cos[impl->running], impl->share_stack + SHARE_STACK_SIZE);
-		_ctx_saver = &impl->cos[impl->running]->ctx;
-	}
-	else {
-		assert(tid >= 0);
-		//no need save stack
-		_ctx_saver = &impl->ctx;
-	}
-	impl->running = tid;
-	if (tid == -1) { //yield to main , just recover ctx 
-		swapcontext(_ctx_saver, &impl->ctx);
-		return ;
-	}
-	///////////////////////////////////////////////////////////////////////
-	assert("current stack has been overflowed !" && (char *)&co > impl->share_stack);
-	switch (cost) {
-	case COROUTINE_STATE_READY:
-		getcontext(&co->ctx); //initialize the context
-		co->ctx.uc_stack.ss_sp = impl->share_stack; //set the running stack
-		co->ctx.uc_stack.ss_size = SHARE_STACK_SIZE;
-		//ctar->ctx.uc_link = 0;
-		co->ctx.uc_link = _ctx_saver;
-		makecontext(&co->ctx, (void(*)(void)) _mainfunc, 2, (uint32_t)ptr, (uint32_t)(ptr >> 32));
-		//switch running , save current context (main) to curC, then start tarC 
-		swapcontext(_ctx_saver, &co->ctx);
-		break;
-	case COROUTINE_STATE_SUSPEND:
-		//resume running , restore stack
-		memcpy(impl->share_stack + SHARE_STACK_SIZE - co->size, co->stack, co->size);
-		swapcontext(_ctx_saver, &co->ctx);
-		break;
-	default:
-		assert("error coroutine state " && false);
+	else { //in main thread
+		assert(tid >= 0 && "main thread switch a co must be a valid !");
+		co = impl->cos[tid];
+		impl->running = tid;
+		if (co->from == -2) { //is ready state , need create 
+			co->from = -1;
+			getcontext(&co->ctx); //initialize the context
+			co->ctx.uc_stack.ss_sp = impl->share_stack; //set the running stack
+			co->ctx.uc_stack.ss_size = SHARE_STACK_SIZE;
+			co->ctx.uc_link = &(impl->ctx);
+			makecontext(&co->ctx, (void(*)(void)) _mainfunc, 2, (uint32_t)ptr, (uint32_t)(ptr >> 32));
+			//switch running , save current context (main) to curC, then start tarC 
+			swapcontext(&(impl->ctx), &co->ctx);
+		}
+		else { //must be suspend , recover stack
+			co->from = -1;
+			memcpy(impl->share_stack + SHARE_STACK_SIZE - co->size, co->stack, co->size);
+			swapcontext(&(impl->ctx), &co->ctx);
+		}
 	}
 }
 void CoroutineScheduler::resume(int id) { _co_switch(this, id); }
 void CoroutineScheduler::yield() { _co_switch(this, -1);}
 int CoroutineScheduler::start(coroutine func, void * ud, const char * name) { 
 	int coid = spawn(func, ud, name);
-	resume(coid);
-	if (this->status(coid) != COROUTINE_STATE_DEAD) {
-		return coid;
-	}
+	if (coid >= 0) { _co_switch(this, coid); return coid;}
 	return -1;
 }
 int CoroutineScheduler::spawn(coroutine func, void *ud, const char * name) {
 	Coroutine *co = _co_new(impl, func, ud);
 	if (impl->nco >= impl->cap) {
 		int id = impl->cap;
+		if (impl->cap * 2 >= impl->max) {return -1;}
 		impl->cos = (Coroutine**)realloc(impl->cos, impl->cap * 2 * sizeof(Coroutine *));
 		memset(impl->cos + impl->cap, 0, sizeof(Coroutine *) * impl->cap);
 		impl->cos[impl->cap] = co;
@@ -230,7 +234,7 @@ int CoroutineScheduler::spawn(coroutine func, void *ud, const char * name) {
 			}
 		}
 	}
-	assert("has no more memory to allocate coroutine !");
+	assert(false);
 	return -1;
 }
 //////////////////////////////////////////////////////////////////////////
