@@ -48,9 +48,18 @@ struct dctcp_proto_dispatcher_t {
 	dctcp_event_cb_t	event_cb{ nullptr };
 	void		*		event_cb_ud{ nullptr };
     msg_buffer_t        buffer;
+	bool operator == (const dctcp_proto_dispatcher_t & rhs_) const {
+		return this->fproto == rhs_.fproto &&
+				this->codec.encode == rhs_.codec.encode &&
+			this->codec.decode == rhs_.codec.decode &&
+			this->token == rhs_.token &&
+			this->event_cb == rhs_.event_cb &&
+			this->event_cb_ud == rhs_.event_cb_ud;
+	}
 };
 struct dctcp_listener_env_t {
-	typedef std::unordered_map<int, dctcp_proto_dispatcher_t>	dctcp_event_listener_t;
+	typedef std::unordered_map<int, dctcp_proto_dispatcher_t*>	dctcp_event_listener_t;
+	std::vector<dctcp_proto_dispatcher_t>	dispatcher_allocator;	
 	dctcp_proto_dispatcher_t		base_listener;
 	dctcp_event_listener_t			cust_listener;
 };
@@ -181,8 +190,7 @@ static inline int _dctcp_get_fd_listenfd(dctcp_t * stcp, int fd){
 	}
 	return it->second;
 }
-static inline dctcp_proto_dispatcher_t * 
-_dctcp_get_proto_dispatcher(dctcp_t * stcp, int fd, int listenfd){
+static inline dctcp_proto_dispatcher_t * _dctcp_get_proto_dispatcher(dctcp_t * stcp, int fd, int listenfd){
 	int efd = -1;
 	if (listenfd != -1){
 		efd = listenfd;
@@ -195,7 +203,7 @@ _dctcp_get_proto_dispatcher(dctcp_t * stcp, int fd, int listenfd){
 	}
 	auto it = stcp->proto_listeners.cust_listener.find(efd);
 	if (it != stcp->proto_listeners.cust_listener.end()){
-		return &(it->second);
+		return it->second;
 	}
 	return &stcp->proto_listeners.base_listener;
 }
@@ -247,6 +255,37 @@ static inline dctcp_proto_type _dctcp_get_proto_info(const char * fproto, const 
     }
 	return proto_type;
 }
+
+static inline void _fd_dettach_codec_dispatcher(dctcp_t * stcp, int fd) {
+	auto it = stcp->proto_listeners.cust_listener.find(fd);
+	if (it != stcp->proto_listeners.cust_listener.end()) {
+		//no free the codec
+		stcp->proto_listeners.cust_listener.erase(it);
+	}
+}
+
+static inline void _fd_attach_codec_dispatcher(dctcp_t * stcp, int fd, const char * fproto, dctcp_event_cb_t cb, void * ud, const dctcp_msg_codec_t * codec) {
+	dctcp_proto_dispatcher_t	codec_dispatcher;
+	const char * proto_token = "";
+	dctcp_proto_type proto_type = _dctcp_get_proto_info(fproto, &proto_token);
+	codec_dispatcher.event_cb = cb;
+	codec_dispatcher.event_cb_ud = ud;
+	codec_dispatcher.fproto = proto_type;
+	codec_dispatcher.token = proto_token;
+	if (codec) {
+		codec_dispatcher.codec = *codec;
+	}
+	auto it = std::find(stcp->proto_listeners.dispatcher_allocator.begin(),
+		stcp->proto_listeners.dispatcher_allocator.end(), codec_dispatcher);
+	if (it == stcp->proto_listeners.dispatcher_allocator.end()) {
+		stcp->proto_listeners.dispatcher_allocator.push_back(codec_dispatcher);
+		dctcp_proto_dispatcher_t & cbenv = stcp->proto_listeners.dispatcher_allocator.back();
+		if (codec) {
+			cbenv.buffer.reserve(MAX_DECODE_BUFFER_SIZE);
+		}
+		stcp->proto_listeners.cust_listener[fd] = &cbenv;
+	}
+}
 static inline void _add_listenner(dctcp_t * stcp, int fd, const sockaddr_in & addr,
 	const char * fproto, dctcp_event_cb_t cb, void * ud, const dctcp_msg_codec_t * codec){
 	assert(fd >= 0);
@@ -255,20 +294,7 @@ static inline void _add_listenner(dctcp_t * stcp, int fd, const sockaddr_in & ad
 	listener.listenaddr = addr;
 	stcp->listeners[fd] = listener;
 	///////////////////////////////////////////////////////////////////
-	if (cb){
-		dctcp_proto_dispatcher_t	custom_cbenv;
-		const char * proto_token = "";
-		dctcp_proto_type proto_type = _dctcp_get_proto_info(fproto, &proto_token);
-		custom_cbenv.event_cb = cb;
-		custom_cbenv.event_cb_ud = ud;
-		custom_cbenv.fproto = proto_type;
-		custom_cbenv.token = proto_token;
-        if(codec){
-            custom_cbenv.buffer.reserve(MAX_DECODE_BUFFER_SIZE);
-            custom_cbenv.codec = *codec;
-        }
-		stcp->proto_listeners.cust_listener[fd] = custom_cbenv;
-	}
+	_fd_attach_codec_dispatcher(stcp, fd, fproto, cb, ud, codec);
 }
 static inline dctcp_connector_t & _add_connector(dctcp_t * stcp, int fd, const sockaddr_in & saddr, int retry,
 	const char * fproto, dctcp_event_cb_t cb, void * ud, const dctcp_msg_codec_t * codec){
@@ -278,20 +304,7 @@ static inline dctcp_connector_t & _add_connector(dctcp_t * stcp, int fd, const s
     cnx.reconnect = 0;
     cnx.connect_addr = saddr;
     stcp->connectors[fd] = cnx;
-	if (fproto && cb){
-		dctcp_proto_dispatcher_t	custom_cbenv;
-		const char * proto_token = "";
-		dctcp_proto_type proto_type = _dctcp_get_proto_info(fproto, &proto_token);
-		custom_cbenv.event_cb = cb;
-		custom_cbenv.event_cb_ud = ud;
-		custom_cbenv.fproto = proto_type;
-        if(codec){
-            custom_cbenv.codec = *codec;
-            custom_cbenv.buffer.reserve(MAX_DECODE_BUFFER_SIZE);
-        }
-		custom_cbenv.token = proto_token;
-		stcp->proto_listeners.cust_listener[fd] = custom_cbenv;
-	}
+	_fd_attach_codec_dispatcher(stcp, fd, fproto, cb, ud, codec);
     return stcp->connectors[fd];
 }
 static inline int _get_sockerror(int fd){
@@ -367,11 +380,7 @@ static inline void	_close_fd(dctcp_t * stcp, int fd, dctcp_close_reason_type rea
 	sev.reason = reason;
 	sev.error = error;
 	dctcp_event_dispatch(stcp, sev);
-    auto it = stcp->proto_listeners.cust_listener.find(fd);
-    if(it != stcp->proto_listeners.cust_listener.end()){
-        it->second.buffer.destroy();
-        stcp->proto_listeners.cust_listener.erase(it);
-    }
+	_fd_dettach_codec_dispatcher(stcp, fd);
 	stcp->fd_map_listenfd.erase(fd);
 }
 
