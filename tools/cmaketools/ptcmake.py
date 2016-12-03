@@ -27,7 +27,7 @@ def run(wdr, config):
             fmte=getattr(config,k)
             env['env']=fmte
     #reserve
-    fmte['cdir']='${CURRENT_SOURCE_DIR}'
+    fmte['cdir']='${CMAKE_CURRENT_SOURCE_DIR}'
     fmte['root']='${PROJECT_SOURCE_DIR}'
     ##########################################
     render(prjc, pct, env, fmte)

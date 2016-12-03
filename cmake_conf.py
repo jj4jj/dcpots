@@ -4,7 +4,7 @@ debug = 1
 defs = []
 verbose = 'on'
 extra_c_flags = '-wno-unused-parameter'
-extra_cxx_flags = '--std=c++11'
+extra_cxx_flags = '--std=c++11 -lpthread -lrt -ldl'
 env={
 'protoc':'protoc',
 }
@@ -106,7 +106,7 @@ units = [{
             'name':'dctest',
             'subdir':'app/test',
             'type':'exe',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
             'lincs':['/usr/local/lib'],
             'libs' : [
                 'dcnode',
@@ -136,7 +136,7 @@ units = [{
             'name':'mongoproxy',
             'type':'exe',
             'subdir':'app/mongoproxy',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
             'lincs':['/usr/local/lib'],
             'dsrcs': ['app/mongoproxy/proto'],
             'libs' : [
@@ -157,7 +157,7 @@ units = [{
             'name':'mongoproxy_testapi',
             'type':'exe',
             'subdir':'app/mongoproxy/testapi',
-            'incs':['/usr/local/include'],
+            'incs':['/usr/local/include','{{root}}'],
             'lincs':['/usr/local/lib'],
             'dsrcs': [],
             'libs' : [
@@ -183,7 +183,7 @@ units = [{
             'name':'reporter',
             'type':'exe',
             'subdir':'app/reporter',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
             'libs' : [
                 'dcrepoter',
                 'dcagent',
@@ -200,7 +200,7 @@ units = [{
             'name':'collector',
             'type':'exe',
             'subdir':'app/collector',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
             'libs' : [
                 'dcrepoter',
                 'dcagent',
@@ -217,7 +217,7 @@ units = [{
             'name':'pingpong',
             'type':'exe',
             'subdir':'app/pingpong',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
             'libs' : [
                 'dcnode',
                 'dcutil-drs',

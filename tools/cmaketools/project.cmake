@@ -49,8 +49,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 # install dir
 set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR})
 
-{%for unit in units%}
-add_subdirectory({{unit.subdir}})
+{%for unit in units%}add_subdirectory({{unit.subdir}})
 {%endfor%}
 
 {%for obj in objs%}
