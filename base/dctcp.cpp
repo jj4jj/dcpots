@@ -524,62 +524,6 @@ static inline int _dctcp_proto_dispatch_codec(dctcp_t * stcp, msg_buffer_t * buf
     }
     return nproc;
 }
-static inline int _dctcp_proto_dispatch_token(dctcp_t * stcp, msg_buffer_t * buffer, int fd, int listenfd,
-	dctcp_proto_dispatcher_t * proto_env){
-	dctcp_event_t	sev;
-	sev.type = DCTCP_READ;
-	sev.fd = fd;
-	sev.listenfd = listenfd;
-	int nproc = 0;//proc msg num
-	//need dispatching
-	//////////////////////////////////////////////////
-	int msg_buff_start = 0;
-	int msg_buff_rest = buffer->valid_size;
-	int msg_buff_total = buffer->valid_size;
-	int msg_token_length = proto_env->param_s.length();
-	int msg_length = 0;
-	const char * ftok = strstr(buffer->buffer, proto_env->param_s.c_str());
-	if (ftok && ftok < buffer->buffer + msg_buff_total){
-        msg_length = ftok - buffer->buffer + msg_token_length;
-	}
-	if (!ftok && buffer->valid_size == buffer->max_size){
-		//errror msg , too big 
-		GLOG_ERR("dctcp read msg length:%d is too much than buffer max size:%d",
-			msg_length, buffer->max_size);
-		_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_ERR, listenfd);
-		return -1;
-	}
-	while (msg_length > msg_token_length) {
-        *(buffer->buffer + msg_length - msg_token_length) = '\0';
-		dctcp_msg_t smsg(buffer->buffer + msg_buff_start, msg_length - msg_token_length);
-		sev.msg = &smsg;
-		dctcp_event_dispatch(stcp, sev, proto_env);
-		++nproc;
-		msg_buff_start += msg_length;
-		msg_buff_rest -= msg_length;
-		//the connection may be close , check fd
-		if (!_is_fd_ok(fd)){
-			GLOG_TRA("fd closed when procssing msg rest of msg size:%d buff total:%d last msg unit size is :%d",
-				msg_buff_rest, msg_buff_total, msg_length);
-            return nproc;
-		}
-		ftok = strstr(buffer->buffer + msg_buff_start, proto_env->param_s.c_str());
-		if (ftok && ftok < buffer->buffer + msg_buff_total){
-            msg_length = ftok - (buffer->buffer + msg_buff_start) + msg_token_length;
-		}
-		else {
-			break;
-		}
-	}
-    if (msg_buff_start > 0 && buffer->valid_size >= msg_buff_start){
-		memmove(buffer->buffer,
-			buffer->buffer + msg_buff_start,
-            buffer->valid_size - msg_buff_start);
-		////////////////////////////////////////////////////////////////
-		buffer->valid_size -= msg_buff_start;
-	}
-	return nproc;
-}
 static inline int _read_tcp_socket(dctcp_t * stcp, int fd, int listenfd){
 	msg_buffer_t * buffer = _get_sock_msg_buffer(stcp, fd, true);
 	if (!buffer) {
@@ -712,7 +656,6 @@ static inline int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, in
 	}
     int listenfd = _dctcp_get_fd_listenfd(stcp, fd);
     dctcp_proto_dispatcher_t * proto_env = _dctcp_get_proto_dispatcher(stcp, fd, listenfd);
-    int msg_buff_total = 0;
     msg_buffer_t msg_buff_msg(msg, sz);
 	int ret = 0;
 	if (proto_env->codec.encode) {ret = proto_env->codec.encode(*msgbuff, msg_buff_msg);}

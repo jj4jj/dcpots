@@ -18,23 +18,24 @@ def render(f,t,e,fe):
 def run(wdr, config):
     prjc='/'.join((wdr,'CMakeLists.txt'))
     keys=filter(lambda xk:xk[0:2] != '__', dir(config))
-    envs={}
+    env={}
     fmte={}
     for k in keys:
-        if k != 'envs':
-            envs[k]=getattr(config,k)
+        if k != 'env':
+            env[k]=getattr(config,k)
         else:
             fmte=getattr(config,k)
+            env['env']=fmte
     #reserve
-    fmte['cdir']='${CMAKE_CURRENT_SOURCE_DIR}'
-    fmte['root']='${CMAKE_PROJECT_SOURCE_DIR}'
+    fmte['cdir']='${CURRENT_SOURCE_DIR}'
+    fmte['root']='${PROJECT_SOURCE_DIR}'
     ##########################################
-    render(prjc, pct, envs, fmte)
+    render(prjc, pct, env, fmte)
     units = getattr(config,'units',[])
     for unit in units:
-        envs['unit']=unit
+        env['unit']=unit
         #print str(unit.get('objs',None))
-        render('/'.join((wdr, unit['subdir'], 'CMakeLists.txt')) ,uct,envs, fmte)
+        render('/'.join((wdr, unit['subdir'], 'CMakeLists.txt')) ,uct,env, fmte)
     
 if __name__ == '__main__':
     wdr='.'

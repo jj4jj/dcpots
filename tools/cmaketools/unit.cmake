@@ -1,15 +1,14 @@
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} CSRCS)
 
-{%for dsrc in unit.dsrcs%}aux_source_directory({{dsrc}} aux_CSRCS)
+{%for dsrc in unit.dsrcs%}aux_source_directory({%if dsrc[0] != '/' and dsrc[0] != '{'%}{{env.root}}/{%endif%}{{dsrc}} aux_CSRCS)
 list(APPEND CSRCS "${aux_CSRCS}")
 {%endfor%}
 
-{%for src in unit.srcs%}list(APPEND CSRCS "{{src}}")
+{%for src in unit.srcs%}list(APPEND CSRCS "{%if src[0] != '/' and src[0] != '{'%}{{env.cdir}}/{%endif%}{{src}}")
 {%endfor%}
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}
-${PROJECT_SOURCE_DIR}
-{%for inc in unit.incs%}{{inc}}
+{%for inc in unit.incs%}{%if inc[0] != '/' and inc[0] != '{'%}{{env.root}}/{%endif%}{{inc}}
 {%endfor%}/usr/local/include
 /usr/include)
 
@@ -21,12 +20,13 @@ set_property(TARGET {{unit.name}} PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_property(TARGET {{unit.name}} PROPERTY POSITION_INDEPENDENT_CODE OFF)
 {%endif%}
 link_directories(
-{%for linc in unit.lincs%}{{linc}}
+{%for linc in unit.lincs%}{%if linc[0] != '/' and linc[0] != '{'%}{{env.root}}/{%endif%}{{linc}}
 {%endfor%}/usr/local/lib
 /usr/lib
 /lib)
 target_link_libraries({{unit.name}}
-{%for lib in unit.libs%}{{lib}}{%endfor%})
+{%for lib in unit.libs%}{{lib}}
+{%endfor%})
 {%elif unit.type == 'share'%}
 add_library({{unit.name}} SHARED ${CSRCS})
 {%if not unit.pic%}

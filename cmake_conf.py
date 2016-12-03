@@ -5,7 +5,7 @@ defs = []
 verbose = 'on'
 extra_c_flags = '-wno-unused-parameter'
 extra_cxx_flags = '--std=c++11'
-envs={
+env={
 'protoc':'protoc',
 }
 units = [{
@@ -37,7 +37,7 @@ units = [{
         {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
-            'incs':['/usr/local/include/libmongoc-1.0','3rd'],
+            'incs':['/usr/local/include/libmongoc-1.0','3rd','{{root}}'],
             'lincs':['/usr/local/lib'],
             'dsrcs': ['app/mongoproxy/proto'],
             'objs': [{
