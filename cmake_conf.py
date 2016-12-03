@@ -96,6 +96,11 @@ LIBS = [
             'subdir':'utility/drs',
             'linklibs' : [],
             'includes':['/usr/local/include','3rd'],
+            'genobj': {
+                'out':'${CMAKE_CURRENT_SOURCE_DIR}/extensions.pb.cc',
+                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/extensions.proto',
+                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/dcxconfig.proto ${CMAKE_CURRENT_SOURCE_DIR}/extensions.proto -I${CMAKE_CURRENT_SOURCE_DIR}/ -I/usr/local/include --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/'
+            }
         },
         {
             'name':'dcutil-crypt',

@@ -1,0 +1,31 @@
+
+package dcs;
+import "extensions.proto";
+
+//default process, logger , db
+
+message LogConf {
+	optional	string		dir = 1[(length)="128",default="./"];
+	optional	string		level = 2[(length)="12",(desc)="TRACE,DEBUG,INFO,WARN,ERROR,FATAL",default="TRACE"];
+	optional	string		file_pattern = 3[(length)="32"];
+	optional	uint32		max_roll = 4[default=10];
+	optional	uint32		max_file_size = 5[default=104857600];
+}
+
+message DBConf {
+	optional	string		ip = 1[(length)="32",default="127.0.0.1"];
+	optional	uint32		port = 2[default=3306];
+	optional	string		sock = 3[(length)="64",default=""];
+	optional	uint32		reconnect = 4[default=1];
+	optional	string		charset = 5[(length)="8",default="utf8"];
+	optional	uint32		autocommit = 6[default=1];
+	optional	string		uname = 7[(length)="16",default="test"];
+	optional	string		passwd = 8[(length)="16",default="123456"];
+	optional	string		dbname = 9[(length)="32",default="test"];
+	optional	uint32		threads = 10[default=1];
+}
+
+message ProcessConf {
+	optional	string		pidfile=1[(length)="32"];
+	optional	uint32		daemon=2[default=0];
+}
