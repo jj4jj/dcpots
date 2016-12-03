@@ -66,15 +66,14 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
 
 //raw log
 #ifndef LOGR
-#define RAW_LOG_MSG_FORMAT_PREFIX	"%19s|%s|"
-#define RAW_LOG_MSG_FORMAT_VALUES(tag)	_s_time_alloc_,(tag)
+#define RAW_LOG_MSG_FORMAT_PREFIX	"%s.%d+0800|%s|"
+#define RAW_LOG_MSG_FORMAT_VALUES(tag)	_s_time_alloc_,err_tv_.tv_usec,(tag)
 
 #define LOGR(log_lv_, format,...)	do{\
     if ((log_lv_) >= logger_level((nullptr))){\
-        timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-        char _s_time_alloc_[40]; struct tm _tmp_sftm_; \
-        localtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
-        strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%FT%X%z", &_tmp_sftm_); \
+        timeval err_tv_; gettimeofday(&err_tv_, NULL); err_tv_.tv_sec += 28800;\
+        char _s_time_alloc_[40]; struct tm _tmp_sftm_;gmtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
+        strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%Y-%m-%dT%H:%M:%S", &_tmp_sftm_); \
         logger_write((nullptr), (log_lv_), 0, RAW_LOG_MSG_FORMAT_PREFIX format "\n", RAW_LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL((log_lv_))), ##__VA_ARGS__); \
     }\
 } while (0)
@@ -84,26 +83,24 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
 //log to str
 #ifndef LOGRSTR
 #define LOGRSTR(str, tag, format,...)	do{\
-    timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-    char _s_time_alloc_[40]; struct tm _tmp_sftm_; \
-    localtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
-    strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%FT%X%z", &_tmp_sftm_); \
+    timeval err_tv_; gettimeofday(&err_tv_, NULL); err_tv_.tv_sec += 28800;\
+    char _s_time_alloc_[40]; struct tm _tmp_sftm_;gmtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
+    strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%Y-%m-%dT%H:%M:%S", &_tmp_sftm_); \
     ::dcs::strprintf((str), RAW_LOG_MSG_FORMAT_PREFIX format, RAW_LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
 } while (0)
 #endif
 
 //general log prefix and values
 //2010-10-12T12:08:08.123456|TID@PID|DEBUG|FUNC:LINE|
-#define LOG_MSG_FORMAT_PREFIX	"%s.%lu|%ld@%d|%s|%s:%d|%s|"
+#define LOG_MSG_FORMAT_PREFIX	"%s.%lu+0800|%ld@%d|%s|%s:%d|%s|"
 #define LOG_MSG_FORMAT_VALUES(tag)	_s_time_alloc_,err_tv_.tv_usec,gettid(),getpid(),(tag),basename(__FILE__),__LINE__,__FUNCTION__
 
 //log to str
 #ifndef LOGSTR
 #define LOGSTR(str, tag, format,...)    do{\
-    timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-    char _s_time_alloc_[40]; struct tm _tmp_sftm_;\
-    localtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
-    strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%FT%X%z", &_tmp_sftm_); \
+    timeval err_tv_; gettimeofday(&err_tv_, NULL); err_tv_.tv_sec += 28800;\
+    char _s_time_alloc_[40]; struct tm _tmp_sftm_;gmtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
+    strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%Y-%m-%dT%H:%M:%S", &_tmp_sftm_); \
     ::dcs::strprintf((str), LOG_MSG_FORMAT_PREFIX format, LOG_MSG_FORMAT_VALUES(tag), ##__VA_ARGS__); \
 } while (0)
 #endif
@@ -113,10 +110,9 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
 #ifndef LOG
 #define LOG(logger_, log_lv_, sys_err_, format_, ...)	do{\
     if ((log_lv_) >= logger_level((logger_))){\
-        timeval err_tv_; gettimeofday(&err_tv_, NULL); \
-        char _s_time_alloc_[40]; struct tm _tmp_sftm_; \
-        localtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
-        strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%FT%X%z", &_tmp_sftm_); \
+		timeval err_tv_; gettimeofday(&err_tv_, NULL); err_tv_.tv_sec += 28800;\
+		char _s_time_alloc_[40]; struct tm _tmp_sftm_;gmtime_r(&err_tv_.tv_sec, &_tmp_sftm_); \
+		strftime(_s_time_alloc_, sizeof(_s_time_alloc_), "%Y-%m-%dT%H:%M:%S", &_tmp_sftm_); \
         logger_write((logger_), (log_lv_), (sys_err_), LOG_MSG_FORMAT_PREFIX format_ "\n", LOG_MSG_FORMAT_VALUES(STR_LOG_LEVEL(log_lv_)), ##__VA_ARGS__); \
     }\
 }while (0)

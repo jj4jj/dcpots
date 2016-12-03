@@ -5,9 +5,10 @@ NS_BEGIN(dcs)
     template<bool threadsafe>
     struct lock_mixin;
     //----------misc------------------------------------------------------------
+	uint64_t			time_unixtime_ns();
 	uint64_t			time_unixtime_us();
-	inline	time_t		time_unixtime_s(){ return time_unixtime_us() / 1000000L; }
 	inline	uint64_t	time_unixtime_ms(){ return time_unixtime_us() / 1000L;}
+	inline	time_t		time_unixtime_s() { return time(NULL); }
 
     const char*			strftime(std::string & str, time_t unixtime = 0, const char * format = "%FT%X%z");
     time_t  	        strptime(const std::string & str, const char * format = "%FT%X%z");

@@ -28,7 +28,7 @@ enum dctcp_close_reason_type {
 };
 
 enum dctcp_event_type {
-	DCTCP_EVT_INIT = 0,
+	DCTCP_INIT = 0,
     DCTCP_CONNECTED = 1,
 	DCTCP_NEW_CONNX,
 	DCTCP_CLOSED ,
@@ -52,13 +52,13 @@ struct dctcp_msg_codec_t {
     typedef int(*encode_func_t)(msg_buffer_t & buff, const msg_buffer_t & msg);
     //return >0: success, return the costed buffer msg length , = 0, need more, < 0 error.
     typedef int(*decode_func_t)(msg_buffer_t & msg, const msg_buffer_t & buff);
-    //////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////////////////
     encode_func_t   encode;
     decode_func_t   decode;
 };
 typedef int(*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
 ////////////////////////////////////////////////////////////////////////////
-dctcp_t *           dctcp_default_loop();
+dctcp_t *           dctcp_default_pump();
 dctcp_t *	        dctcp_create(const dctcp_config_t & conf);
 void				dctcp_destroy(dctcp_t * );
 void				dctcp_event_cb(dctcp_t*, dctcp_event_cb_t cb, void *ud);

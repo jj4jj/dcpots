@@ -364,7 +364,7 @@ static inline int init_facilities(App & app, AppImpl * impl_){
         return -3;
     }
     eztimer_set_dispatcher(app_timer_dispatch);
-    impl_->stcp = dctcp_default_loop();
+    impl_->stcp = dctcp_default_pump();
     if (!impl_->stcp){
         GLOG_SER("dctcp loop init error !");
         return -4;
