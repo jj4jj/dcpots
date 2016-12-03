@@ -1,5 +1,5 @@
-project='dcagent'
-version='0.0.1'
+project='dcpots'
+version='0.1.1'
 debug = 1 
 defs = []
 verbose = 'on'
@@ -7,7 +7,6 @@ extra_c_flags = '-wno-unused-parameter'
 extra_cxx_flags = '--std=c++11'
 envs={
 'protoc':'protoc',
-'cdir':'${CMAKE_CURRENT_SOURCE_DIR}',
 }
 units = [{
             'name':'dcbase',
@@ -19,9 +18,9 @@ units = [{
             'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
             'dsrcs':['dcnode/proto','3rd/pbjson'],
             'objs': [{
-                'out':'{cdir}/proto/dcnode.pb.cc',
-                'dep':'{cdir}/proto/dcnode.proto',
-                'cmd':'{protoc} {cdir}/proto/dcnode.proto -I{cdir}/proto --cpp_out={cdir}/proto'
+                'out':'{{cdir}}/proto/dcnode.pb.cc',
+                'dep':'{{cdir}}/proto/dcnode.proto',
+                'cmd':'{{protoc}} {{cdir}}/proto/dcnode.proto -I{{cdir}}/proto --cpp_out={{cdir}}/proto'
             }]
         },
         {
@@ -30,9 +29,9 @@ units = [{
             'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
             'dsrcs':['dcagent/proto'],
             'objs': [{
-                'out':'{cdir}/proto/dcagent.pb.cc',
-                'dep':'{cdir}/proto/dcagent.proto',
-                'cmd':'{protoc} {cdir}/proto/dcagent.proto -I{cdir}/proto --cpp_out={cdir}/proto'
+                'out':'{{cdir}}/proto/dcagent.pb.cc',
+                'dep':'{{cdir}}/proto/dcagent.proto',
+                'cmd':'{{protoc}} {{cdir}}/proto/dcagent.proto -I{{cdir}}/proto --cpp_out={{cdir}}/proto'
             }]
         },
         {
@@ -41,11 +40,11 @@ units = [{
             'incs':['/usr/local/include/libmongoc-1.0','3rd'],
             'lincs':['/usr/local/lib'],
             'dsrcs': ['app/mongoproxy/proto'],
-            'objs': {
-                'out':'{cdir}/../proto/mongo.pb.cc',
-                'dep':'{cdir}/../proto/mongo.proto',
-                'cmd':'{protoc} {cdir}/../proto/mongo.proto -I{cdir}/../proto --cpp_out={cdir}/../proto'
-            }
+            'objs': [{
+                'out':'{{cdir}}/../proto/mongo.pb.cc',
+                'dep':'{{cdir}}/../proto/mongo.proto',
+                'cmd':'{{protoc}} {{cdir}}/../proto/mongo.proto -I{{cdir}}/../proto --cpp_out={{cdir}}/../proto'
+            }]
         },
         {
             'name': 'dcrepoter',
@@ -66,11 +65,12 @@ units = [{
             'name': 'dcrpc',
             'subdir': 'dcrpc',
             'incs': [],
-            'dsrcs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/','./dcrpc/share/dcrpc.pb.cc'],
+            'dsrcs': ['client/','server/','share/'],
+            'srcs': ['share/dcrpc.pb.cc'],
             'objs': [{
-                'out':'{cdir}/share/dcrpc.pb.cc',
-                'dep':'{cdir}/proto/dcrpc.proto',
-                'cmd':'{protoc} {cdir}/proto/dcrpc.proto -I{cdir}/proto --cpp_out={cdir}/share'
+                'out':'{{cdir}}/share/dcrpc.pb.cc',
+                'dep':'{{cdir}}/proto/dcrpc.proto',
+                'cmd':'{{protoc}} {{cdir}}/proto/dcrpc.proto -I{{cdir}}/proto --cpp_out={{cdir}}/share'
             }]
         },
         {
@@ -93,9 +93,9 @@ units = [{
             'subdir':'utility/drs',
             'incs':['/usr/local/include','3rd'],
             'objs': [{
-                'out':'{cdir}/extensions.pb.cc',
-                'dep':'{cdir}/extensions.proto',
-                'cmd':'{protoc} {cdir}/dcxconfig.proto {cdir}/extensions.proto -I{cdir}/ -I/usr/local/include --cpp_out={cdir}/'
+                'out':'{{cdir}}/extensions.pb.cc',
+                'dep':'{{cdir}}/extensions.proto',
+                'cmd':'{{protoc}} {{cdir}}/dcxconfig.proto {{cdir}}/extensions.proto -I{{cdir}}/ -I/usr/local/include --cpp_out={{cdir}}/'
             }]
         },
         {
@@ -127,9 +127,9 @@ units = [{
                 'crypto',
             ],
             'objs': [{
-                'out':'{cdir}/test_conf.pb.cc',
-                'dep':'{cdir}/test_conf.proto',
-                'cmd':'{protoc} {cdir}/test_conf.proto -I{cdir} --cpp_out={cdir}'
+                'out':'{{cdir}}/test_conf.pb.cc',
+                'dep':'{{cdir}}/test_conf.proto',
+                'cmd':'{{protoc}} {{cdir}}/test_conf.proto -I{{cdir}} --cpp_out={{cdir}}'
             }]
         },
         {
@@ -174,9 +174,9 @@ units = [{
                 'bson-1.0'
             ],
             'objs': [{
-                'out':'{cdir}/test.pb.cc',
-                'dep':'{cdir}/test.proto',
-                'cmd':'{protoc} {cdir}/test.proto -I{cdir} --cpp_out={cdir}'
+                'out':'{{cdir}}/test.pb.cc',
+                'dep':'{{cdir}}/test.proto',
+                'cmd':'{{protoc}} {{cdir}}/test.proto -I{{cdir}} --cpp_out={{cdir}}'
             }]
         },
         {

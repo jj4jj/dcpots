@@ -11,24 +11,30 @@ pct = Template(ptf.decode('utf8'))
 uctf=os.path.join(cdr,'unit.cmake')
 utf=open(uctf).read(1024*1024)
 uct = Template(utf.decode('utf8')) 
-def render(f,t,e):
+def render(f,t,e,fe):
     print 'render file:%s ...'%f
-    open(f,'w').write(t.render(e).encode('utf8'))
+    open(f,'w').write(Template(t.render(e)).render(fe).encode('utf8'))
 
 def run(wdr, config):
     prjc='/'.join((wdr,'CMakeLists.txt'))
     keys=filter(lambda xk:xk[0:2] != '__', dir(config))
     envs={}
+    fmte={}
     for k in keys:
         if k != 'envs':
             envs[k]=getattr(config,k)
         else:
-            envs.update(getattr(config,k))
-    render(prjc, pct, envs)
+            fmte=getattr(config,k)
+    #reserve
+    fmte['cdir']='${CMAKE_CURRENT_SOURCE_DIR}'
+    fmte['root']='${CMAKE_PROJECT_SOURCE_DIR}'
+    ##########################################
+    render(prjc, pct, envs, fmte)
     units = getattr(config,'units',[])
     for unit in units:
         envs['unit']=unit
-        render('/'.join((wdr, unit['subdir'], 'CMakeLists.txt')),uct,envs)
+        #print str(unit.get('objs',None))
+        render('/'.join((wdr, unit['subdir'], 'CMakeLists.txt')) ,uct,envs, fmte)
     
 if __name__ == '__main__':
     wdr='.'
@@ -42,3 +48,4 @@ if __name__ == '__main__':
     sys.path.append(wdr)
     mdc=__import__(mdf.split('.')[0])
     run(wdr, mdc)
+
