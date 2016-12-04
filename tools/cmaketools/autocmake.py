@@ -49,4 +49,8 @@ if __name__ == '__main__':
     sys.path.append(wdr)
     mdc=__import__(mdf.split('.')[0])
     run(wdr, mdc)
+    autogen=wdr+'/'+'autogen.sh'
+    if not sys.path.exists(autogen):
+        at=Template(open(os.path.join(cdr,'autogen.sh')).read(1024*1024))
+        render(autogen, at, {'autocmake_dir':cdr),{})
 
