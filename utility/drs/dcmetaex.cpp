@@ -148,7 +148,7 @@ struct ProtoMetaErrorCollector : google::protobuf::compiler::MultiFileErrorColle
 	int line,
 	int column,
 	const string & message) {
-		std::cerr << "file name:" << filename << ":" << line << " error:" << message << endl;
+		GLOG_ERR("protobuff error:[%s] file [%s:%d:%d] ", message.c_str(), filename.c_str(), line, column);
 	}
 };
 
@@ -173,12 +173,12 @@ int		EXTProtoMeta::Init(const char * * path, int n, const char ** otherfiles , i
 	if (importer){
 		return -1;
 	}
+	dst->MapPath(".", "./");
+	dst->MapPath("/", "/");
 	while (path && n-- > 0){
 		dst->MapPath("", path[n]);
 		//std::clog << "add path:" << path[n] << endl;
 	}
-    //dst->MapPath("", "/usr/include");
-    //dst->MapPath("", "/usr/local/include");
 
 	static ProtoMetaErrorCollector mfec;
 	importer = new google::protobuf::compiler::Importer(dst, &mfec);
