@@ -1,9 +1,6 @@
-#DCPots
-DCPots is a distribute system basic componets container solution .
+#dcpots
 
-##dcpots##
-
-- lib components for distribute server (C++)
+lib components for distribute app implementation (C++)
 
 
 
@@ -19,13 +16,13 @@ DCPots is a distribute system basic componets container solution .
 6. DateTime , Collections [hash table and memory pool / block list] (with static flat memory or dynmaic) 
 7. Simple Logger and timer (from cloudwu)
 8. Corouties (support nested in coroutine) (implement refer from cloudwu)
-9. Google Protobuffer meta extensions related, convert all data reprensntation each-other [json/xml/protobuf/mysql ORM](utility/drs)
+9. Google Protobuffer meta extensions related ,DR[json/xml/protobuf/mysql ORM](utility/drs)
 10. Mysql client multi-thread worker
 11. Multi-Thread worker simple GP
 12. An tcp/protobuf based RPC implementation (dcrpc)
 13. Mongoproxy server (app/mongoproxy)
 14. A cluster communication model (dcnode) 
-15. etc
+15. Security/Encryption/Net/FS etc
 
 ```
 
