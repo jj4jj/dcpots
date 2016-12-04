@@ -13,7 +13,7 @@ build()
 rebuild()
 {
     mkdir -p build
-    python tools/cmaketools/ptcmake.py
+    python tools/cmaketools/autocmake.py
     make -C dcnode/proto/
     #cd -
     make -C dagent/proto/
