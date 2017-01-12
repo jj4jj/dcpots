@@ -7,6 +7,8 @@ extra_c_flags = '-wno-unused-parameter'
 extra_cxx_flags = '--std=c++11 -lpthread -lrt -ldl'
 env={
 'protoc':'protoc',
+'protoi':'/usr/local/include',
+'protol':'/usr/local/lib',
 }
 units = [{
             'name':'dcbase',
@@ -15,8 +17,9 @@ units = [{
         {
             'name':'dcnode',
             'subdir':'dcnode',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd','{{protoi}}'],
             'dsrcs':['dcnode/proto','3rd/pbjson'],
+            'srcs':['proto/dcnode.pb.cc'],
             'objs': [{
                 'out':'{{cdir}}/proto/dcnode.pb.cc',
                 'dep':'{{cdir}}/proto/dcnode.proto',
@@ -37,9 +40,10 @@ units = [{
         {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
-            'incs':['/usr/local/include/libmongoc-1.0','3rd','{{root}}'],
+            'incs':['/usr/local/include/libmongoc-1.0','3rd','{{root}}','{{protoi}}'],
             'lincs':['/usr/local/lib'],
             'dsrcs': ['app/mongoproxy/proto'],
+            'srcs':['../proto/mongo.pb.cc'],
             'objs': [{
                 'out':'{{cdir}}/../proto/mongo.pb.cc',
                 'dep':'{{cdir}}/../proto/mongo.proto',
@@ -64,7 +68,7 @@ units = [{
         {
             'name': 'dcrpc',
             'subdir': 'dcrpc',
-            'incs': [],
+            'incs': ['{{protoi}}'],
             'dsrcs': ['client/','server/','share/'],
             'srcs': ['share/dcrpc.pb.cc'],
             'objs': [{
@@ -86,16 +90,17 @@ units = [{
         {
             'name':'dcutil-mongo',
             'subdir':'utility/mongo',
-            'incs':['/usr/local/include/libbson-1.0','3rd'],
+            'incs':['/usr/local/include/libbson-1.0','3rd','/usr/include'],
         },
         {
             'name':'dcutil-drs',
             'subdir':'utility/drs',
-            'incs':['/usr/local/include','3rd'],
+            'incs':['3rd','{{protoi}}'],
+            'srcs': ['extensions.pb.cc'],
             'objs': [{
                 'out':'{{cdir}}/extensions.pb.cc',
                 'dep':'{{cdir}}/extensions.proto',
-                'cmd':'{{protoc}} {{cdir}}/dcxconfig.proto {{cdir}}/extensions.proto -I{{cdir}}/ -I/usr/local/include --cpp_out={{cdir}}/'
+                'cmd':'{{protoc}} {{cdir}}/dcxconfig.proto {{cdir}}/extensions.proto -I{{cdir}}/ -I{{protoi}} -I/usr/include -I/usr/local/include --cpp_out={{cdir}}/'
             }]
         },
         {
@@ -106,11 +111,12 @@ units = [{
             'name':'dctest',
             'subdir':'app/test',
             'type':'exe',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
-            'lincs':['/usr/local/lib'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs':['/usr/local/lib','{{protol}}'],
+            'srcs':['test_conf.pb.cc'],
             'libs' : [
-                'dcnode',
                 'dcagent',
+                'dcnode',
                 'dcutil-drs',
                 'dcutil-mysql',
                 'dcutil-mongo',
@@ -136,8 +142,8 @@ units = [{
             'name':'mongoproxy',
             'type':'exe',
             'subdir':'app/mongoproxy',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
-            'lincs':['/usr/local/lib'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs':['/usr/local/lib','{{protol}}'],
             'dsrcs': ['app/mongoproxy/proto'],
             'libs' : [
                 'mongoproxyapi',
@@ -158,7 +164,7 @@ units = [{
             'type':'exe',
             'subdir':'app/mongoproxy/testapi',
             'incs':['/usr/local/include','{{root}}'],
-            'lincs':['/usr/local/lib'],
+            'lincs':['/usr/local/lib','{{protol}}'],
             'dsrcs': [],
             'libs' : [
                 'mongoproxyapi',
@@ -183,7 +189,8 @@ units = [{
             'name':'reporter',
             'type':'exe',
             'subdir':'app/reporter',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs': ['{{protol}}'],
             'libs' : [
                 'dcrepoter',
                 'dcagent',
@@ -200,7 +207,8 @@ units = [{
             'name':'collector',
             'type':'exe',
             'subdir':'app/collector',
-            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs':['{{protol}}'],
             'libs' : [
                 'dcrepoter',
                 'dcagent',
