@@ -17,7 +17,7 @@ endif()
 #compile option
 option(DEBUG "Debug mode" 1)
 option(PCH "Use precompiled headers" 0)
-SET(DEBUG {{debug_mode}})
+SET(DEBUG {{debug}})
 
 {{definations}}
 SET( CMAKE_VERBOSE_MAKEFILE {{verbose}})
