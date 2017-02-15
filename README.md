@@ -1,60 +1,29 @@
-#DCPots
-DCPots is a distribute system basic comunication componets [agent] container solution .
+#dcpots
 
-##DCPots main feature##
-
-- lib for distribute agent client
-- distribute agent server for report bussiness, monitor, machine statistics , python extension etc.
+lib components for distribute app implementation (C++)
 
 
 
-##Architecture##
+##Features##
 
-- Bussiness Application [reporter , execter , monitor , machine statistics]
-- DCPots [wrap DCNode with python extension]
-- DCNode [local:system mq, remote:tcp]
 
 ```
+1. App framework library (base/App.hpp)
+2. A non-blocked tcp socket msg event handler lib (client/server) [base/dctcp.h]
+3. many utilities function {base/dcutils.hpp)
+4. Linux share memory / SystemV msgq wrrapper in a common scene .
+5. Comman Server command line parser (getopt wrapper) [base/cmdline_opt.h]
+6. DateTime , Collections [hash table and memory pool / block list] (with static flat memory or dynmaic) 
+7. Simple Logger and timer (from cloudwu)
+8. Corouties (support nested in coroutine) (implement refer from cloudwu)
+9. Google Protobuffer meta extensions related ,DR[json/xml/protobuf/mysql ORM](utility/drs)
+10. Mysql client multi-thread worker
+11. Multi-Thread worker simple GP
+12. An tcp/protobuf based RPC implementation (dcrpc)
+13. Mongoproxy server (app/mongoproxy)
+14. A cluster communication model (dcnode) 
+15. Security/Encryption/Net/FS etc
 
-    1:N communication module
-
-
-
-	               			agent(root)[smq:pull,tcp:server]
-								|					|
-								|					|
-	        	agent[tcp:client,tcp:server]  	smq leaf[smq:push]
-					|					|
-         agent[smq:pull,tcp:client] 	|
-			|							|
-    smq leaf[smq:push]    			tcp leaf[tcp:client]
-
-
-    leaf node:
-          1. register name
-          2. send msg by msgq to parent
-    agent node:
-          1. register name
-          2. send msg by msgq or tcp to parent
-          3. forward msg [route] to other [known/unknown] node
-    root node:
-          1. an agent node with no parent node
-
-	NOTE:
-	    msgq push and pull that is a 1:N communication model
-	    sms: msgq pull end [server]
-	    smc: msgq push end [client]
-	    sms:
-	        1. get shm for name maping
-	        2. get a request for register name
-	        3. if name is collision [no host] . reject registering
-	        4. set name map the name->id 
-	        	the ID must not a pid[long :seed+seq].
-	        5. resonse to client
-	    smc:
-	        1. register name with sms [using pid temp communication]
-	        2. recv name response . got a valid key for communication.
-	        3. in ready state, smc can use name map shm to lookup peer node.
 ```
 
 

@@ -43,7 +43,6 @@ public:
 	int						time_offset() const;
 	void					add_time_offset(int seconds);
 
-
 public:
     int			init(int argc, const char * argv[]);
     int			start();
@@ -56,11 +55,16 @@ public:
     dctcp_t       *                 evloop();
     typedef std::function<void()>   timer_task_t;
     //ms: > 0 (just after ms excute once),0:(excute now),<0(period ms excute);
-    void		                    shedule(timer_task_t task, int ms);
+    void		                    schedule(timer_task_t task, int ms);
     void                            cmdopt(cmdline_opt_t & cmdopt);
 
+public:
+	//async related
+	//void							sleep(int us);
+
+
 protected:
-	App(const char * version = __DATE__);
+	App(const char * version = __DATE__ "-" __TIME__);
 	virtual ~App();
 protected:
 	AppImpl * impl_{ nullptr};
@@ -71,7 +75,7 @@ int AppMain(int argc, const char * argv[]){
     static AppT app;
     int ret = app.init(argc, argv);
     if (ret){
-        fprintf(stderr, "App(%s) init error:%d ", typeid(AppT).name(), ret);
+        fprintf(stderr, "App(%s) init error:%d \n", typeid(AppT).name(), ret);
         return ret;
     }
     return app.start();

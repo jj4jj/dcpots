@@ -1,117 +1,122 @@
-PROJECT='dcagent'
-VERSION='0.0.1'
-DEBUG = 1    #0/1
-DEFS = []
-VERBOSE = 'on'    #on/off
-EXTRA_C_FLAGS = '-Wno-unused-parameter'
-EXTRA_CXX_FLAGS = '--std=c++11'
-LIBS = [
-        {
+project='dcpots'
+version='0.1.1'
+debug = 1 
+defs = []
+verbose = 'on'
+extra_c_flags = '-wno-unused-parameter'
+extra_cxx_flags = '--std=c++11 -lpthread -lrt -ldl'
+env={
+'protoc':'protoc',
+'protoi':'/usr/local/include',
+'protol':'/usr/local/lib',
+}
+units = [{
             'name':'dcbase',
             'subdir':'base',
-            'linklibs' : [],
-            'includes':[],
-            'src_dirs':['base'],
         },
         {
             'name':'dcnode',
             'subdir':'dcnode',
-            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
-            'src_dirs':['dcnode/proto','3rd/pbjson'],
-            'genobj': {
-                'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.pb.cc',
-                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.proto',
-                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcnode.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto'
-            }
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd','{{protoi}}'],
+            'dsrcs':['dcnode/proto','3rd/pbjson'],
+            'srcs':['proto/dcnode.pb.cc'],
+            'objs': [{
+                'out':'{{cdir}}/proto/dcnode.pb.cc',
+                'dep':'{{cdir}}/proto/dcnode.proto',
+                'cmd':'{{protoc}} {{cdir}}/proto/dcnode.proto -I{{cdir}}/proto --cpp_out={{cdir}}/proto'
+            }]
         },
         {
             'name':'dcagent',
             'subdir':'dcagent',
-            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
-            'src_dirs':['dcagent/proto'],
-            'genobj': {
-                'out':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.pb.cc',
-                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.proto',
-                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcagent.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/proto'
-            }
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','3rd'],
+            'dsrcs':['dcagent/proto'],
+            'objs': [{
+                'out':'{{cdir}}/proto/dcagent.pb.cc',
+                'dep':'{{cdir}}/proto/dcagent.proto',
+                'cmd':'{{protoc}} {{cdir}}/proto/dcagent.proto -I{{cdir}}/proto --cpp_out={{cdir}}/proto'
+            }]
         },
         {
             'name':'mongoproxyapi',
             'subdir':'app/mongoproxy/api',
-            'includes':['/usr/local/include/libmongoc-1.0','3rd'],
-            'linkpaths':['/usr/local/lib'],
-            'src_dirs': ['app/mongoproxy/proto'],
-            'genobj': {
-                'out':'${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.pb.cc',
-                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.proto',
-                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/../proto/mongo.proto -I${CMAKE_CURRENT_SOURCE_DIR}/../proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/../proto'
-            }
+            'incs':['/usr/local/include/libmongoc-1.0','3rd','{{root}}','{{protoi}}'],
+            'lincs':['/usr/local/lib'],
+            'dsrcs': ['app/mongoproxy/proto'],
+            'srcs':['../proto/mongo.pb.cc'],
+            'objs': [{
+                'out':'{{cdir}}/../proto/mongo.pb.cc',
+                'dep':'{{cdir}}/../proto/mongo.proto',
+                'cmd':'{{protoc}} {{cdir}}/../proto/mongo.proto -I{{cdir}}/../proto --cpp_out={{cdir}}/../proto'
+            }]
         },
         {
             'name': 'dcrepoter',
             'subdir': 'reporter',
-            'includes': ['base','dcnode','dcagent','/usr/local/include/libmongoc-1.0','3rd'],
+            'incs': ['base','dcnode','dcagent','/usr/local/include/libmongoc-1.0','3rd'],
         },
         {
             'name': 'pbjson',
-            'subdir': '3rd/pbjson/',
-            'includes': ['3rd'],
+            'subdir': '3rd/pbjson',
+            'incs': ['3rd'],
         },
         {
             'name': 'dcutil-redis',
             'subdir': 'utility/redis',
-            'includes': ['3rd'],
+            'incs': ['3rd'],
         },
         {
             'name': 'dcrpc',
             'subdir': 'dcrpc',
-            'includes': [],
-            'src_dirs': ['./dcrpc/client/','./dcrpc/server/','./dcrpc/share/','./dcrpc/share/dcrpc.pb.cc'],
-            'genobj': {
-                'out':'${CMAKE_CURRENT_SOURCE_DIR}/share/dcrpc.pb.cc',
-                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/proto/dcrpc.proto',
-                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/proto/dcrpc.proto -I${CMAKE_CURRENT_SOURCE_DIR}/proto --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}/share'
-            }
+            'incs': ['{{protoi}}'],
+            'dsrcs': ['client/','server/','share/'],
+            'srcs': ['share/dcrpc.pb.cc'],
+            'objs': [{
+                'out':'{{cdir}}/share/dcrpc.pb.cc',
+                'dep':'{{cdir}}/proto/dcrpc.proto',
+                'cmd':'{{protoc}} {{cdir}}/proto/dcrpc.proto -I{{cdir}}/proto --cpp_out={{cdir}}/share'
+            }]
         },
         {
             'name':'dcutil-mysql',
             'subdir':'utility/mysql',
-            'linklibs' : [],
-            'includes':['/usr/local/include'],
+            'incs':['/usr/local/include'],
         },
         {
             'name':'dcutil-script',
             'subdir':'utility/script',
-            'linklibs' : [],
-            'includes':['/usr/local/include'],
+            'incs':['/usr/local/include'],
         },
         {
             'name':'dcutil-mongo',
             'subdir':'utility/mongo',
-            'linklibs' : [],
-            'includes':['/usr/local/include/libbson-1.0','3rd'],
+            'incs':['/usr/local/include/libbson-1.0','3rd','/usr/include'],
         },
         {
             'name':'dcutil-drs',
             'subdir':'utility/drs',
-            'linklibs' : [],
-            'includes':['/usr/local/include','3rd'],
+            'incs':['3rd','{{protoi}}'],
+            'srcs': ['extensions.pb.cc'],
+            'objs': [{
+                'out':'{{cdir}}/extensions.pb.cc',
+                'dep':'{{cdir}}/extensions.proto',
+                'cmd':'{{protoc}} {{cdir}}/dcxconfig.proto {{cdir}}/extensions.proto -I{{cdir}}/ -I{{protoi}} -I/usr/include -I/usr/local/include --cpp_out={{cdir}}/'
+            }]
         },
         {
             'name':'dcutil-crypt',
             'subdir':'utility/crypt',
         },
-
-]
-EXES = [
         {
             'name':'dctest',
             'subdir':'app/test',
-            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
-            'linkpaths':['/usr/local/lib'],
-            'linklibs' : [
-                'dcnode',
+            'type':'exe',
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs':['/usr/local/lib','{{protol}}'],
+            'srcs':['test_conf.pb.cc'],
+            'libs' : [
                 'dcagent',
+                'dcnode',
                 'dcutil-drs',
                 'dcutil-mysql',
                 'dcutil-mongo',
@@ -127,19 +132,20 @@ EXES = [
                 'ssl',
                 'crypto',
             ],
-            'genobj': {
-                'out':'${CMAKE_CURRENT_SOURCE_DIR}/test_conf.pb.cc',
-                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/test_conf.proto',
-                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/test_conf.proto -I${CMAKE_CURRENT_SOURCE_DIR} --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}'
-            }
+            'objs': [{
+                'out':'{{cdir}}/test_conf.pb.cc',
+                'dep':'{{cdir}}/test_conf.proto',
+                'cmd':'{{protoc}} {{cdir}}/test_conf.proto -I{{cdir}} --cpp_out={{cdir}}'
+            }]
         },
         {
             'name':'mongoproxy',
+            'type':'exe',
             'subdir':'app/mongoproxy',
-            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
-            'linkpaths':['/usr/local/lib'],
-            'src_dirs': ['app/mongoproxy/proto'],
-            'linklibs' : [
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs':['/usr/local/lib','{{protol}}'],
+            'dsrcs': ['app/mongoproxy/proto'],
+            'libs' : [
                 'mongoproxyapi',
                 'dcnode',
                 'dcagent',
@@ -155,11 +161,12 @@ EXES = [
         },
         {
             'name':'mongoproxy_testapi',
+            'type':'exe',
             'subdir':'app/mongoproxy/testapi',
-            'includes':['/usr/local/include'],
-            'linkpaths':['/usr/local/lib'],
-            'src_dirs': [],
-            'linklibs' : [
+            'incs':['/usr/local/include','{{root}}'],
+            'lincs':['/usr/local/lib','{{protol}}'],
+            'dsrcs': [],
+            'libs' : [
                 'mongoproxyapi',
                 'dcnode',
                 'dcagent',
@@ -172,17 +179,19 @@ EXES = [
                 'mongoc-1.0',
                 'bson-1.0'
             ],
-            'genobj': {
-                'out':'${CMAKE_CURRENT_SOURCE_DIR}/test.pb.cc',
-                'dep':'${CMAKE_CURRENT_SOURCE_DIR}/test.proto',
-                'cmd':'protoc ${CMAKE_CURRENT_SOURCE_DIR}/test.proto -I${CMAKE_CURRENT_SOURCE_DIR} --cpp_out=${CMAKE_CURRENT_SOURCE_DIR}'
-            }
+            'objs': [{
+                'out':'{{cdir}}/test.pb.cc',
+                'dep':'{{cdir}}/test.proto',
+                'cmd':'{{protoc}} {{cdir}}/test.proto -I{{cdir}} --cpp_out={{cdir}}'
+            }]
         },
         {
             'name':'reporter',
+            'type':'exe',
             'subdir':'app/reporter',
-            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
-            'linklibs' : [
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs': ['{{protol}}'],
+            'libs' : [
                 'dcrepoter',
                 'dcagent',
                 'dcnode',
@@ -196,9 +205,11 @@ EXES = [
         },
         {
             'name':'collector',
+            'type':'exe',
             'subdir':'app/collector',
-            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
-            'linklibs' : [
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}','{{protoi}}'],
+            'lincs':['{{protol}}'],
+            'libs' : [
                 'dcrepoter',
                 'dcagent',
                 'dcnode',
@@ -212,9 +223,10 @@ EXES = [
         },
         {
             'name':'pingpong',
+            'type':'exe',
             'subdir':'app/pingpong',
-            'includes':['/usr/local/include','/usr/local/include/libmongoc-1.0'],
-            'linklibs' : [
+            'incs':['/usr/local/include','/usr/local/include/libmongoc-1.0','{{root}}'],
+            'libs' : [
                 'dcnode',
                 'dcutil-drs',
                 'dcbase',

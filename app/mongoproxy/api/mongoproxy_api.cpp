@@ -1,13 +1,14 @@
 #include "base/stdinc.h"
 #include "base/msg_buffer.hpp"
 #include "3rd/pbjson/pbjson.hpp"
-#include "../mongoproxy_msg.h"
-#include "mongoproxy_api.h"
 #include "dcnode/dcnode.h"
 #include "base/msg_buffer.hpp"
 #include "utility/drs/dcjson.hpp"
 #include "utility/drs/dcproto.h"
 #include "google/protobuf/descriptor.h"
+#include "../mongoproxy_msg.h"
+#include "mongoproxy_api.h"
+
 
 using namespace dcorm;
 using namespace std;

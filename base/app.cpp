@@ -110,7 +110,7 @@ void  App::cmdopt(cmdline_opt_t & cmdopt){
 
 //typedef std::function<void()>   timer_task_t;
 //ms: > 0 (just after ms excute once),0:(excute now),<0(period ms excute);
-void App::shedule(timer_task_t task, int ms){
+void App::schedule(timer_task_t task, int ms){
 	impl_->task_id++;
 	int max_try = INT_MAX;
 	while (max_try-- > 0 && impl_->task_pool.find(impl_->task_id) !=
@@ -364,7 +364,7 @@ static inline int init_facilities(App & app, AppImpl * impl_){
         return -3;
     }
     eztimer_set_dispatcher(app_timer_dispatch);
-    impl_->stcp = dctcp_default_loop();
+    impl_->stcp = dctcp_default_pump();
     if (!impl_->stcp){
         GLOG_SER("dctcp loop init error !");
         return -4;

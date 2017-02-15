@@ -649,6 +649,13 @@ static int app_test(int argc, const char * argv[]){
                     usleep(1000*10);
                 }
             }
+			this->schedule([](){
+				GLOG_IFO("test tick schedule 5s every !");
+			},-5000);
+			this->schedule([]() {
+				GLOG_IFO("test tick schedule after 8s!");
+			}, 8000);
+
             return 0;
         }
 
@@ -845,6 +852,37 @@ static int aes_test() {
     return 0;
 
 }
+#include "base/coroutine.h"
+void co_test_h(void * ud, CoroutineScheduler * cs) {
+	GLOG_IFO("ok info:%s %d", cs->backtrace(), cs->pending());
+}
+
+void co_test_g(void * ud, CoroutineScheduler * cs) {
+	GLOG_DBG("X");
+	//cs->start(co_test_h, (void*)"TESTh", "h()");
+	cs->yield();
+	GLOG_IFO("ok info:%s %d", cs->backtrace(), cs->pending());
+}
+void co_test_f(void * ud, CoroutineScheduler * cs) {
+	GLOG_DBG("co test1");
+	cs->yield();
+	GLOG_DBG("co test2");
+	cs->start(co_test_g, (void*)"TESTG", "g()");
+	cs->yield();
+	GLOG_DBG("co test3");
+	cs->yield();
+	GLOG_IFO("ok info:%s %d", cs->backtrace(), cs->pending());
+	cout << (char*)ud <<endl;
+}
+static int co_test() {
+	CoroutineScheduler cs;
+	int coid = cs.spawn(co_test_f, (void*)"hello,world");
+	while (cs.status(coid) != COROUTINE_STATE_DEAD) {
+		cs.resume(coid);
+		GLOG_DBG("after resumed");
+	}
+	return 0;
+}
 int main(int argc, const char* argv[])
 {
 
@@ -887,6 +925,9 @@ int main(int argc, const char* argv[])
         if (!strcasecmp(argv[1], "aes")) {
             return aes_test();
         }
+		if (!strcasecmp(argv[1], "co")) {
+			return co_test();
+		}
 		switch (argv[1][0])
 		{
 		case 'm':

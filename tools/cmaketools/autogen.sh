@@ -1,30 +1,20 @@
 #!/bin/bash
 
-build()
-{
-    make -C dcnode/proto/
-    #cd -
-    make -C dagent/proto/
-    make -C app/mongoproxy/
+build(){
     cd build && cmake ../ && make -j 6
     cd -
 }
 
-rebuild()
-{
+rebuild(){
     mkdir -p build
-    cd tools/cmaketools/
-    python generate.py ../..
-    cd -
-    make -C dcnode/proto/
-    #cd -
-    make -C dagent/proto/
+	cmdir=$1
+	[ -z "$1" ] && cmdir="{{autocmake_dir}}"
+    python $cmdir/autocmake.py
     cd build && cmake ../ && make
     cd -
 }
 ###########################
-clean()
-{
+clean(){
     echo "clean files ..."
     find . -name *.pyc
     find . -name *.pyc | xargs rm -f
@@ -35,30 +25,20 @@ clean()
     echo "make clean"
     cd build && make clean
     echo "clean shm and msg queue"
-    sh tools/clean.sh
 }
 
-inst_all()
-{
+inst_all(){
     cd build && make install
 }
 
-run_test()
-{
-    echo "todo"
-    cd bin && ./dcagent test
-}
-
-list()
-{
-    echo "usage:./automake.sh <option>  "
+list(){
+    echo "usage:$1 <option> [autocmake.py tools dir] "
     echo "option as follow:"
     echo -e "\trebuild"
     echo -e "\tbuild"
     echo -e "\tclean"
     echo -e "\tlist"
     echo -e "\tinstall"
-    echo -e "\ttest"
 }
 
 if [[ ! -d build ]];then
@@ -71,16 +51,13 @@ case $1 in
         build
         ;;
     rebuild)
-        rebuild
+        rebuild $2
         ;;
     clean)
         clean
         ;;
     install)
         inst_all
-        ;;
-    test)
-        run_test
         ;;
     *)
         list

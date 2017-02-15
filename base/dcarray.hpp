@@ -22,6 +22,14 @@ struct array_t {
     bool   empty() const {
         return this->count == 0;
     }
+    T &    front() {
+        assert(count>0);
+        return this->list[0];
+    }
+    T &    back() {
+        assert(count>0);
+        return this->list[count-1];
+    }
     void   clear() {
         this->count = 0;
     }
@@ -90,7 +98,6 @@ struct array_t {
         }
         if (swap_remove){
             list[idx] = list[count - 1];
-            //list[cmax - 1].construct();
         }
         else {
             memmove(list + idx, list + idx + 1, (count - idx - 1)*sizeof(T));
