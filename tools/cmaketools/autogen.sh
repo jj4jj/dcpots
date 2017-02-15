@@ -9,7 +9,7 @@ rebuild(){
     mkdir -p build
 	cmdir=$1
 	[ -z "$1" ] && cmdir="{{autocmake_dir}}"
-    python $cmdir/autocmake.py
+    python $cmdir/autocmake.py {{autocmake_conf}}
     cd build && cmake ../ && make
     cd -
 }
