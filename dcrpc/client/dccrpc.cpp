@@ -133,6 +133,8 @@ int RpcClient::init(const std::string & svraddrs, int queue_size, dctcp_t * stcp
     impl = new RpcClientImpl;
     if (!stcp){
         dctcp_config_t dctcp;
+        dctcp.max_tcp_send_buff_size = 1024*1024*10;
+        dctcp.max_tcp_recv_buff_size = 1024*1024*10;
         impl->stcp = dctcp_create(dctcp);
         if (!impl->stcp){
             return -2;

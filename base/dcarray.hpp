@@ -89,7 +89,7 @@ struct array_t {
             return -1;
         }
         if (swap_remove){
-            list[idx] = list[cmax - 1];
+            list[idx] = list[count - 1];
             //list[cmax - 1].construct();
         }
         else {

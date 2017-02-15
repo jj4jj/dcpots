@@ -331,7 +331,7 @@ namespace dcs {
         int ret = 0;
         while(true){
             ret = readdir_r(dfd, entryp, &dp_itr);
-            if(ret){
+            if(ret || !dp_itr){
                 break;
             }
             if (strcmp(dp_itr->d_name, ".") == 0

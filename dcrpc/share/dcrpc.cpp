@@ -2,18 +2,23 @@
 #include "dcrpc.h"
 using namespace google::protobuf;
 namespace dcrpc {
+    static std::string s_null_str;
     struct RpcValuesImpl : public RepeatedPtrField< ::dcrpc::RpcMsg_ValueItem > {
     };
     int64_t RpcValues::geti(int idx) const {
+        if(data_->size() == 0){return 0;}
         return data_->Get(idx).i();
     }
     const string & RpcValues::gets(int idx) const {
+        if (data_->size() == 0) { return s_null_str; }
         return data_->Get(idx).s();
     }
     double RpcValues::getf(int idx) const {
+        if (data_->size() == 0) { return .0; }
         return data_->Get(idx).f();
     }
     const string & RpcValues::getb(int idx) const {
+        if (data_->size() == 0) { return s_null_str; }
         return data_->Get(idx).b();
     }
 	void RpcValues::extend(int n){

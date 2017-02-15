@@ -213,8 +213,8 @@ int    RpcServer::init(const std::string & addr, dctcp_t * stcp){
         dctcp_config_t dctcp;
         dctcp.max_recv_buff = 1024 * 1024 * 2;
         dctcp.max_send_buff = 1024 * 1024 * 1;
-        dctcp.max_tcp_recv_buff_size = 1 * 1024 * 1024;
-        dctcp.max_tcp_send_buff_size = 1 * 1024 * 1024;
+        dctcp.max_tcp_recv_buff_size = 10 * 1024 * 1024;
+        dctcp.max_tcp_send_buff_size = 10 * 1024 * 1024;
         impl->stcp_looper = dctcp_create(dctcp);
         if (!impl->stcp_looper){
             return -2;
