@@ -1,5 +1,5 @@
 #!/bin/bash
-
+chmod +x $0
 build(){
     cd build && cmake ../ && make -j 6
     cd -
