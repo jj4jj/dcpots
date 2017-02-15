@@ -69,7 +69,7 @@ units = [{
             'name': 'dcrpc',
             'subdir': 'dcrpc',
             'incs': ['{{protoi}}'],
-            'dsrcs': ['client/','server/','share/'],
+            'dsrcs': ['{{cdir}}/client/','{{cdir}}/server/','{{cdir}}/share/'],
             'srcs': ['share/dcrpc.pb.cc'],
             'objs': [{
                 'out':'{{cdir}}/share/dcrpc.pb.cc',
