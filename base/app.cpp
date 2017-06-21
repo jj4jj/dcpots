@@ -129,7 +129,7 @@ void App::schedule(timer_task_t task, int ms){
 		eztimer_run_after(ms, impl_->task_id, &impl_, sizeof(impl_));
     }
     else if (ms < 0){
-		eztimer_run_every(ms, impl_->task_id, &impl_, sizeof(impl_));
+		eztimer_run_every(-ms, impl_->task_id, &impl_, sizeof(impl_));
     }
     else {
         task();
