@@ -770,6 +770,49 @@ namespace dcs {
         }
         return -1;
     }
+    int         netaddr(struct sockaddr_in & addr, bool stream, const std::string & saddr){
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_addr.s_addr = 0;
+        addr.sin_family = AF_INET;
+        addr.sin_port = 0;
+        //////////////////////////////////////////////////////////////////////////        
+        std::vector<string> vs;
+        strsplit(saddr, ":", vs);
+        if (vs.empty()) {
+            GLOG_ERR("error format address:%s", saddr.c_str());
+            return -1;
+        }
+        int port = 0;
+        if (vs.size() == 2) {
+            port = stoi(vs[1]);
+        }
+        char _port[6];  /* strlen("65535"); */
+        snprintf(_port, 6, "%d", port);
+        struct addrinfo hints, *servinfo;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = stream?SOCK_STREAM:SOCK_DGRAM;
+        if (getaddrinfo(vs[0].c_str(),_port,&hints,&servinfo) != 0) {
+             hints.ai_family = AF_INET6;
+             if (getaddrinfo(vs[0].c_str(),_port,&hints,&servinfo) != 0) {
+                 GLOG_SER("getaddrinfo error try 6 and 4 host:%s", saddr.c_str());
+                 return -1;
+            }
+        }        
+        for (struct addrinfo * p = servinfo; p != NULL; p = p->ai_next) {
+            int sockfd = socket(p->ai_family,p->ai_socktype,p->ai_protocol);
+            if (sockfd == -1){
+                continue;
+            }
+            close(sockfd);
+            memcpy(&addr, p->ai_addr, p->ai_addrlen);
+            freeaddrinfo(servinfo);
+            return 0;
+        }
+        freeaddrinfo(servinfo);
+        GLOG_SER("create socket:%s error", saddr.c_str());
+        return -1;
+    }
     int         socknetaddr(sockaddr_in & addr, const std::string & saddr) {
         memset(&addr, 0, sizeof(addr));
         addr.sin_addr.s_addr = 0;
