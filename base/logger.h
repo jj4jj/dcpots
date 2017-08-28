@@ -119,12 +119,14 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-#define LOG_TRA(logger_, format_, ...)		LOG(logger_, LOG_LVL_TRACE, sys_err_, format_, ##__VA_ARGS__)
-#define LOG_DBG(logger_, format_, ...)		LOG(logger_, LOG_LVL_DEBUG, sys_err_, format_, ##__VA_ARGS__)
-#define LOG_IFO(logger_, format_, ...)		LOG(logger_, LOG_LVL_INFO, sys_err_, format_, ##__VA_ARGS__)
-#define LOG_WAR(logger_, format_, ...)		LOG(logger_, LOG_LVL_WARNING, sys_err_, format_, ##__VA_ARGS__)
-#define LOG_ERR(logger_, format_, ...)		LOG(logger_, LOG_LVL_ERROR, sys_err_, format_, ##__VA_ARGS__)
-#define LOG_FTL(logger_, format_, ...)		LOG(logger_, LOG_LVL_FATAL, sys_err_, format_, ##__VA_ARGS__)
+#define LOG_TRA(logger_, format_, ...)		LOG(logger_, LOG_LVL_TRACE, 0, format_, ##__VA_ARGS__)
+#define LOG_DBG(logger_, format_, ...)		LOG(logger_, LOG_LVL_DEBUG, 0, format_, ##__VA_ARGS__)
+#define LOG_IFO(logger_, format_, ...)		LOG(logger_, LOG_LVL_INFO, 0, format_, ##__VA_ARGS__)
+#define LOG_WAR(logger_, format_, ...)		LOG(logger_, LOG_LVL_WARNING, 0, format_, ##__VA_ARGS__)
+#define LOG_ERR(logger_, format_, ...)		LOG(logger_, LOG_LVL_ERROR, 0, format_, ##__VA_ARGS__)
+#define LOG_FTL(logger_, format_, ...)		LOG(logger_, LOG_LVL_FATAL, 0, format_, ##__VA_ARGS__)
+#define LOG_SER(logger_, format_, ...)		LOG(logger_, LOG_LVL_ERROR, 1, format_, ##__VA_ARGS__)
+#define LOG_SFT(logger_, format_, ...)		LOG(logger_, LOG_LVL_FATAL, 1, format_, ##__VA_ARGS__)
 
 
 #endif

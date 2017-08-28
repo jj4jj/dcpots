@@ -156,8 +156,8 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 		GLOG_FTL("malloc error");
 		return nullptr;
 	}
-	smq->sendbuff = (msgbuf	*)malloc(conf.msg_buffsz);
-	smq->recvbuff = (msgbuf	*)malloc(conf.msg_buffsz);
+	smq->sendbuff = (msgbuf	*)malloc(conf.msg_buffsz + sizeof(size_t));
+	smq->recvbuff = (msgbuf	*)malloc(conf.msg_buffsz + sizeof(size_t));
 	if (!smq->sendbuff ||
 		!smq->recvbuff){
 		//mem alloc
@@ -258,36 +258,47 @@ uint64_t	 dcsmq_take(dcsmq_t* smq, dcsmq_msg_t & msg) {//send to peer like himse
 uint64_t     dcsmq_recv(dcsmq_t* smq, dcsmq_msg_t & msg){
     return _dcsmq_recv_msg(smq, smq->recver, smq->session, msg);
 }
-static inline int
-_dcsmq_send_msg(dcsmq_t* smq, int msgid, uint64_t dst, const dcsmq_msg_t & msg){
-    if (msg.sz > smq->conf.msg_buffsz){
-        GLOG_ERR("send msg error :%d max :%d", msg.sz, smq->conf.msg_buffsz);
+int     _dcsmq_sendv(dcsmq_t* smq, int msgid, uint64_t dst, const std::vector<dcsmq_msg_t> & msgv) {
+    if (dst == 0) {
+        GLOG_ERR("send msg error dst must not 0!");
         return -1;
     }
-    if (dst == 0){
-        GLOG_ERR("send msg error dst must not 0!");
-        return -2;
-    }
+    int totalsz = 0;
     smq->sendbuff->mtype = dst;
-    memcpy(smq->sendbuff->mtext, msg.buffer, msg.sz);
+    for (int i = 0; i < (int)msgv.size(); ++i) {
+        const dcsmq_msg_t & msg = msgv[i];
+        if ((totalsz + msg.sz) > smq->conf.msg_buffsz) {
+            GLOG_ERR("send msg total:%d error sz:%d max :%d", totalsz, msg.sz, smq->conf.msg_buffsz);
+            return -2;
+        }
+        memcpy(smq->sendbuff->mtext + totalsz, msg.buffer, msg.sz);
+        totalsz += msg.sz;
+    }
     int ret = 0;
     do {
-        ret = msgsnd(msgid, smq->sendbuff, msg.sz, IPC_NOWAIT);
+        ret = msgsnd(msgid, smq->sendbuff, totalsz, IPC_NOWAIT);
     } while (ret == -1 && errno == EINTR);
     //============stat====================
-    if (ret){
+    if (ret) {
         STAT_ON_SEND_ERROR();
     }
-    else{
+    else {
         STAT_ON_SEND(dst, msg.sz);
     }
     return ret;
 }
 int		dcsmq_put(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
-    return _dcsmq_send_msg(smq, smq->recver, dst, msg);
+    std::vector<dcsmq_msg_t> msgv;
+    msgv.push_back(msg);
+    return _dcsmq_sendv(smq, smq->recver, dst, msgv);
 }
 int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
-    return _dcsmq_send_msg(smq, smq->sender, dst, msg);
+    std::vector<dcsmq_msg_t> msgv;
+    msgv.push_back(msg);
+    return _dcsmq_sendv(smq, smq->sender, dst, msgv);
+}
+int         dcsmq_sendv(dcsmq_t*, uint64_t dst, const std::vector<dcsmq_msg_t> & msgv){
+    return _dcsmq_sendv(smq, smq->sender, dst, msgv);
 }
 bool	dcsmq_server_mode(dcsmq_t * smq){
 	return smq->conf.passive;
