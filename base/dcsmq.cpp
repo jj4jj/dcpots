@@ -283,7 +283,7 @@ int     _dcsmq_sendv(dcsmq_t* smq, int msgid, uint64_t dst, const std::vector<dc
         STAT_ON_SEND_ERROR();
     }
     else {
-        STAT_ON_SEND(dst, msg.sz);
+        STAT_ON_SEND(dst, totalsz);
     }
     return ret;
 }
@@ -297,7 +297,7 @@ int     dcsmq_send(dcsmq_t* smq, uint64_t dst, const dcsmq_msg_t & msg){
     msgv.push_back(msg);
     return _dcsmq_sendv(smq, smq->sender, dst, msgv);
 }
-int         dcsmq_sendv(dcsmq_t*, uint64_t dst, const std::vector<dcsmq_msg_t> & msgv){
+int         dcsmq_sendv(dcsmq_t* smq, uint64_t dst, const std::vector<dcsmq_msg_t> & msgv){
     return _dcsmq_sendv(smq, smq->sender, dst, msgv);
 }
 bool	dcsmq_server_mode(dcsmq_t * smq){
