@@ -191,6 +191,9 @@ const char * App::on_control(const char * cmdline){
     GLOG_IFO("process received a command line:%s", cmdline);
     return cmdline;
 }
+const char * App::coredump(){
+    return "some important info when crash ocurred !";
+}
 void  App::cmdopt(cmdline_opt_t & cmdopt){
     assert("cmdline options must be set most once !" && !this->impl_->cmdopt);
     this->impl_->cmdopt = &cmdopt;
@@ -402,7 +405,7 @@ static inline void init_signal(){
                 strfcname.reserve(128);
                 std::string strft;
                 string strstack;
-                dcs::strprintf(strfcname, "/tmp/core.%s.%s.log", namep, dcs::strftime(strft, time(NULL), "%F_%H%M%S"));
+                dcs::strprintf(strfcname, "/tmp/core.%s.%s.log", namep, dcs::strftime(strft, time(NULL), "%y%m%d_%H%M%S"));
                 FILE * fp = fopen(strfcname.c_str(), "w");
                 if(fp){
                     fprintf(fp, "program crash info: \n"
@@ -419,6 +422,8 @@ static inline void init_signal(){
                     ucontext_t *uc = (ucontext_t *)ucontex;
                     const char * stackinfo = dcs::stacktrace(strstack, 0, 16, uc);
                     fprintf(fp, "program crash stack info:\n%s\n", stackinfo);
+                    fprintf(fp, "crash app info:[%s]\n", App::instance().coredump());
+                    fflush(fp);
                     fclose(fp);
                 }
             }

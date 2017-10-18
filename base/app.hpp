@@ -24,6 +24,7 @@ public:
     virtual bool			on_restart();//true is ok
     virtual int				on_exit();//once
     virtual const char *	on_control(const char * cmdline);
+    virtual const char *    coredump();
     virtual std::string		options();
 
 public:
