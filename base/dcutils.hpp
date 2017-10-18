@@ -16,10 +16,12 @@ NS_BEGIN(dcs)
 
     time_t				stdstrtime(const char * strtime = "1970-01-01T08:08:08+0800");
     bool                time_same_hour(time_t t1, time_t t2);
+    bool                time_same_ten_minutes(time_t t1, time_t t2);
     bool                time_same_day(time_t t1, time_t t2);
     bool                time_same_month(time_t t1, time_t t2);
     bool                time_same_week(time_t t1, time_t t2);
     bool                time_same_year(time_t t1, time_t t2);
+    int	                getminutes(time_t unixtime);
 
 	//file releataed
     //if sz = 0 , test file exist

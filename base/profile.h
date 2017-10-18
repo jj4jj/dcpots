@@ -40,7 +40,6 @@ public:
 };
 
 //#define _LOG_PROFILING_
-
 #define PROFILE_ON(s)	profile_t::on((s))
 #ifdef _LOG_PROFILING_
 #define PROFILE_FUNC() profile_t _func_prof_(__FILE__,__FUNCTION__,__LINE__)

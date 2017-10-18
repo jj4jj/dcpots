@@ -511,7 +511,7 @@ static inline int _dctcp_proto_dispatch_codec(dctcp_t * stcp, msg_buffer_t * buf
     msg_buffer_t msg_proc_buff = *buffer;
     while(true){
         msg_buff_length = proto_env->codec.decode(msg_buff, msg_proc_buff);
-        if (0 == msg_buff_length) {
+        if (0 == msg_buff_length || msg_buff_length > msg_proc_buff.valid_size) {
             break;
         }
         else if(msg_buff_length < 0){
@@ -873,7 +873,7 @@ static inline void _proc(dctcp_t * stcp, const epoll_event & ev){
 void			dctcp_close(dctcp_t * stcp, int fd){
 	_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_CLOSE_ACTIVE, _dctcp_get_fd_listenfd(stcp, fd));
 }
-int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc){
+int             dctcp_poll(dctcp_t * stcp, int interval_us, int max_proc){
 	PROFILE_FUNC();
 	if (stcp->listeners.empty() &&
 		stcp->connectors.empty()){
@@ -900,7 +900,7 @@ int            dctcp_poll(dctcp_t * stcp, int timeout_us, int max_proc){
         if (t_timeus_now < stcp->next_evt_poll_time){
             return 0;
         }
-        stcp->next_evt_poll_time = t_timeus_now + timeout_us;
+        stcp->next_evt_poll_time = t_timeus_now + interval_us;
     }
     ////////////////////////////////////////////////////////
 	int n = epoll_wait(stcp->epfd, stcp->events, stcp->conf.max_client, 0);

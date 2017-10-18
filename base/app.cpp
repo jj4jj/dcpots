@@ -17,6 +17,90 @@
 
 NS_BEGIN(dcs)
 
+struct AppStatItem {
+    uint64_t        total_time_ns {0};
+    uint32_t        max_time_ns {0};
+    uint32_t        min_time_ns {1000*1000*1000};
+    uint64_t        call_begin_time_ns {0};
+    uint64_t        ncall {0};
+    uint64_t        nproc {0};
+    void clear(){
+        total_time_ns = 0;
+        max_time_ns = 0;
+        min_time_ns = 0;
+        ncall = 0;
+        nproc = 0;
+    }
+    void begin(){
+        call_begin_time_ns = dcs::time_unixtime_ns();
+    }
+    int end(int nproc_ = 0){
+        uint64_t cost_time_ns = dcs::time_unixtime_ns() - call_begin_time_ns;
+        total_time_ns += cost_time_ns;
+        if(cost_time_ns > max_time_ns){
+            max_time_ns = cost_time_ns;
+        }
+        if(cost_time_ns < min_time_ns){
+            min_time_ns = cost_time_ns;
+        }
+        ++ncall;
+        if(nproc_ > 0){
+            nproc += nproc_;
+        }
+        return (cost_time_ns+999)/1000;
+    }
+};
+
+enum AppRunStatItemType {
+    APP_RUN_STAT_ITEM_IDLE = 0,
+    APP_RUN_STAT_ITEM_TICK,
+    APP_RUN_STAT_ITEM_LOOP,
+    //////////////////////////////
+    APP_RUN_STAT_ITEM_MAX,
+};
+struct AppRunStat {
+    uint64_t        start_time_us {0};
+    uint64_t        total_time_us {0};
+    uint32_t        next_update_time_s {0};
+    uint32_t        stat_update_period {60};
+    AppStatItem     item[APP_RUN_STAT_ITEM_MAX];
+    std::string     strlog;
+    void start(){
+        start_time_us = dcs::time_unixtime_us();
+        total_time_us = 0;
+        next_update_time_s = start_time_us/(1000*1000) + stat_update_period;
+        strlog.reserve(1024+256*APP_RUN_STAT_ITEM_MAX);
+    }
+    void update(uint64_t time_now_us){
+        total_time_us = time_now_us - start_time_us;
+        uint32_t timenow_s = time_now_us/(1000*1000);
+        if(timenow_s > next_update_time_s){
+            //clear
+            for(int i = 0 ;i < APP_RUN_STAT_ITEM_MAX; ++i){
+                item[i].clear();
+            }
+            next_update_time_s = timenow_s + stat_update_period;
+        }
+    }
+    const char * log(){
+        //
+        std::string strtime;
+        int n = dcs::strprintf(strlog, "#AppRuningStat# period:%d start-time:%s total-run-time:%ds ",
+                       stat_update_period, dcs::strftime(strtime, start_time_us/(1000*1000)),
+                       total_time_us/(1000*1000));
+        static const char * item_name_dict[APP_RUN_STAT_ITEM_MAX] = {"idle","tick", "loop", };
+        for(int i = 0 ;i < APP_RUN_STAT_ITEM_MAX; ++i){
+            n += snprintf((char*)strlog.data() + n, 192, " | name:%s time total:%lums max:%uns min:%uns avg:%luns ncall:%lu nproc:%lu",
+                          item_name_dict[i], item[i].total_time_ns/(1000*1000),
+                          item[i].max_time_ns, item[i].min_time_ns,
+                          item[i].ncall > 0 ? (item[i].total_time_ns / item[i].ncall):0,
+                          item[i].ncall, item[i].nproc);
+        
+        }
+        return strlog.data();
+    }
+};
+
 struct AppImpl {
     std::string		version { "0.0.1" };
     cmdline_opt_t * cmdopt{ nullptr };
@@ -28,10 +112,12 @@ struct AppImpl {
 	uint32_t		task_id{ 0 };
 	int				console{ -1 };
 	int				interval { 1000 * 10 };
-	int				maxtptick{ 500 };
-	uint64_t		next_tick_time{ 0 };
+	int				max_proc_tick{ 500 };
+    uint64_t        time_now_us {0};
+	uint64_t		next_tick_time_us{ 0 };
     dcshmobj_pool   shm_pool;
 	DateTime		datetime;
+    AppRunStat      stat;
 };
 
 static App * s_app_instance{ nullptr };
@@ -84,8 +170,10 @@ int App::on_exit(){
 int  App::on_loop(){
     return 0;
 }
+int App::on_tick(){
+    return 0;
+}
 void App::on_idle(){
-    usleep(1000*10);
 }
 bool App::on_stop(){
     GLOG_WAR("process will stop ...");
@@ -241,8 +329,7 @@ static inline int init_command(App & app, const char * pidfile){
     }
 	return app.on_cmd_opt();
 }
-static inline int 
-app_console_command(AppImpl * , const char * msg, int msgsz, int fd, dctcp_t * dc){
+static inline int app_console_command(AppImpl * , const char * msg, int msgsz, int fd, dctcp_t * dc){
 	string cmd(msg, msgsz);
 	GLOG_IFO("session:%d recv msg:%s", cmd.c_str());
 	const char * resp = App::instance().on_control(cmd.c_str());
@@ -252,8 +339,7 @@ app_console_command(AppImpl * , const char * msg, int msgsz, int fd, dctcp_t * d
 	return -1;
 }
 //typedef int(*dctcp_event_cb_t)(dctcp_t*, const dctcp_event_t & ev, void * ud);
-static inline int 
-app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
+static inline int app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
     AppImpl * impl = (AppImpl*)ud;
     switch (ev.type){
 	case DCTCP_NEW_CONNX:
@@ -273,8 +359,7 @@ app_console_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
 	return 0;
 }
 
-static inline int
-app_stcp_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
+static inline int app_stcp_listener(dctcp_t * dc, const dctcp_event_t & ev, void * ud){
     GLOG_TRA("app stcp listener ev.type:%d ev.fd:%d ev.listenfd:%d",
         ev.type, ev.fd, ev.listenfd);
     AppImpl * impl = (AppImpl*)ud;
@@ -292,13 +377,6 @@ static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
 		it->second();
 	}
 	return 0;
-}
-static inline void app_tick_update(AppImpl * impl_){
-	uint64_t t_time_now = dcs::time_unixtime_us();
-	if (t_time_now > impl_->next_tick_time){
-		eztimer_update();
-		impl_->next_tick_time = t_time_now + impl_->interval;
-	}
 }
 const   char *  App::name() const {
     return const_cast<App*>(this)->cmdopt().getoptstr("name");
@@ -318,21 +396,31 @@ static inline void init_signal(){
         }
         static void segv_crash(int signo, siginfo_t * info, void * ucontex){
             if (ucontex) {
-                GLOG_ERR("program crash info: \n"
-                    "info.si_signo = %d \n"
-                    "info.si_errno = %d \n"
-                    "info.si_code  = %d (%s) \n"
-                    "info.si_addr  = %p\n",
-                    signo, info->si_errno,
-                    info->si_code,
-                    (info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
-                    info->si_addr);
-                /////////////////////////////////////////////////////////////////
-                //print stack info
-                ucontext_t *uc = (ucontext_t *)ucontex;
+                //
+                const char * namep = App::instance().name();                
+                std::string strfcname;
+                strfcname.reserve(128);
+                std::string strft;
                 string strstack;
-                const char * stackinfo = dcs::stacktrace(strstack, 0, 16, uc);
-                GLOG_ERR("program crash stack info:\n%s", stackinfo);
+                dcs::strprintf(strfcname, "/tmp/core.%s.%s.log", namep, dcs::strftime(strft, time(NULL), "%F_%H%M%S"));
+                FILE * fp = fopen(strfcname.c_str(), "w");
+                if(fp){
+                    fprintf(fp, "program crash info: \n"
+                             "info.si_signo = %d \n"
+                             "info.si_errno = %d \n"
+                             "info.si_code  = %d (%s) \n"
+                             "info.si_addr  = %p\n",
+                             signo, info->si_errno,
+                             info->si_code,
+                             (info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
+                             info->si_addr);
+                    /////////////////////////////////////////////////////////////////////////
+                    //print stack info
+                    ucontext_t *uc = (ucontext_t *)ucontex;
+                    const char * stackinfo = dcs::stacktrace(strstack, 0, 16, uc);
+                    fprintf(fp, "program crash stack info:\n%s\n", stackinfo);
+                    fclose(fp);
+                }
             }
             dcs::signalh_default(signo);
         }
@@ -357,6 +445,12 @@ static inline int init_facilities(App & app, AppImpl * impl_){
         fprintf(stderr, "logger init error = %d", ret);
         return -2;
     }
+    impl_->interval = app.cmdopt().getoptint("tick-interval");
+    impl_->max_proc_tick = app.cmdopt().getoptint("tick-max-proc");
+    impl_->stat.stat_update_period = app.cmdopt().getoptint("run-stat-interval");
+    if (impl_->stat.stat_update_period < 10) {
+        impl_->stat.stat_update_period = 10;
+    }
     //init timer
     ret = eztimer_init();
     if (ret){
@@ -380,8 +474,6 @@ static inline int init_facilities(App & app, AppImpl * impl_){
             return -5;
         }
     }
-    impl_->interval = app.cmdopt().getoptint("tick-interval");
-    impl_->maxtptick = app.cmdopt().getoptint("tick-maxproc");
     //tzo set
     app.gmt_tz_offset(impl_->cmdopt->getoptint("tzo"));    
     //////////////////////////////////////////////////////////////////////////////////
@@ -402,6 +494,10 @@ static inline int init_facilities(App & app, AppImpl * impl_){
             return -7;
         }
     }
+    //////////////////////////////////////////////////////////////////////////
+    app.schedule([impl_]{
+        GLOG_IFO("app run stat dump:%s", impl_->stat.log());
+    }, -impl_->stat.stat_update_period*1000);
 
     return 0;
 }
@@ -428,8 +524,9 @@ static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_,
         "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
         "console-listen:r::console command listen (tcp address);"
         "shm:r::keep process state shm key/path;"
-        "tick-interval:r::tick update interval time (microseconds):10000;"
-        "tick-maxproc:r::tick proc times once:1000;"
+        "tick-interval:r::tick update interval time (us):10000;"
+        "tick-max-proc:r::tick proc times once:5000;"
+        "run-stat-interval:o::update run stat period (s):60;"
         "", program_name, program_name, program_name);
     snprintf((char*)(cmdopt_pattern.data() + lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
         "%s", app.options().c_str());
@@ -445,6 +542,10 @@ static inline void _app_reload_env(AppImpl * impl_){
 	UNUSED(impl_);
 }
 int App::init(int argc, const char * argv[]){
+    srand(time(NULL));
+    impl_->time_now_us = dcs::time_unixtime_us();
+    impl_->stat.start();
+    //random env
     int ret = on_create(argc, argv);
     if (ret){
         GLOG_ERR("app check start error:%d !", ret);
@@ -492,45 +593,69 @@ int App::init(int argc, const char * argv[]){
     //////////////////////////////////////////////////////////////////////////////////
     return on_init();
 }
+static inline int _app_tick(App * app, AppImpl * impl_){
+    impl_->time_now_us = dcs::time_unixtime_us();
+    impl_->stat.update(impl_->time_now_us);
+    int nproc = 0;
+    if (impl_->time_now_us > impl_->next_tick_time_us) {
+        impl_->stat.item[APP_RUN_STAT_ITEM_TICK].begin();
+        nproc += app->on_tick();
+        eztimer_update();
+        impl_->stat.item[APP_RUN_STAT_ITEM_TICK].end(nproc);
+        impl_->next_tick_time_us = impl_->time_now_us + impl_->interval;
+    }
+    return nproc;
+}
+static inline void _app_idle(App * app, AppImpl * impl_){
+    int sleep_time_us = impl_->interval;
+    impl_->stat.item[APP_RUN_STAT_ITEM_IDLE].begin();
+    app->on_idle();
+    int rest_time_us = sleep_time_us - impl_->stat.item[APP_RUN_STAT_ITEM_IDLE].end();
+    if (rest_time_us > 0) {
+        usleep(rest_time_us);
+    }
+}
 int App::start(){
-    int  iret = 0;
-    bool bret = 0;
+    int  nproc = 0;
+    bool bstat = 0;
     while (true){
-		app_tick_update(impl_);
+        nproc = 0;
+        nproc += _app_tick(this, impl_);
         if (impl_->stoping){ //need stop
-            bret = on_stop();
-            if (bret){
+            bstat = on_stop();
+            if (bstat){
                 break;
             }
-            continue;
         }
-        if (impl_->restarting){//need restart
-            bret = on_restart();
-            if (bret){
+        else if (impl_->restarting){//need restart
+            bstat = on_restart();
+            if (bstat){
                 break;
             }
-            continue;
         }
-        if (impl_->reloading){//need reload
+        else if (impl_->reloading){//need reload
             _app_reload_env(impl_);
-            iret = on_reload();
-            if (iret){
-                GLOG_ERR("reload error ret :%d !", iret);
+            int rret = on_reload();
+            if (rret){
+                GLOG_ERR("reload error ret :%d !", nproc);
             }
             impl_->reloading = false;
         }
         //running
         if (impl_->stcp) { //one tick , one us ?
-            iret += dctcp_poll(impl_->stcp, impl_->maxtptick, impl_->maxtptick);
+            nproc += dctcp_poll(impl_->stcp, impl_->interval, impl_->max_proc_tick);
         }
-        iret = on_loop();
-        if (iret == 0){
-            on_idle();
+        //////////////////////////////////////////////
+        impl_->stat.item[APP_RUN_STAT_ITEM_LOOP].begin();
+        nproc += on_loop();
+        impl_->stat.item[APP_RUN_STAT_ITEM_LOOP].end(nproc);
+        if (nproc == 0){
+            _app_idle(this, impl_);
         }
     }
-    iret = impl_->shm_pool.stop();
-    if (iret){
-        GLOG_ERR("shm pool stop error ret:%d", iret);
+    nproc = impl_->shm_pool.stop();
+    if (nproc){
+        GLOG_ERR("shm pool stop error ret:%d", nproc);
     }
     return on_exit();
 }
@@ -558,10 +683,10 @@ int             App::tick_interval() const{
     return impl_->interval;
 }
 void             App::tick_maxproc(int maxproc){
-    impl_->maxtptick = maxproc;
+    impl_->max_proc_tick = maxproc;
 }
 int             App::tick_maxproc() const{
-    return impl_->maxtptick;
+    return impl_->max_proc_tick;
 }
 const DateTime &	App::datetime() const {
 	return impl_->datetime;

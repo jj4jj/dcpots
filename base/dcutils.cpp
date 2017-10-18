@@ -387,7 +387,7 @@ namespace dcs {
             }
             else  if (errno != EINTR) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    if (waitfd_writable(fd, timeout_ms)) {
+                    if (timeout_ms > 0 && waitfd_writable(fd, timeout_ms)) {
                         GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
                         return -1;
                     }
@@ -1076,6 +1076,16 @@ namespace dcs {
     bool                time_same_hour(time_t t1, time_t t2){
         return t1 / 3600 == t2 / 3600;
     }
+	bool                time_same_ten_minutes(time_t t1, time_t t2){
+		if (t1 / 3600 == t2 / 3600)
+		{
+			return (t1 % 3600) / 600 == (t2 % 3600) / 600;
+		}
+		else
+		{
+			return false;
+		}
+	}
     bool                time_same_week(time_t t1, time_t t2){
         struct tm _sftm;
         localtime_r(&t1, &_sftm);
@@ -1109,6 +1119,14 @@ namespace dcs {
         return m1 == m2 && time_same_year(t1, t2);
     }
 
+	int	getminutes(time_t unixtime){
+		if (unixtime == 0U){
+			unixtime = time(NULL);
+		}
+		struct tm _sftm;
+		localtime_r(&unixtime, &_sftm);
+		return _sftm.tm_min;
+	}
     const char*		strftime(std::string & str, time_t unixtime, const char * format){
         str.reserve(32);
         if (unixtime == 0U){
