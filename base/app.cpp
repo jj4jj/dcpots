@@ -83,7 +83,6 @@ struct AppRunStat {
         }
     }
     const char * log(){
-        //
         std::string strtime;
         int n = dcs::strprintf(strlog, "#AppRuningStat# period:%d start-time:%s total-run-time:%ds ",
                        stat_update_period, dcs::strftime(strtime, start_time_us/(1000*1000)),
@@ -97,6 +96,7 @@ struct AppRunStat {
                           item[i].ncall, item[i].nproc);
         
         }
+        ((char*)strlog.data())[n] = 0;
         return strlog.data();
     }
 };
@@ -408,6 +408,8 @@ static inline void init_signal(){
                 dcs::strprintf(strfcname, "/tmp/core.%s.%s.log", namep, dcs::strftime(strft, time(NULL), "%y%m%d_%H%M%S"));
                 FILE * fp = fopen(strfcname.c_str(), "w");
                 if(fp){
+                    fprintf(fp, "crash app stamp:[%s]\n", App::instance().coredump());
+                    fflush(fp);
                     fprintf(fp, "program crash info: \n"
                              "info.si_signo = %d \n"
                              "info.si_errno = %d \n"
@@ -417,12 +419,12 @@ static inline void init_signal(){
                              info->si_code,
                              (info->si_code == SEGV_MAPERR) ? "SEGV_MAPERR" : "SEGV_ACCERR",
                              info->si_addr);
+                    fflush(fp);
                     /////////////////////////////////////////////////////////////////////////
                     //print stack info
                     ucontext_t *uc = (ucontext_t *)ucontex;
                     const char * stackinfo = dcs::stacktrace(strstack, 0, 16, uc);
                     fprintf(fp, "program crash stack info:\n%s\n", stackinfo);
-                    fprintf(fp, "crash app info:[%s]\n", App::instance().coredump());
                     fflush(fp);
                     fclose(fp);
                 }
@@ -453,9 +455,6 @@ static inline int init_facilities(App & app, AppImpl * impl_){
     impl_->interval = app.cmdopt().getoptint("tick-interval");
     impl_->max_proc_tick = app.cmdopt().getoptint("tick-max-proc");
     impl_->stat.stat_update_period = app.cmdopt().getoptint("run-stat-interval");
-    if (impl_->stat.stat_update_period < 10) {
-        impl_->stat.stat_update_period = 10;
-    }
     //init timer
     ret = eztimer_init();
     if (ret){
@@ -612,20 +611,22 @@ static inline int _app_tick(App * app, AppImpl * impl_){
     return nproc;
 }
 static inline void _app_idle(App * app, AppImpl * impl_){
-    int sleep_time_us = impl_->interval;
     impl_->stat.item[APP_RUN_STAT_ITEM_IDLE].begin();
+    int sleep_time_us = impl_->interval;
+    uint64_t start_time = dcs::time_unixtime_us();
     app->on_idle();
-    int rest_time_us = sleep_time_us - impl_->stat.item[APP_RUN_STAT_ITEM_IDLE].end();
+    int rest_time_us = sleep_time_us - (dcs::time_unixtime_us() - start_time);
     if (rest_time_us > 0) {
         usleep(rest_time_us);
     }
+    impl_->stat.item[APP_RUN_STAT_ITEM_IDLE].end();
 }
 int App::start(){
-    int  nproc = 0;
+    int  nproc = 0 , ntick = 0;
     bool bstat = 0;
     while (true){
         nproc = 0;
-        nproc += _app_tick(this, impl_);
+        ntick = _app_tick(this, impl_);
         if (impl_->stoping){ //need stop
             bstat = on_stop();
             if (bstat){
@@ -646,12 +647,12 @@ int App::start(){
             }
             impl_->reloading = false;
         }
+        //////////////////////////////////////////////
+        impl_->stat.item[APP_RUN_STAT_ITEM_LOOP].begin();
         //running
         if (impl_->stcp) { //one tick , one us ?
             nproc += dctcp_poll(impl_->stcp, impl_->interval, impl_->max_proc_tick);
         }
-        //////////////////////////////////////////////
-        impl_->stat.item[APP_RUN_STAT_ITEM_LOOP].begin();
         nproc += on_loop();
         impl_->stat.item[APP_RUN_STAT_ITEM_LOOP].end(nproc);
         if (nproc == 0){

@@ -391,6 +391,9 @@ namespace dcs {
                         GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
                         return -1;
                     }
+                    else {
+                        break;
+                    }
                 }
                 else {
                     GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
@@ -539,9 +542,12 @@ namespace dcs {
             }
             else if (errno != EINTR) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {//
-                    if (waitfd_readable(fd, timeout_ms)) {
+                    if (timeout_ms > 0 && waitfd_readable(fd, timeout_ms)) {
                         GLOG_ERR("read fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
                         return -1;
+                    }
+                    else {
+                        break;
                     }
                 }
                 else {
@@ -554,10 +560,13 @@ namespace dcs {
     }
     //mode: size, end, msg:sz32/16/8, token:\r\n\r\n , return > 0 read size, = 0 end, < 0 error
     int                 readfd(int fd, char * buffer, size_t sz, const char * mode, int timeout_ms) {
-        if (sz == 0 || !buffer || fd < 0 || !mode) {
+        if (sz == 0 || !buffer || fd < 0) {
             return 0;
         }
-        if (strstr(mode, "size") == mode) {
+        if (!mode || !(*mode) || strstr(mode, "end")) {
+            return _readfd(fd, buffer, sz, timeout_ms);
+        }
+        else if (strstr(mode, "size") == mode) {
             //just read sz or end
             size_t tsz = _readfd(fd, buffer, sz, timeout_ms);
             if (sz != tsz) {
@@ -565,9 +574,6 @@ namespace dcs {
                 return -1;
             }
             return tsz;
-        }
-        else if (strstr(mode, "end")) {
-            return _readfd(fd, buffer, sz, timeout_ms);
         }
         else if (strstr(mode, "msg:")) {
             //read 32

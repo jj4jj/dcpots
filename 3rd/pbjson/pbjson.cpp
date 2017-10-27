@@ -32,20 +32,122 @@
 #include "rapidjson/rapidjson.h"
 #include "rapidjson/writer.h"
 #include "rapidjson/stringbuffer.h"
+#include <iconv.h>
 
 #define RETURN_ERR(id, cause)  do{\
                                   err = cause; \
                                   return id;   \
                               }while(0)
+#define MAX_LEN_FOR_UTF8_FIX (10240000)
 using namespace google::protobuf;
 namespace pbjson
 {
+	static bool unicode_to_utf8(char *inbuf, size_t *inlen, char *outbuf, size_t *outlen)
+	{
+		/* 目的编码, TRANSLIT：遇到无法转换的字符就找相近字符替换
+		*           IGNORE ：遇到无法转换字符跳过*/
+		//char *encTo = "UTF-8//IGNORE";
+		const char *encTo = "UTF-8//TRANSLIT";
+		/* 源编码 */
+		const char *encFrom = "UNICODE";
+
+		/* 获得转换句柄
+		*@param encTo 目标编码方式
+		*@param encFrom 源编码方式
+		*/
+		iconv_t cd = iconv_open(encTo, encFrom);
+		if (cd == (iconv_t)-1)
+		{
+			return false;
+		}
+
+		/* 由于iconv()函数会修改指针，所以要保存源指针 */
+		char *tmpin = inbuf;
+		char *tmpout = outbuf;
+		size_t insize = *inlen;
+		size_t outsize = *outlen;
+
+		/* 进行转换
+		*@param cd iconv_open()产生的句柄
+		*@param srcstart 需要转换的字符串
+		*@param inlen 存放还有多少字符没有转换
+		*@param tempoutbuf 存放转换后的字符串
+		*@param outlen 存放转换后,tempoutbuf剩余的空间
+		*/
+		size_t ret = iconv(cd, &tmpin, inlen, &tmpout, outlen);
+		if (ret == -1)
+		{
+			iconv_close(cd);
+			return false;
+		}
+
+		iconv_close(cd);
+		return true;
+	}
+
+	static bool utf8_to_unicode(char *inbuf, size_t *inlen, char *outbuf, size_t *outlen)
+	{
+		/* 目的编码, TRANSLIT：遇到无法转换的字符就找相近字符替换
+		*           IGNORE ：遇到无法转换字符跳过*/
+		//char *encTo = "UNICODE//IGNORE";
+		const char *encTo = "UNICODE//TRANSLIT";
+		/* 源编码 */
+		const char *encFrom = "UTF-8";
+
+		iconv_t cd = iconv_open(encTo, encFrom);
+		if (cd == (iconv_t)-1)
+		{
+			return false;
+		}
+
+		/* 由于iconv()函数会修改指针，所以要保存源指针 */
+		char *tmpin = inbuf;
+		char *tmpout = outbuf;
+		size_t insize = *inlen;
+		size_t outsize = *outlen;
+
+		/* 进行转换
+		*@param cd iconv_open()产生的句柄
+		*@param srcstart 需要转换的字符串
+		*@param inlen 存放还有多少字符没有转换
+		*@param tempoutbuf 存放转换后的字符串
+		*@param outlen 存放转换后,tempoutbuf剩余的空间
+		*/
+		size_t ret = iconv(cd, &tmpin, inlen, &tmpout, outlen);
+		if (ret == -1)
+		{
+			iconv_close(cd);
+			return false;
+		}
+
+		iconv_close(cd);
+		return true;
+	}
+
+	static int fix_utf8_code(char *inbuf, size_t inlen, char *outbuf, size_t *outlen)
+	{
+		static char s_tmp_fixcode_buf[MAX_LEN_FOR_UTF8_FIX];
+		if (NULL == inbuf || NULL == outbuf || inlen <= 0 || NULL == outlen)
+		{
+			return -1;
+		}
+		size_t tmpoutlen = MAX_LEN_FOR_UTF8_FIX;
+		utf8_to_unicode(inbuf, &inlen, s_tmp_fixcode_buf, &tmpoutlen);
+		size_t tmpinlen = MAX_LEN_FOR_UTF8_FIX - tmpoutlen;
+		size_t tmpoutlen2 = MAX_LEN_FOR_UTF8_FIX;
+		unicode_to_utf8(s_tmp_fixcode_buf, &tmpinlen, outbuf, &tmpoutlen2);
+		*outlen = MAX_LEN_FOR_UTF8_FIX - tmpoutlen2;
+
+		return 0;
+	}
+
     static rapidjson::Value *parse_msg(const Message *msg, rapidjson::Value::AllocatorType& allocator);
     static rapidjson::Value* field2json(const Message *msg, const FieldDescriptor *field,
             rapidjson::Value::AllocatorType& allocator)
     {
         const Reflection *ref = msg->GetReflection();
         const bool repeated = field->is_repeated();
+		static char s_tmp_fixutf8_buf[MAX_LEN_FOR_UTF8_FIX];
 
         size_t array_size = 0;
         if (repeated)
@@ -175,10 +277,26 @@ namespace pbjson
                         if (is_binary)
                         {
                             value = b64_encode(value);
+							rapidjson::Value v(value.c_str(), static_cast<rapidjson::SizeType>(value.size()), allocator);
+							json->PushBack(v, allocator);
                         }
-                        rapidjson::Value v(value.c_str(), static_cast<rapidjson::SizeType>(value.size()), allocator);
-                        json->PushBack(v, allocator);
-                    }
+						else
+						{
+							size_t outlen = MAX_LEN_FOR_UTF8_FIX;
+							s_tmp_fixutf8_buf[0] = 0;
+							//memset(s_tmp_fixutf8_buf, 0, MAX_LEN_FOR_UTF8_FIX);
+							if (0 == fix_utf8_code((char*)value.c_str(), value.size(), s_tmp_fixutf8_buf, &outlen))
+							{
+								rapidjson::Value v(s_tmp_fixutf8_buf, static_cast<rapidjson::SizeType>(outlen), allocator);
+								json->PushBack(v, allocator);
+							}
+							else
+							{
+								rapidjson::Value v(value.c_str(), static_cast<rapidjson::SizeType>(value.size()), allocator);
+								json->PushBack(v, allocator);
+							}
+						}
+					}
                 }
                 else
                 {
@@ -186,8 +304,22 @@ namespace pbjson
                     if (is_binary)
                     {
                         value = b64_encode(value);
+						json = new rapidjson::Value(value.c_str(), value.size(), allocator);
                     }
-                    json = new rapidjson::Value(value.c_str(), value.size(), allocator);
+					else
+					{
+						size_t outlen = MAX_LEN_FOR_UTF8_FIX;
+                        s_tmp_fixutf8_buf[0] = 0;
+						//memset(s_tmp_fixutf8_buf, 0, MAX_LEN_FOR_UTF8_FIX);
+						if (0 == fix_utf8_code((char*)value.c_str(), value.size(), s_tmp_fixutf8_buf, &outlen))
+						{
+							json = new rapidjson::Value(s_tmp_fixutf8_buf, outlen, allocator);
+						}
+						else
+						{
+							json = new rapidjson::Value(value.c_str(), value.size(), allocator);
+						}
+					}
                 }
                 break;
             }
