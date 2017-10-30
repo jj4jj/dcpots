@@ -51,6 +51,7 @@ void			default_logger_destroy();
 logger_t *		default_logger();
 ///////////////////////////////////////////////////////////////////////
 void            logger_lock(logger_t * logger = nullptr);
+bool            logger_try_lock(logger_t * logger = nullptr);
 void            logger_unlock(logger_t * logger = nullptr);
 ///////////////////////////////////////////////////////////////////////
 logger_t *		logger_create(const logger_config_t & conf);

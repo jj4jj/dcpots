@@ -2,47 +2,36 @@
 #include "logger.h"
 #include "dcdebug.h"
 
-#define  THREAD_SAFE
-
 struct logger_t {
-	logger_config_t	conf;
-#ifdef  THREAD_SAFE
-    dcs::lock_mixin<true>   lock;
-#else
-    dcs::lock_mixin<false>  lock;
-#endif //  THREAD_SAFE
-	int			last_err;
-	string		last_msg;
-	
-    dcs::logfile_t   logfile;
-    dcs::logfile_t   errfile;
-
-    logger_t() :last_err(0){
-	}
+	logger_config_t	    conf;
+    std::mutex          lock;
+    int			        last_err {0};
+	string		        last_msg;
+    dcs::logfile_t      logfile;
+    dcs::logfile_t      errfile;
 };
-#undef THREAD_SAFE
 
-static	logger_t * G_LOGGER = nullptr;
+static	logger_t * g_default_logger = nullptr;
 logger_t *		default_logger(){
-    if (!G_LOGGER){
+    if (!g_default_logger){
         default_logger_init(logger_config_t());
     }
-	return G_LOGGER;
+	return g_default_logger;
 }
 int				default_logger_init(const logger_config_t & conf){
-	if (G_LOGGER){
+	if (g_default_logger){
 		default_logger_destroy();
-		G_LOGGER = nullptr;
+		g_default_logger = nullptr;
 	}
-	G_LOGGER = logger_create(conf);
-	return G_LOGGER ? 0 : -1;
+	g_default_logger = logger_create(conf);
+	return g_default_logger ? 0 : -1;
 }
 void			default_logger_destroy(){
-	if (!G_LOGGER){
+	if (!g_default_logger){
 		return;
 	}
-	logger_destroy(G_LOGGER);
-	G_LOGGER = nullptr;
+	logger_destroy(g_default_logger);
+	g_default_logger = nullptr;
 }
 
 logger_t *	logger_create(const logger_config_t & conf){
@@ -68,6 +57,12 @@ logger_t *	logger_create(const logger_config_t & conf){
 		em->errfile.open();
 	}
 	return em;
+}
+bool            logger_try_lock(logger_t * logger){
+    if (!logger) {
+        return default_logger()->lock.try_lock();
+    }
+    return logger->lock.try_lock();
 }
 void            logger_lock(logger_t * logger){
     if (!logger){
