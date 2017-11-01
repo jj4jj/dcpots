@@ -163,6 +163,10 @@ int logfile_t::write(const char * logmsg){
     }
     else {
         impl->net.logmsg = impl->net.prefix + "|" + logmsg;
+        dcs::strreplace(impl->net.logmsg, "\n", "`", true);
+        if('`' == impl->net.logmsg.back()){
+            impl->net.logmsg.back() = '\n';
+        }
         int ret = dcs::writefd(impl->net.fd, impl->net.logmsg.c_str(), impl->net.logmsg.length(), "end", 0);
         if(ret <= 0){
             return -2;

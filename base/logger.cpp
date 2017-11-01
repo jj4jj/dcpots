@@ -61,8 +61,10 @@ logger_t *	logger_create(const logger_config_t & conf){
             conf.pattern.find("tcp://") == 0 ||
             conf.pattern.find("udp://") == 0
         );
+    string log_all_filepath = "";
+    string log_err_filepath = "";
     if (!is_net_log) {
-        string log_all_filepath = conf.dir;
+        log_all_filepath = conf.dir;
         if (log_all_filepath.back() == '/') {
             log_all_filepath += conf.pattern;
         }
@@ -75,26 +77,33 @@ logger_t *	logger_create(const logger_config_t & conf){
         if (log_all_filepath.find(".all.log") == string::npos) {
             log_all_filepath += ".all.log";
         }
-        string log_err_filepath = log_all_filepath;
+        log_err_filepath = log_all_filepath;
         log_err_filepath.replace(log_err_filepath.find(".all."), 5, ".err.");
-
-        //all log
-        int ret = em->logfile.init(log_all_filepath.c_str(), conf.max_roll, conf.max_file_size);
-        if(ret){
-            fprintf(stderr, "warn: init all log path:%s error:%d", log_all_filepath.c_str(), ret);
-        }
-        //error log
-        em->errfilt = true;
-        ret = em->errfile.init(log_err_filepath.c_str(), conf.max_roll, conf.max_file_size);
-        if(ret){
-            fprintf(stderr, "warn: init error log path:%s error:%d", log_err_filepath.c_str(), ret);
-        }
     }
     else {
-        int ret = em->logfile.init(conf.pattern.c_str());
-        if(ret){
-            fprintf(stderr, "warn: init net log:%s error:%d", conf.pattern.c_str(), ret);
+        log_all_filepath = conf.pattern;
+        if(log_all_filepath.find("?") != std::string::npos){
+            if (log_all_filepath.find(".all.log") == string::npos) {
+                log_all_filepath += ".all.log";
+            }            
+            log_err_filepath = log_all_filepath;
+            log_err_filepath.replace(log_err_filepath.find(".all.log"), 8, ".err.log");
         }
+    }
+
+    //all log
+    int ret = em->logfile.init(log_all_filepath.c_str(), conf.max_roll, conf.max_file_size);
+    if (ret) {
+        fprintf(stderr, "warn: init all log path:%s error:%d", log_all_filepath.c_str(), ret);
+    }
+
+    //error log
+    if(!log_err_filepath.empty()){
+        em->errfilt = true;
+        ret = em->errfile.init(log_err_filepath.c_str(), conf.max_roll, conf.max_file_size);
+        if (ret) {
+            fprintf(stderr, "warn: init error log path:%s error:%d", log_err_filepath.c_str(), ret);
+        }    
     }
 	return em;
 }
@@ -191,6 +200,9 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 	}
 	if (loglv == LOG_LVL_FATAL && available_size > 192){
 		//append stack frame info
+        if (msg_start[n - 1] == '\n') {
+            --n;
+        }
 		string strstack;
 		n += snprintf(&msg_start[n], available_size, "%s\n",
 			dcs::stacktrace(strstack, 2, 16, nullptr, " <-- "));
