@@ -1,6 +1,7 @@
 #include "dclogfile.h"
 #include "logger.h"
 #include "dcdebug.h"
+#include "dctls.h"
 
 struct logger_t {
 	logger_config_t	    conf;
@@ -9,12 +10,26 @@ struct logger_t {
 	string		        last_msg;
     dcs::logfile_t      logfile;
     dcs::logfile_t      errfile;
+    bool                errfilt {false};
 };
 
+logger_config_t::logger_config_t() :max_roll(20),
+max_msg_size(1024 * 1024), max_file_size(1024 * 1024 * 10) {
+    lv = LOG_LVL_TRACE;
+}
 static	logger_t * g_default_logger = nullptr;
+struct LoggerWriteTls {};
+dcs::thread_local_storage<LoggerWriteTls, int>  thread_is_writing_log;
+int    tls_flag_is_writing = 0; //dummy just for address is a flag
+int    tls_flag_is_not_writing = 0; //dummy just for address is a flag
+
 logger_t *		default_logger(){
     if (!g_default_logger){
-        default_logger_init(logger_config_t());
+        int ret = default_logger_init(logger_config_t());
+        if(ret){
+            fprintf(stderr, "default logger init error:%d", ret);
+            return nullptr;
+        }
     }
 	return g_default_logger;
 }
@@ -36,26 +51,51 @@ void			default_logger_destroy(){
 
 logger_t *	logger_create(const logger_config_t & conf){
 	logger_t * em = new logger_t();
-	if (!em) return nullptr;
+    if (!em) {return nullptr;}
 	em->last_msg.reserve(conf.max_msg_size);
 	em->conf = conf;
-    string log_all_filepath = conf.dir;
-    if(em->conf.pattern.find(".all.log") != string::npos){
-        log_all_filepath += "/" + conf.pattern;        
+    if(conf.pattern.empty()){
+        return em;
+    }
+    bool is_net_log = (
+            conf.pattern.find("tcp://") == 0 ||
+            conf.pattern.find("udp://") == 0
+        );
+    if (!is_net_log) {
+        string log_all_filepath = conf.dir;
+        if (log_all_filepath.back() == '/') {
+            log_all_filepath += conf.pattern;
+        }
+        else {
+            if(!log_all_filepath.empty()){
+                log_all_filepath += "/";            
+            }
+            log_all_filepath += conf.pattern;
+        }
+        if (log_all_filepath.find(".all.log") == string::npos) {
+            log_all_filepath += ".all.log";
+        }
+        string log_err_filepath = log_all_filepath;
+        log_err_filepath.replace(log_err_filepath.find(".all."), 5, ".err.");
+
+        //all log
+        int ret = em->logfile.init(log_all_filepath.c_str(), conf.max_roll, conf.max_file_size);
+        if(ret){
+            fprintf(stderr, "warn: init all log path:%s error:%d", log_all_filepath.c_str(), ret);
+        }
+        //error log
+        em->errfilt = true;
+        ret = em->errfile.init(log_err_filepath.c_str(), conf.max_roll, conf.max_file_size);
+        if(ret){
+            fprintf(stderr, "warn: init error log path:%s error:%d", log_err_filepath.c_str(), ret);
+        }
     }
     else {
-        log_all_filepath += "/" + conf.pattern + ".all.log";
+        int ret = em->logfile.init(conf.pattern.c_str());
+        if(ret){
+            fprintf(stderr, "warn: init net log:%s error:%d", conf.pattern.c_str(), ret);
+        }
     }
-    string log_err_filepath = log_all_filepath;
-    log_err_filepath.replace(log_err_filepath.find(".all."),5,".err.");
-	if (!conf.pattern.empty()){
-		//all log
-		em->logfile.init(log_all_filepath.c_str(), conf.max_roll, conf.max_file_size);
-		em->logfile.open();
-		//error log
-		em->errfile.init(log_err_filepath.c_str(), conf.max_roll, conf.max_file_size);
-		em->errfile.open();
-	}
 	return em;
 }
 bool            logger_try_lock(logger_t * logger){
@@ -86,14 +126,13 @@ void			logger_set_level(logger_t * logger, log_msg_level_type level){
 	if (logger == nullptr){
 		logger = default_logger();
 	}
-	logger->conf.lv = level;
+    if(logger){logger->conf.lv = level;}
 }
 int				logger_level(logger_t * logger){
 	if (logger == nullptr){
 		logger = default_logger();
 	}
-	if (logger)
-		return logger->conf.lv;
+    if (logger) {return logger->conf.lv;}
 	return LOG_LVL_INVALID;
 }
 
@@ -109,17 +148,29 @@ int				logger_errno(logger_t * logger){
 	if (logger == nullptr){
 		logger = default_logger();
 	}
-	return logger->last_err;
+    if(logger){
+        return logger->last_err;
+    }
+    return 0;
 }
 
-//set last
 int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt, ...){
 	if (logger == nullptr){
 		logger = default_logger();
 	}
+    if(!logger){
+        fprintf(stderr, "logger is null !");
+        return -1;
+    }
 	if (loglv < logger->conf.lv){
 		return 0;
 	}
+    int * writingp = thread_is_writing_log.get();
+    if(writingp && writingp == &tls_flag_is_writing){
+        fprintf(stderr, "doing logging but logging recursive logger:%p lv:%d pserr:%d fmt:[%s]!", logger, loglv, sys_err_, fmt);
+        return -1;
+    }
+    thread_is_writing_log.set(&tls_flag_is_writing);//is writing
     logger_lock(logger);
 	va_list ap;
 	va_start(ap, fmt);
@@ -138,19 +189,24 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 			strerror_r(errno, errorno_msg_buff, sizeof(errorno_msg_buff)-1));
 		available_size = logger->last_msg.capacity() - (n + 2);
 	}
-	if (loglv == LOG_LVL_FATAL && available_size > 128){
+	if (loglv == LOG_LVL_FATAL && available_size > 192){
 		//append stack frame info
 		string strstack;
-		snprintf(&msg_start[n], available_size, "%s\n",
-			dcs::stacktrace(strstack, 2));
+		n += snprintf(&msg_start[n], available_size, "%s\n",
+			dcs::stacktrace(strstack, 2, 16, nullptr, " <-- "));
+        available_size = logger->last_msg.capacity() - (n + 2);
 	}
-
-	if (logger->logfile.write(msg_start)){
+    msg_start[n] = 0;
+    if (logger->logfile.write(msg_start)) {
         fputs(msg_start, stderr);
     }
-    if (loglv == LOG_LVL_ERROR || loglv == LOG_LVL_FATAL){
-		logger->errfile.write(msg_start);
+    if(logger->errfilt){
+        if (loglv == LOG_LVL_ERROR || loglv == LOG_LVL_FATAL) {
+            logger->errfile.write(msg_start);
+        }
     }
+    ///////////////////////////////////////////////////////////////////////    
+    thread_is_writing_log.set(&tls_flag_is_not_writing);
     logger_unlock(logger);
 	return n;
 }

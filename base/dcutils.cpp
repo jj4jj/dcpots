@@ -387,16 +387,21 @@ namespace dcs {
             }
             else  if (errno != EINTR) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    if (timeout_ms > 0 && waitfd_writable(fd, timeout_ms)) {
-                        GLOG_ERR("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
-                        return -1;
+                    if (timeout_ms > 0 ) {
+                        if(0 == waitfd_writable(fd, timeout_ms)){
+                            continue;
+                        }
+                        else {
+                            GLOG_DBG("write fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
+                            break;
+                        }
                     }
                     else {
                         break;
                     }
                 }
                 else {
-                    GLOG_ERR("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
+                    GLOG_SER("write fd:%d ret:%d error :%d(%s) total sz:%zd write:%zd", fd, n, errno, strerror(errno), sz, tsz);
                     return -2;
                 }
             }
@@ -408,14 +413,7 @@ namespace dcs {
     //udp://<ip:port>
     //mode:r:listen/w:connect
     int                 openfd(const std::string & uri, const char * mode, int timeout_ms) {
-        if (uri.find("file://") == 0) { //+7
-            int fd = open(uri.substr(7).c_str(), O_CREAT | O_RDWR);
-            if (fd >= 0) {
-                nonblockfd(fd, true);
-            }
-            return fd;
-        }
-        else if (uri.find("tcp://") == 0) {//+6
+        if (uri.find("tcp://") == 0) {//+6
             const char * skaddr = uri.substr(6).c_str();
             sockaddr_in iaddr;
             int ret = socknetaddr(iaddr, skaddr);
@@ -527,9 +525,16 @@ namespace dcs {
             }
             return fd;
         }
-        else {
-            GLOG_ERR("not support uri:%s", uri.c_str());
-            return -1;
+        else { //+7
+            int offset = uri.find("file://") == 0 ? 7: 0;
+            int fd = open(uri.substr(offset).c_str(), O_CREAT | O_RDWR);
+            if (fd >= 0) {
+                nonblockfd(fd, true);
+            }
+            else {
+                GLOG_SER("open file:%s (:%d) error !", uri.c_str(), offset);
+            }
+            return fd;
         }
         return -2;
     }
@@ -542,16 +547,21 @@ namespace dcs {
             }
             else if (errno != EINTR) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {//
-                    if (timeout_ms > 0 && waitfd_readable(fd, timeout_ms)) {
-                        GLOG_ERR("read fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
-                        return -1;
+                    if (timeout_ms > 0) {
+                        if(0 == waitfd_readable(fd, timeout_ms)){
+                            continue;
+                        }
+                        else {
+                            GLOG_DBG("read fd:%d time out:%dms tsz:%zd", fd, timeout_ms, tsz);
+                            break;
+                        }
                     }
                     else {
                         break;
                     }
                 }
                 else {
-                    GLOG_ERR("read fd:%d ret:%d error :%d(%s) total sz:%zd", fd, n, errno, strerror(errno), tsz);
+                    GLOG_SER("read fd:%d ret:%d read:%d total sz:%zd", fd, n, tsz, sz);
                     return -2;
                 }
             }
@@ -691,13 +701,13 @@ namespace dcs {
             }
             int n = _writefd(fd, (const char *)&nwsz, szlen, timeout_ms);
             if (n != szlen) {
-                GLOG_ERR("write fd:%d buffer head size:%d write sz error ret:%d",
+                GLOG_SER("write fd:%d buffer head size:%d write sz error ret:%d",
                          fd, szlen, n);
                 return -4;
             }
             n = _writefd(fd, buffer, sz, timeout_ms);
             if ((size_t)n != sz) {
-                GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
+                GLOG_SER("write fd:%d buffer size:%d write sz error ret:%d",
                          fd, sz, n);
                 return -5;
             }
@@ -711,14 +721,14 @@ namespace dcs {
             }
             int n = _writefd(fd, buffer, sz, timeout_ms);
             if ((size_t)n != sz) {
-                GLOG_ERR("write fd:%d buffer size:%d write sz error ret:%d",
+                GLOG_SER("write fd:%d buffer size:%d write sz error ret:%d",
                          fd, sz, n);
                 return -2;
             }
             int seplen = strlen(sep);
             n = _writefd(fd, sep, seplen, timeout_ms);
             if (n != seplen) {
-                GLOG_ERR("write fd:%d buffer token size:%d write sz error ret:%d",
+                GLOG_SER("write fd:%d buffer token size:%d write sz error ret:%d",
                          fd, sz, n);
                 return -3;
             }

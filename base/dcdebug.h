@@ -13,7 +13,7 @@ struct stackframe_info_t {
     const char * str(string & s);
 };
 
-const char *  stacktrace(string & str, int startlevel = 0, int maxlevels = 16, void * ucontext = nullptr);
+const char *  stacktrace(string & str, int startlevel = 0, int maxlevels = 16, void * ucontext = nullptr, const char * sep = nullptr);
 int           stacktrace(std::vector<stackframe_info_t> & vsi, int startlevel = 0, int maxlevels = 16, void * ucontext = nullptr);
 
         

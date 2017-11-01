@@ -156,7 +156,7 @@ int           stacktrace(std::vector<stackframe_info_t> & vsi, int startlevel, i
         return _ucontext_stacktrace((ucontext_t*)uc, vsi, startlevel, maxlevels);
     }
 }
-const char *  stacktrace(string & str, int startlevel, int maxlevel, void * uc){
+const char *  stacktrace(string & str, int startlevel, int maxlevel, void * uc, const char * sep){
     std::vector<stackframe_info_t> vsi;
     int n = stacktrace(vsi, startlevel + 1, maxlevel, uc);
     string  allocator_s;
@@ -164,7 +164,7 @@ const char *  stacktrace(string & str, int startlevel, int maxlevel, void * uc){
 	char sibuff[16];
     for (int i = 0; i < n; ++i){
         if (i > 0){
-            str.append("\n");
+            str.append(sep ? sep :"\n");
         }
 		snprintf(sibuff, sizeof(sibuff)-1, "#%02d#", startlevel + i);
 		str.append(sibuff);

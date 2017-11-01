@@ -8,14 +8,9 @@ enum logfile_roll_order {
 	LOGFILE_ROLL_ASC = 0,
 	LOGFILE_ROLL_DSC = 1,
 };
-enum logfile_type {
-    LOGFILE_TYPE_ROLL,
-    LOGFILE_TYPE_NET,
-};
 struct logfile_t {
-    int     init(const char * file, int max_roll, int max_file_size, 
-                 logfile_roll_order order = LOGFILE_ROLL_ASC,
-                 logfile_type type = LOGFILE_TYPE_ROLL);
+    int     init(const char * path, int max_roll = 10, int max_file_size = 1024*1024*20, 
+                 logfile_roll_order order = LOGFILE_ROLL_DSC);
     int     open();
     void    close();
     int     write(const char * logmsg);
