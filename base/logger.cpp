@@ -54,42 +54,16 @@ logger_t *	logger_create(const logger_config_t & conf){
     if (!em) {return nullptr;}
 	em->last_msg.reserve(conf.max_msg_size);
 	em->conf = conf;
-    if(conf.pattern.empty()){
+    if(conf.path.empty() || conf.path == "stdout"){
         return em;
     }
-    bool is_net_log = (
-            conf.pattern.find("tcp://") == 0 ||
-            conf.pattern.find("udp://") == 0
-        );
-    string log_all_filepath = "";
-    string log_err_filepath = "";
-    if (!is_net_log) {
-        log_all_filepath = conf.dir;
-        if (log_all_filepath.back() == '/') {
-            log_all_filepath += conf.pattern;
-        }
-        else {
-            if(!log_all_filepath.empty()){
-                log_all_filepath += "/";            
-            }
-            log_all_filepath += conf.pattern;
-        }
-        if (log_all_filepath.find(".all.log") == string::npos) {
-            log_all_filepath += ".all.log";
-        }
-        log_err_filepath = log_all_filepath;
-        log_err_filepath.replace(log_err_filepath.find(".all."), 5, ".err.");
+
+    string log_all_filepath =  conf.path;
+    if (log_all_filepath.find(".all.log") == string::npos) {
+        log_all_filepath += ".all.log";
     }
-    else {
-        log_all_filepath = conf.pattern;
-        if(log_all_filepath.find("?") != std::string::npos){
-            if (log_all_filepath.find(".all.log") == string::npos) {
-                log_all_filepath += ".all.log";
-            }            
-            log_err_filepath = log_all_filepath;
-            log_err_filepath.replace(log_err_filepath.find(".all.log"), 8, ".err.log");
-        }
-    }
+    string log_err_filepath = log_all_filepath;
+    log_err_filepath.replace(log_err_filepath.find(".all.log"), 8, ".err.log");
 
     //all log
     int ret = em->logfile.init(log_all_filepath.c_str(), conf.max_roll, conf.max_file_size);

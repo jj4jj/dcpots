@@ -381,6 +381,9 @@ static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
 	}
 	return 0;
 }
+const   char *  App::program() const {
+    return const_cast<App*>(this)->cmdopt().program();
+}
 const   char *  App::name() const {
     return const_cast<App*>(this)->cmdopt().getoptstr("name");
 }
@@ -442,8 +445,7 @@ static inline void init_signal(){
 static inline int init_facilities(App & app, AppImpl * impl_){
     //3.global logger
     logger_config_t lconf;
-    lconf.dir = app.cmdopt().getoptstr("log-dir");
-    lconf.pattern = app.cmdopt().getoptstr("log-file");
+    lconf.path = app.cmdopt().getoptstr("log-path");
     lconf.lv = INT_LOG_LEVEL(app.cmdopt().getoptstr("log-level"));
     lconf.max_file_size = app.cmdopt().getoptint("log-size");
     lconf.max_roll = app.cmdopt().getoptint("log-roll");
@@ -506,39 +508,36 @@ static inline int init_facilities(App & app, AppImpl * impl_){
     return 0;
 }
 static inline int init_arguments(int argc, const char * argv[], AppImpl * impl_, App & app){
+    assert(!impl_->cmdopt);
+    impl_->cmdopt = new cmdline_opt_t(argc, argv);
     string cmdopt_pattern;
     const char * program_name = dcs::path_base(argv[0]);
-#define		MAX_CMD_OPT_OPTION_LEN	(1024*32)
-    size_t lpattern = strnprintf(cmdopt_pattern, 1024*8, ""
-        "console-shell:n::console shell(connect with --console-listen);"
-        "start:n:S:start process normal mode;"
-        "stop:n:T:stop process normal mode;"
-        "restart:n:R:stop process with restart mode;"
-        "reload:n:r:reload process config and some settings;"
-        "shm-clear-recover:n::clear the master share memory for recover;"
-        "shm-clear-backup:n::clear the backup share memory for recover;"
-        "name:r:N:set process name:%s;"
-        "tzo:r::set app gmt timezone offset to east of UTC:+0800;"
-        "daemon:n:D:daemonlize start mode;"
-        "log-dir:r::log dir settings:/tmp;"
-        "log-file:r::log file pattern settings:%s;"
-        "log-level:r::log level settings:INFO;"
-        "log-size:r::log single file max size settings:20480000;"
-        "log-roll:r::log max rolltation count settings:20;"
-        "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
-        "console-listen:r::console command listen (tcp address);"
-        "shm:r::keep process state shm key/path;"
-        "tick-interval:r::tick update interval time (us):10000;"
-        "tick-max-proc:r::tick proc times once:5000;"
-        "run-stat-interval:o::update run stat period (s):60;"
-        "", program_name, program_name, program_name);
+    #define		MAX_CMD_OPT_OPTION_LEN	(1024*32)
+    size_t lpattern = strnprintf(cmdopt_pattern, 1024 * 8, ""
+                                    "console-shell:n::console shell(connect with --console-listen);"
+                                    "start:n:S:start process normal mode;"
+                                    "stop:n:T:stop process normal mode;"
+                                    "restart:n:R:stop process with restart mode;"
+                                    "reload:n:r:reload process config and some settings;"
+                                    "shm-clear-recover:n::clear the master share memory for recover;"
+                                    "shm-clear-backup:n::clear the backup share memory for recover;"
+                                    "name:r:N:set process name:%s;"
+                                    "tzo:r::set app gmt timezone offset to east of UTC:+0800;"
+                                    "daemon:n:D:daemonlize start mode;"
+                                    "log-path:r::log file pattern settings:stdout;"
+                                    "log-level:r::log level settings:INFO;"
+                                    "log-size:r::log single file max size settings:20480000;"
+                                    "log-roll:r::log max rolltation count settings:20;"
+                                    "pid-file:r::pid file for locking (eg./tmp/%s.pid);"
+                                    "console-listen:r::console command listen (tcp address);"
+                                    "shm:r::keep process state shm key/path;"
+                                    "tick-interval:r::tick update interval time (us):10000;"
+                                    "tick-max-proc:r::tick proc times once:5000;"
+                                    "run-stat-interval:o::update run stat period (s):60;"
+                                    "", program_name, program_name);
     snprintf((char*)(cmdopt_pattern.data() + lpattern), MAX_CMD_OPT_OPTION_LEN - lpattern,
-        "%s", app.options().c_str());
-    if (!impl_->cmdopt){
-        impl_->cmdopt = new cmdline_opt_t(argc, argv);
-    }
+                "%s", app.options().c_str());
     impl_->cmdopt->parse(cmdopt_pattern.data(), impl_->version.c_str());
-    /////////////////////////////////////////////////////////////////////
     return 0;
 }
 //////////////////////////////////////////////////////////

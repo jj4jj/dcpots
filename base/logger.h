@@ -33,8 +33,7 @@ static inline log_msg_level_type INT_LOG_LEVEL(const char * lv){
 }
 
 struct logger_config_t{
-	string	dir;
-	string	pattern;
+	string	path;
 	int		max_roll;
 	int		max_msg_size;
 	int		max_file_size;

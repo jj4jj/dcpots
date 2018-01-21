@@ -37,6 +37,7 @@ public:
     int             tick_interval() const;
     void            tick_maxproc(int maxproc);
     int             tick_maxproc() const;
+    const   char *  program() const;
 
 public:
 	const DateTime &		datetime() const;
@@ -82,6 +83,10 @@ int AppMain(int argc, const char * argv[]){
     }
     return app.start();
 }
+
+
+#define DCAPP  (dcs::App::instance())
+
 };
 
 

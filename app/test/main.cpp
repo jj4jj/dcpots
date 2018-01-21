@@ -225,8 +225,7 @@ int log_test(){
 	logger_config_t lc;
 	lc.max_file_size = 1024;
 	lc.max_roll = 3;
-	lc.dir = "./";
-	lc.pattern = "test";
+	lc.path = "test";
 	int ret = default_logger_init(lc);
 	if (ret){
 		return ret;
@@ -641,7 +640,7 @@ static int app_test(int argc, const char * argv[]){
                 logger_config_t lgconf;
                 lgconf.max_file_size = 10485760;
                 lgconf.max_roll = 20;
-                lgconf.pattern = "dctest";
+                lgconf.path = "dctest";
                 default_logger_init(lgconf);
                 std::string ds;
                 while (true){

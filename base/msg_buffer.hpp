@@ -1,4 +1,6 @@
 #pragma once
+#include <cstring>
+#include <string>
 
 struct msg_buffer_t {
     char *	buffer{ nullptr };
@@ -9,7 +11,7 @@ struct msg_buffer_t {
 			valid_size = strlen(csp) + 1;
 		}
 	}
-	msg_buffer_t(const string & str) :msg_buffer_t(str.c_str(), str.length() + 1){}
+	msg_buffer_t(const std::string & str) :msg_buffer_t(str.c_str(), str.length() + 1){}
 	int create(int max_sz, bool init = false){
         destroy();
         char * p = (char*)malloc(max_sz);

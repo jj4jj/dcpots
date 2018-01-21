@@ -26,6 +26,11 @@ static inline void _destroy_cmdlineopt(cmdline_opt_t * cmdopt){
 cmdline_opt_t::~cmdline_opt_t(){
     _destroy_cmdlineopt(this);
 }
+
+const char *    cmdline_opt_t::program() const {
+    return impl_->program.c_str();
+}
+
 #define MAX_OPT_SHOW_TEXT_WIDTH (32)
 int cmdline_opt_t::init(int argc, const char * argv[], const char * init_pattern /* = nullptr */){
     if (argc > 0 && argv != nullptr){
@@ -43,9 +48,16 @@ int cmdline_opt_t::init(int argc, const char * argv[], const char * init_pattern
         return -1;
     }
 }
-static inline void pversion(const char * version){
+static inline void pversion(const char * version) {
     std::cout << version << std::endl;
     exit(0);
+}
+static const char * default_argval(cmdline_opt_impl_t *impl_, const char * argk){
+    auto it = impl_->dict_opts_default.find(argk);
+    if(it != impl_->dict_opts_default.end()){
+        return it->second.c_str();
+    }
+    return "";
 }
 void cmdline_opt_t::parse(const char * pattern, const char * version){
     impl_->dict_opts.clear();
@@ -168,7 +180,8 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 	while (opt != -1) {
 		if (opt == 0){
 			string opt_name = longopts[longIndex].name;
-			string opt_value = (optarg ? optarg : "");
+			string opt_value = (optarg ? optarg : default_argval(impl_, opt_name.c_str()));
+
 			//std::cout << "dbg long:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
 			impl_->dict_opts.insert(std::make_pair(opt_name, opt_value));
 			if (longopts[longIndex].val > 0){
@@ -196,8 +209,9 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
 				pversion(version);
 			}
 			string opt_name = string((char*)&opt, 1);
-			string opt_value = (optarg ? optarg : "");
+			string opt_value = (optarg ? optarg : default_argval(impl_, opt_name.c_str()));
 			impl_->dict_opts.insert(std::make_pair(opt_name, opt_value));
+
 			//std::cout << "dbg short:" << opt_name << "=" << opt_value << ":length:" << opt_value.length() << std::endl;
 
             if (shortopt_2_longopt.find(opt) != shortopt_2_longopt.end()){
@@ -209,8 +223,7 @@ void cmdline_opt_t::parse(const char * pattern, const char * version){
         opt = getopt_long(impl_->argc, (char* const *)impl_->argv, short_opt.c_str(), &longopts[0], &longIndex);
 	}
 }
-int			
-cmdline_opt_t::getoptnum(const char * opt){
+int  cmdline_opt_t::getoptnum(const char * opt)  const  {
 	auto range = impl_->dict_opts.equal_range(opt);
 	int count = 0;
 	while (range.first != range.second){
@@ -219,8 +232,7 @@ cmdline_opt_t::getoptnum(const char * opt){
 	}
 	return count;
 }
-bool			
-cmdline_opt_t::hasopt(const char * opt, int idx){
+bool cmdline_opt_t::hasopt(const char * opt, int idx)  const {
     auto range = impl_->dict_opts.equal_range(opt);
     while (range.first != range.second){
         if (idx == 0){
@@ -231,8 +243,7 @@ cmdline_opt_t::hasopt(const char * opt, int idx){
     }
     return nullptr;
 }
-const char * 
-cmdline_opt_t::getoptstr(const char * opt, int idx){
+const char * cmdline_opt_t::getoptstr(const char * opt, int idx)  const {
 	auto range = impl_->dict_opts.equal_range(opt);
 	while (range.first != range.second){
 		if (idx == 0){
@@ -247,25 +258,21 @@ cmdline_opt_t::getoptstr(const char * opt, int idx){
 	}
 	return nullptr;
 }
-int			 
-cmdline_opt_t::getoptint(const char * opt, int idx){
+int	cmdline_opt_t::getoptint(const char * opt, int idx) const {
 	const char * value = getoptstr(opt, idx);
 	if (value){
 		return atoi(value);
 	}
 	return 0;
 }
-void
-cmdline_opt_t::pusage(){
+void cmdline_opt_t::pusage() const {
 	std::cerr << impl_->usage << std::endl;
     exit(0);
 }
-const char *	
-cmdline_opt_t::usage(){
+const char * cmdline_opt_t::usage()  const {
 	return impl_->usage.c_str();
 }
-const std::multimap<std::string, std::string>  &
-cmdline_opt_t::options() const {
+const std::multimap<std::string, std::string>  & cmdline_opt_t::options() const {
     return impl_->dict_opts;
 }
 

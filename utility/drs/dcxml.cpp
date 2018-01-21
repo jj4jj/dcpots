@@ -33,7 +33,7 @@ int					xml_doc_t::parse_file(const char * file){
 		GLOG_TRA("create file buffer error !");
 		return -1;
 	}
-	size_t readn = dcs::readfile(file, parse_file_buffer.buffer, parse_file_buffer.max_size);
+	int readn = dcs::readfile(file, parse_file_buffer.buffer, parse_file_buffer.max_size);
 	if (readn <= 0){
 		GLOG_TRA("read file :%s error ! ", file);
 		return -2;
