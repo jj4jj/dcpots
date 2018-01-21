@@ -1,35 +1,36 @@
 #pragma once
 
+//push tail and pop head
 template<class LengthT>
 struct RingQueue {
-    LengthT * front, *rear, capacity;
+    LengthT * tail, *head, capacity;
     unsigned char *  data;
-    RingQueue(LengthT * front_, LengthT * rear_, LengthT cap, unsigned char * data_):
-        front(front_),rear(rear_),capacity(cap),data(data_{
-            *front = *rear = 0;
+    RingQueue(LengthT * tail_, LengthT * head_, LengthT cap, unsigned char * data_):
+        tail(tail_),head(head_),capacity(cap),data(data_{
+            *tail = *head = 0;
             assert(capacity > 1);
         }
     void Reset(){
-        *rear = *front;
+        *head = *tail;
     }
     bool Put(const unsigned char * buffer, LengthT size){
-        LengthT free_size = (capacity + *rear - *front - 1) % capacity
+        LengthT free_size = (capacity + *head - *tail - 1) % capacity
         if(free_size < size){
             return false;
         }
-        if(*front + size > capacity){
-            LengthT tail_size = size + *front - capacity;
-            memcpy(&data + *front, buffer, tail_size);
+        if(*tail + size > capacity){
+            LengthT tail_size = size + *tail - capacity;
+            memcpy(&data + *tail, buffer, tail_size);
             memcpy(&data, buffer + tail_size, size - tail_size);
         }
         else {
-            memcpy(&data + *front, buffer, size);
+            memcpy(&data + *tail, buffer, size);
         }
-        *front = (*front + size) % capacity;
+        *tail = (*tail + size) % capacity;
         return true;
     }
     bool Take(INOUT unsigned char * buffer, INOUT LengthT * sizep, bool no_error=false, bool peek=false){
-        LengthT buffer_size = (capacity + *front - *rear)%capacity;
+        LengthT buffer_size = (capacity + *tail - *head)%capacity;
         if(buffer_size == 0){
             return false;
         }
@@ -37,16 +38,16 @@ struct RingQueue {
             return false;
         }            
         *sizep = buffer_size;
-        if(*rear + *sizep > capacity){
+        if(*head + *sizep > capacity){
             LengthT tail_size = *sizep + *sizep - capacity;
-            memcpy(buffer, data + *rear, tail_size);
+            memcpy(buffer, data + *head, tail_size);
             memcpy(buffer+tail_size, data, *sizep - tail_size);
         }
         else {
-            memcpy(buffer, data + *rear, *sizep);
+            memcpy(buffer, data + *head, *sizep);
         }
         if(!peek){
-            *rear = (capacity + *rear + *sizep);
+            *head = (capacity + *head + *sizep);
         }
         return true;
     }
