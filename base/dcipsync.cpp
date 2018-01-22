@@ -20,39 +20,91 @@ int     path_to_key(const char * path, unsigned char proj_id){
     return key;
 }
 
-ipsync_t *   ipsync_lock(int key, bool wait, bool attach){
+ipsync_t *   ipsync_init(int key, bool attach){
     int   semid = -1;
-    int flags = IPC_CREAT | 0666;
-    if(attach){flags |= IPC_EXCL;}
+    int flags = IPC_CREAT|0666|IPC_EXCL;
+    bool attached = false;
     semid = semget(key, 1, flags);
     if(semid < 0){
-        GLOG_SER("semget error attach:%d !", attach);
-        return nullptr;
+        if(errno == EEXIST){
+            //exist already
+            flags = IPC_CREAT|0666;
+            semid = semget(key, 1, flags);            
+        }
+        if(semid < 0) {
+            GLOG_SER("semget error attach:%d !", attach);
+            return nullptr;
+        }
     }
-    struct sembuf sbop;
-    memset(&sbop, 0 , sizeof(sbop));
-    sbop.sem_op = -1;
-    sbop.sem_flg = SEM_UNDO;
-    if(!wait){
-        sbop.sem_flg |= IPC_NOWAIT;    
-    }
-
-    if(semop(semid, &sbop, 1) < 0){
-        GLOG_SER("semop error flags:%d", sbop.sem_flg);
-        return nullptr;
+    else {
+        //no exist , and create one
+        if(attach){
+            semctl(semid, 0, IPC_RMID);
+            GLOG_ERR("attach sem but not exist create one now rm it !");
+            return nullptr;
+        }
+        //first create
+        if(semctl(semid, 0, SETVAL, 1)){
+            GLOG_SER("init sem error !");
+            semctl(semid, 0, IPC_RMID);
+            return nullptr;
+        }
     }
 
     ipsync_t * ips = new ipsync_t ();
     ips->semid = semid;
 
     return ips;
-} 
+}
+
+int        ipsync_lock(ipsync_t * is, bool wait){
+    if(is){
+        struct sembuf sbop;
+        memset(&sbop, 0, sizeof(sbop));
+        sbop.sem_num = 0;
+        sbop.sem_op = -1;
+        sbop.sem_flg = SEM_UNDO;
+        if (!wait) {
+            sbop.sem_flg |= IPC_NOWAIT;
+        }
+
+        if (semop(is->semid, &sbop, 1) < 0) {
+            GLOG_SER("semop error flags:%d", sbop.sem_flg);
+            return -1;
+        }
+    }
+    else {
+        GLOG_ERR("lock sync is null !");
+        return -1;
+    }
+}
+
+
 void         ipsync_unlock(ipsync_t * is){
     if(is){
-        if(is->semid != -1){
+        struct sembuf sbop;
+        memset(&sbop, 0, sizeof(sbop));
+        sbop.sem_num = 0;
+        sbop.sem_op = +1;
+        sbop.sem_flg = IPC_NOWAIT;
+        if (semop(is->semid, &sbop, 1) < 0) {
+            GLOG_SER("semop error flags:%d", sbop.sem_flg);
+        }
+    }
+    else {
+        GLOG_ERR("lock sync is null !");
+    }
+}
+
+void        ipsync_free(ipsync_t * is){
+    if(is){
+        if (is->semid != -1) {
             semctl(is->semid, 0, IPC_RMID);
         }
         delete is;    
+    }
+    else {
+        GLOG_ERR("lock sync is null !");
     }
 }
 
