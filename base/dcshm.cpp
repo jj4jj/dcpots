@@ -1,6 +1,7 @@
 #include "stdinc.h"
 #include "logger.h"
 #include "dcshm.h"
+#include "dcipsync.h"
 
 static inline bool _shm_exists(key_t k, size_t sz = 0, int ioflag = 0){
     int id = shmget(k, sz, IPC_CREAT | IPC_EXCL | ioflag);
@@ -22,12 +23,7 @@ static inline void _shm_delete(int key){
     }
 }
 int             dcshm_path_key(const char * path, unsigned char proj_id){
-    key_t key = ftok(path, proj_id);
-    if (key < 0){
-        GLOG_SER("ftoken error path = %s proj id:%d", path, proj_id);
-        return -1;
-    }
-    return key;
+    return dcs::path_to_key(path, proj_id);
 }
 void *			dcshm_open(int key, bool & attach, size_t size){
     if (key < 0){
