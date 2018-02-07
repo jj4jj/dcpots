@@ -24,8 +24,8 @@ public:
 		BEGIN_NODE,
 		END_NODE
 	};
-	typedef void(*sax_event_cb_t)(xml_node_t * node, int lv, void * ud, sax_event_type ev);
-	void				sax(sax_event_cb_t cb, void * cb_ud, xml_node_t * node, int lv = 0);
+	typedef int(*sax_event_cb_t)(xml_node_t * node, int lv, void * ud, sax_event_type ev);
+	int  				sax(sax_event_cb_t cb, void * cb_ud, xml_node_t * node, int lv = 0);
 	///////////////////////////////////////////////////////
 	//get and add
 	xml_attribute_t *	get_attr(const char * key, xml_node_t * node = nullptr, const char * deafultvale = nullptr);

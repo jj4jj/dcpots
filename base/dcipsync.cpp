@@ -72,6 +72,7 @@ int        ipsync_lock(ipsync_t * is, bool wait){
             GLOG_SER("semop error flags:%d", sbop.sem_flg);
             return -1;
         }
+        return 0;
     }
     else {
         GLOG_ERR("lock sync is null !");

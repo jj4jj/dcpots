@@ -66,19 +66,18 @@ const	char *		xml_doc_t::dumps(std::string & str){
 	return pretty(str);
 }
 
-void				
-xml_doc_t::sax(sax_event_cb_t cb, void * cb_ud, xml_node_t * node, int lv){
+int xml_doc_t::sax(sax_event_cb_t cb, void * cb_ud, xml_node_t * node, int lv){
 	if (node == nullptr){
 		node = reinterpret_cast<xml_node_t*>(doc);
 	}
-	cb(node, lv, cb_ud, BEGIN_NODE);
+	int ret = cb(node, lv, cb_ud, BEGIN_NODE);
 	auto it = node->first_node();
 	while (it){
 		auto subnode = reinterpret_cast<xml_node_t *>(it);
-		sax(cb, cb_ud, subnode, lv + 1);
+		ret = sax(cb, cb_ud, subnode, lv + 1);
 		it = it->next_sibling();
 	}
-	cb(node, lv, cb_ud, END_NODE);
+	return cb(node, lv, cb_ud, END_NODE);
 }
 
 

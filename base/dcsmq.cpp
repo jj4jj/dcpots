@@ -57,13 +57,13 @@ int		_msgq_create(key_t key, int flag, size_t max_size){
 	int id = msgget(key, flag);
 	if (id < 0){
 		//get error
-		GLOG_ERR( "msg get error !");
+		GLOG_SER( "msg get error key:%d !", key);
 		return -1;
 	}
 	struct msqid_ds mds;
 	int ret = msgctl(id, IPC_STAT, (struct msqid_ds *)&mds);
 	if (ret != 0){
-		GLOG_ERR( "msgctl error !");
+		GLOG_SER( "msgctl error id:%d !", id);
 		return -2;
 	}
 
@@ -71,7 +71,7 @@ int		_msgq_create(key_t key, int flag, size_t max_size){
 		mds.msg_qbytes = max_size;
 		ret = msgctl(id, IPC_SET, (struct msqid_ds *)&mds);
 		if (ret != 0){
-			GLOG_ERR( "msgctl error !");
+			GLOG_SER( "msgctl error id:%d !", id);
 			return -3;
 		}
 	}

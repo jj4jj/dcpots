@@ -240,8 +240,9 @@ static inline int _op_poll(dctcp_t * stcp, int cmd, int fd, int flag = 0, int li
 	int ret = epoll_ctl(stcp->epfd, cmd, fd, &ev);
     if(ret){
         GLOG_SER("epoll ctl epfd:%d cmd:%d fd:%d(%d) flag:%d error:%d !", stcp->epfd, cmd, fd, listenfd, flag, ret);
+        return -1;
     }
-    return ret;
+    return 0;
 }
 static inline dctcp_proto_type _dctcp_get_proto_info(const char * fproto, const char ** proto_token = nullptr){
 	dctcp_proto_type proto_type = DCTCP_PROTO_MSG_SZ32;
@@ -676,13 +677,17 @@ static inline  int	_reconnect(dctcp_t* stcp, int fd, dctcp_connector_t & cnx){
     int ret = connect(fd, (sockaddr*)&cnx.connect_addr, addrlen);
     if (ret && errno != EALREADY &&
         errno != EINPROGRESS) {
-        //error
+        GLOG_SER("fd:%d connect error !", fd);
         return -1;
     }
     cnx.reconnect++;
-    GLOG_TRA("tcp connect fd:%d tried:%d  ....", fd, cnx.reconnect);
-	
-	return _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
+    GLOG_TRA("tcp connect fd:%d tried:%d  ....", fd, cnx.reconnect);	
+	ret = _op_poll(stcp, EPOLL_CTL_ADD, fd, EPOLLOUT);
+    if(ret){
+        GLOG_SER("poll ctrl add fd:%d error !", fd);
+        return -1;
+    }
+    return 0;
 }
 static inline void _connect_check(dctcp_t * stcp, int fd){
 	int error = 0;
@@ -724,6 +729,7 @@ static inline int _dctcp_check_send_queue(dctcp_t * stcp, int fd, int listenfd, 
     while (send_pdu > 0){
         int ret = send(fd, msgbuff->buffer + sent,
             send_pdu, MSG_DONTWAIT | MSG_NOSIGNAL);
+        GLOG_TRA("send socket fd:%d buffer offset:%d size:%d ret:%d", fd, sent, send_pdu, ret);
         if (ret > 0){ //send ok
             sent += ret;
         }
@@ -830,6 +836,7 @@ static inline int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, in
         GLOG_ERR("error proto format :%d fd:%d", proto_env->fproto, fd);
         return -3;
 	}
+    GLOG_TRA("send msg with fd:%d(%d) payload:%d frame size:%d", fd, listenfd, sz, msgbuff->valid_size);
     return _dctcp_check_send_queue(stcp, fd, listenfd, msgbuff);
 }
 
@@ -957,5 +964,9 @@ int             dctcp_connect(dctcp_t * stcp, const string & addr, int retry, co
 	saddr.sin_family = AF_INET;
 	//////////////////////////////////////////////////////////////////////////
     dctcp_connector_t & cnx = _add_connector(stcp, fd, saddr, retry, fproto, cb, ud, codec);
-	return _reconnect(stcp, fd, cnx);
+	if( _reconnect(stcp, fd, cnx)){
+        GLOG_ERR("dctcp fd:%d connect:%s error !", fd, addr.c_str());
+        return -1;
+    }
+    return fd;
 }

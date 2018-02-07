@@ -35,6 +35,7 @@ public:
     const   char *  name() const;
     void            tick_interval(int interval);
     int             tick_interval() const;
+    int             tick_hz() const;
     void            tick_maxproc(int maxproc);
     int             tick_maxproc() const;
     const   char *  program() const;

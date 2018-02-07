@@ -18,8 +18,8 @@ namespace dcs {
     struct mempool_t {
         int     init(const mempool_conf_t & conf);
         void *  alloc();
-        void    free(void *);
-        void *  ptr(size_t id);
+        int     free(void *);
+        void *  ptr(size_t id) const;
         size_t  id(void *) const;
         size_t  used() const;
         size_t  capacity() const;
@@ -55,11 +55,13 @@ namespace dcs {
         int         init(const hashmap_conf_t & conf);
         void *      insert(const void * blk, bool unique = true);
         void *      find(const void * blk);
-        void        remove(const void * blk);
+        int         remove(const void * blk);
         void *      next(void * blk);
         size_t      capacity() const;
 		size_t		buckets() const;
         size_t      used() const;
+        void *      ptr(size_t id) const;
+        size_t      id(void * p) const;
 	public:
 		//statistic
 		int         load(int rate = 100) const;

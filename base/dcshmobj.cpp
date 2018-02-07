@@ -6,7 +6,7 @@
 
 //////////////////////////////////////////////////////////////////
 const char * dcshmobj_user_t::name() const { return "shmobj_user"; }
-int          dcshmobj_user_t::on_alloced(void * data, bool attached) { UNUSED(data); UNUSED(attached); return 0; }
+int          dcshmobj_user_t::on_alloced(void * data, size_t udsize, bool attached) { UNUSED(data); UNUSED(attached); return 0; }
 size_t       dcshmobj_user_t::size() const { return 0; }
 size_t       dcshmobj_user_t::pack_size(void * ) const { return 0; }
 bool         dcshmobj_user_t::pack(void * , size_t , const void * ) const { return false; }
@@ -19,7 +19,7 @@ struct dcshmobj_pool_mm_fmt {
         MAX_OBJECT_TYPE_COUNT = 128,
         CHUNK_BLOCK_SIZE = 8,
         MAX_SAFE_MAGIC_LENGTH = 1024,
-        MAX_USER_NAME_LEN = 32,
+        MAX_USER_NAME_LEN = 64,
         SAFE_CHECK_MAGIC_NUMBER = 0xAA55AA55,
     };
     struct _head_t {
@@ -66,19 +66,19 @@ struct dcshmobj_pool_mm_fmt {
         return size_block(sz) * CHUNK_BLOCK_SIZE;
     }
     const char *   stat_dump(std::string & str) const {
-        str += "objects count:" + std::to_string(head.objects_count);
+        str += "count:" + std::to_string(head.objects_count);
         str += " version:"+ std::to_string(head.version) + " => list:";
         for (size_t i = 0; i < head.objects_count; ++i){
-            str += "{<user name:";
+            str += "{<user:";
             str += head.objects[i].name;
             str += ">,";
-            str += "<block offset:";
+            str += "<offset:";
             str += std::to_string(head.objects[i].block_offset);
             str += ">,";
-            str += "<block count:";
+            str += "<chunk:";
             str += std::to_string(head.objects[i].block_count);
             str += ">,";
-            str += "<real size:";
+            str += "<size:";
             str += std::to_string(head.objects[i].real_size);
             str += ">}";
             if (i + 1 < head.objects_count){
@@ -126,6 +126,7 @@ int     dcshmobj_pool_impl::regis(dcshmobj_user_t * user){
 size_t  dcshmobj_pool_impl::total_size() const {
     size_t sz = dcshmobj_pool_mm_fmt::align_size(sizeof(dcshmobj_pool_mm_fmt));
     for (auto u : shm_users){
+        sz += dcshmobj_pool_mm_fmt::align_size(sizeof(dcshmobj_pool_mm_fmt::_safe_magic_t));
         sz += dcshmobj_pool_mm_fmt::align_size(u->size());
     }
     return sz;
@@ -213,11 +214,12 @@ int     dcshmobj_pool_impl::start_with_backup_shm(dcshmobj_pool_mm_fmt * shmback
     shm->head.objects_count = 0;
     shm->head.version = 1;
     size_t nb_alloced = 0;
-    size_t safe_block_count = dcshmobj_pool_mm_fmt::size_block(sizeof(dcshmobj_pool_mm_fmt::_safe_magic_t));
+    size_t safe_block_size = dcshmobj_pool_mm_fmt::align_size(sizeof(dcshmobj_pool_mm_fmt::_safe_magic_t));
+    size_t safe_block_count = dcshmobj_pool_mm_fmt::size_block(safe_block_size);
     for (size_t i = 0; i < this->shm_users.size(); ++i){
         dcshmobj_user_t * user = this->shm_users[i];
         strncpy(shm->head.objects[i].name, user->name(), sizeof(shm->head.objects[i].name) - 1);
-        shm->head.objects[i].block_offset = nb_alloced;
+        shm->head.objects[i].block_offset = nb_alloced ;
         shm->head.objects[i].block_count = dcshmobj_pool_mm_fmt::size_block(user->size());
         shm->head.objects[i].real_size = user->size();
         dcshmobj_pool_mm_fmt::_safe_magic_t * safe_block = (dcshmobj_pool_mm_fmt::_safe_magic_t *)
@@ -235,7 +237,7 @@ int     dcshmobj_pool_impl::start_with_backup_shm(dcshmobj_pool_mm_fmt * shmback
             dcshmobj_user_t * user = find_user(objname);
             assert(user);
             GLOG_IFO("allocate shm %s init new fresh ...", user->name());
-            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0], false);
+            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0], shm->head.objects[i].real_size,  false);
             if (ret){
                 GLOG_ERR("allocated user :%s size:%zu alloc init error ret:%d !", user->name(), user->size(), ret);
                 return -4;
@@ -267,7 +269,7 @@ int     dcshmobj_pool_impl::start_with_backup_shm(dcshmobj_pool_mm_fmt * shmback
                 recover_ok = true;
             }
             GLOG_IFO("allocate shm %s recover state(attached):%d", user->name(), recover_ok ? 1 : 0);
-            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0], recover_ok);
+            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0], shm->head.objects[i].real_size, recover_ok);
             if (ret){
                 GLOG_ERR("allocated user :%s size:%zu alloc init error ret:%d recover state:%d!",
                     user->name(), user->size(), ret, recover_ok ? 1 : 0);
@@ -324,7 +326,7 @@ int     dcshmobj_pool_impl::start(const char * keypath){
         dcshmobj_user_t * user = find_user(objname);
         assert(user);
         GLOG_IFO("allocate object shm :%s with recover mode (all attached)", user->name());
-        ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0], true);
+        ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0],  shm->head.objects[i].real_size, true);
         if (ret){
             GLOG_ERR("allocated user :%s size:%zu attach init error ret:%d !", user->name(), user->size(), ret);
             return -4;

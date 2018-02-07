@@ -273,7 +273,14 @@ namespace dcs {
 		}
 		return lfst.st_atime;//.tv_sec;
 	}
-
+    int         touch_file(const std::string & file_path){
+        FILE * fp = fopen(file_path.c_str(), "a+");
+        if (!fp) {
+            return -1;
+        }
+        fclose(fp);
+        return 0;    
+    }
     size_t      file_size(const std::string & file) {
         FILE * fp = fopen(file.c_str(), "r");
         if (!fp) {
@@ -855,7 +862,12 @@ namespace dcs {
         addr.sin_family = AF_INET;
         addr.sin_port = 0;
         std::vector<string> vs;
-        strsplit(saddr, ":", vs);
+        std::string dname = saddr;
+        std::string::size_type fpos = saddr.find("//");
+        if(fpos != std::string::npos){
+            dname = saddr.substr(fpos+2);
+        }
+        strsplit(dname, ":", vs);
         if (strisint(vs[0])) {
             addr.sin_addr.s_addr = stol(vs[0]);
         }
@@ -867,7 +879,7 @@ namespace dcs {
         else { //must be a domainname
             int num = 1;
             if (ipfromhostname(&addr.sin_addr.s_addr, num, vs[0])) {
-                GLOG_ERR("get host name error first name:%s hostname:%s", vs[0].c_str(), saddr.c_str());
+                GLOG_ERR("get host name error first name:%s hostname:%s", vs[0].c_str(), dname.c_str());
                 return -1;
             }
         }

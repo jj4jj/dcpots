@@ -665,16 +665,16 @@ protobuf_msg_to_xml_string(const google::protobuf::Message & msg, std::string & 
     return 0;
 }
 
-static void
+static int
 convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type evt){
     UNUSED(lv);
 	std::stack<Message *> * msgstack = (std::stack<Message *> *)ud;
     if (xml_doc_t::node_type(node) != 1){//must be element
-        return;
+        return 0;
     }
     if (msgstack->empty()){
         GLOG_ERR("msg stack is empty ! please check the error !");
-        return;
+        return -1;
     }
     auto msg = msgstack->top();
 	auto desc =	msg->GetDescriptor();
@@ -691,7 +691,7 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
         else if (msg->GetDescriptor()->name() != name) {
             GLOG_WAR("not found the field current env msg:%s node:%s", msg->GetTypeName().c_str(), name);
         }
-        return;
+        return 0;
     }
 	switch (evt){
 	case xml_doc_t::BEGIN_NODE:
@@ -713,6 +713,7 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
 					int ret = protobuf_msg_field_set_value(*msg, name, -1, xml_doc_t::node_value(node), error);
 					if (ret){
 						GLOG_ERR("set value error ret:%d for :%s", ret, error.c_str());
+                        return -1;
 					}
 				}
 			}
@@ -722,7 +723,7 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
         //visit end
 		break;
 	default:
-		return;
+		return 0;
 	}
 }
 int
@@ -744,12 +745,18 @@ protobuf_msg_from_xml_file(google::protobuf::Message & msg, const std::string & 
 	xml_doc_t xml;
 	int ret = xml.parse_file(xmlfile.c_str());
 	if (ret){
-		error = "parse from file error !";
+		error = "parse from file format error !";
+        GLOG_ERR("parse file:%s xml format error", xmlfile.c_str());
 		return ret;
 	}
 	std::stack<Message*>		msgstack;
 	msgstack.push(&msg);
-	xml.sax(convert_xml_to_pb, &msgstack, nullptr);
+	ret = xml.sax(convert_xml_to_pb, &msgstack, nullptr);
+    if(ret < 0){
+        error = "parse from file proto error !";
+        GLOG_ERR("parse file:%s xml proto error", xmlfile.c_str());
+        return -1;
+    }
 	return 0;
 }
 

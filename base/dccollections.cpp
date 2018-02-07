@@ -2,10 +2,13 @@
 #include "dcmath.hpp"
 #include "dccollections.h"
 ///////////////////////////////////////////////////////////////////////////////////////////
-#define MMPOOL_MAGIC	("mmpool-magic")
+#define MMPOOL_HEAD_MAGIC	("mmpool-head")
+#define MMPOOL_MAGIC_BEGIN	("mmpool-magic-begin")
+#define MMPOOL_MAGIC_END	("mmpool-magic-end")
 #define DIV_CEIL(s,n)		(((s)+(n-1))/n)
-#define ALIGN_N(s,n)		(((s)+(n-1))/n*n)
-
+#define ALIGN_N(s,n)		(DIV_CEIL(s,n)*n)
+#define MMPOOL_DATA_BEGIN_PADDING_BUFF_SIZE    (1024)
+#define MMPOOL_PADDING_END_BLOCK_LIST    (1024)
 ///////////////////////////////////////////////////////////////////////////////////////////
 namespace dcs {
 struct mempool_impl_t {
@@ -13,16 +16,19 @@ struct mempool_impl_t {
 	size_t						data_size;
 	size_t						block_size;
 	size_t						block_max;
-	char						magic[16];
+	char						magic[32];
 	size_t                      used;
+    size_t                      capacity;
 	size_t						last_alloc_id;
-	size_t						head_begin;
 	size_t						data_begin;
 	size_t						data_end;
 };
-union mempool_impl_head {
+union mempool_impl_head_t {
 	///////////////////////////////////////////
-	uint64_t				bmp[1];
+    struct bmp_t {
+        size_t                  bmp_count;
+        uint64_t				bmp_block[1];
+    } bmp;
 	///////////////////////////////////////////
 	struct block_list_t {
 		struct queue_t {
@@ -45,18 +51,28 @@ mempool_conf_t::mempool_conf_t(){
     stg = MEMPOOL_STRATEGY_BITMAP;
     attach = false;
 }
-static inline int mmpool_bitmap_init(uint64_t bmp[], size_t blksz, size_t nblk, bool attach) {
+static inline int mmpool_bitmap_init(mempool_impl_head_t::bmp_t * bmp, size_t blksz, size_t nblk, bool attach) {
+    if(!attach){        
+        memset(bmp->bmp_block, 0, bmp->bmp_count*sizeof(uint64_t));
+    }
+    else {
+        if(bmp->bmp_count != DIV_CEIL(nblk, 64)){
+            return -1;
+        }
+    }
 	return 0;
 }
-static inline int mmpool_blklist_init(mempool_impl_head::block_list_t * bkl, size_t blksz, size_t nblk, bool attach) {
+static inline int mmpool_blklist_init(mempool_impl_head_t::block_list_t * bkl, size_t blksz, size_t nblk, bool attach) {
 	if (!attach){
 		memset(bkl, 0, sizeof(*bkl));
 		bkl->free.front = bkl->free.rear = 0;
 		bkl->busy.front = bkl->busy.rear = 0;
 		//init construct a linked list free
+        bkl->list[0].busy = 0;
 		bkl->list[0].next = 1;
 		bkl->list[0].prev = nblk-1;
 		for (size_t i = 1; i < nblk; ++i) {
+            bkl->list[i].busy = 0;
 			bkl->list[i].prev = i-1;
 			bkl->list[i].next = (i+1)%nblk;
 		}
@@ -70,16 +86,21 @@ int     mempool_t::init(const mempool_conf_t & conf){
 		return -1;
 	}
 	impl_ = (mempool_impl_t*)conf.data;
-	mempool_impl_head * mphead = (mempool_impl_head*)&(impl_[1]);
+	mempool_impl_head_t * mphead = (mempool_impl_head_t*)&(impl_[1]);
 	if (conf.attach) {
-		if (strcmp(MMPOOL_MAGIC, impl_->magic)) {
+		if (strcmp(MMPOOL_HEAD_MAGIC, impl_->magic)) {
 			GLOG_ERR("mmpool magic head error [%s] !", impl_->magic);
 			return -1;
 		}
-		if (strcmp(MMPOOL_MAGIC, (char *)impl_ + impl_->data_end)) {
-			GLOG_ERR("mmpool magic tail error [%s] !", (char *)impl_ + impl_->data_end);
+		if (strcmp(MMPOOL_MAGIC_BEGIN, (char *)impl_ + impl_->data_begin - MMPOOL_DATA_BEGIN_PADDING_BUFF_SIZE)) {
+			GLOG_ERR("mmpool magic data begin error [%s] !", (char *)impl_ + impl_->data_end);
 			return -1;
 		}
+        if (strcmp(MMPOOL_MAGIC_END, (char *)impl_ + impl_->data_end)) {
+            GLOG_ERR("mmpool magic data end error [%s] !", (char *)impl_ + impl_->data_end);
+            return -1;
+        }
+
 	}
 	else {
 		memset(impl_, 0, sizeof(*impl_));
@@ -87,24 +108,27 @@ int     mempool_t::init(const mempool_conf_t & conf){
 		impl_->data_size = conf.data_size;
 		impl_->block_size = conf.block_size;
 		impl_->stg = conf.stg;
-		impl_->head_begin = sizeof(mempool_impl_t);
+		impl_->data_begin = sizeof(mempool_impl_t) + sizeof(mempool_impl_head_t);
 		if (conf.stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
-			impl_->data_begin = impl_->head_begin + sizeof(uint64_t)*DIV_CEIL(conf.block_max,64);
-		}
+            mphead->bmp.bmp_count = DIV_CEIL(conf.block_max,64);
+            impl_->capacity = mphead->bmp.bmp_count*64;
+            impl_->data_begin += (sizeof(uint64_t)*mphead->bmp.bmp_count) ;
+        }
 		else if (conf.stg == mempool_conf_t::MEMPOOL_STRATEGY_BLKLST) {
-			impl_->data_begin = impl_->head_begin + \
-				sizeof(mempool_impl_head::block_list_t)+\
-				sizeof(mempool_impl_head::block_list_t::entry_t)*(conf.block_max-1);
+            impl_->capacity = conf.block_max;
+			impl_->data_begin += sizeof(mempool_impl_head_t::block_list_t::entry_t)*(impl_->capacity);
 		}
 		else {
 			assert("not support now !" && false);
 		}
-		impl_->data_end = impl_->data_begin + conf.block_max*conf.block_size;
-		strcpy(impl_->magic, MMPOOL_MAGIC);
-		strcpy((char *)impl_ + impl_->data_end, MMPOOL_MAGIC);
+        impl_->data_begin += MMPOOL_DATA_BEGIN_PADDING_BUFF_SIZE;
+		impl_->data_end = impl_->data_begin + conf.block_size*impl_->capacity;
+		strcpy(impl_->magic, MMPOOL_HEAD_MAGIC);
+		strcpy((char *)impl_ + impl_->data_begin - MMPOOL_DATA_BEGIN_PADDING_BUFF_SIZE, MMPOOL_MAGIC_BEGIN);
+        strcpy((char *)impl_ + impl_->data_end, MMPOOL_MAGIC_END);
 	}
 	if (conf.stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
-		return mmpool_bitmap_init(mphead->bmp, conf.block_size, conf.block_max, conf.attach);
+		return mmpool_bitmap_init(&mphead->bmp, conf.block_size, conf.block_max, conf.attach);
 	}
 	else if (conf.stg == mempool_conf_t::MEMPOOL_STRATEGY_BLKLST) {
 		return mmpool_blklist_init(&mphead->bkl, conf.block_size, conf.block_max, conf.attach);
@@ -121,25 +145,27 @@ void *  mempool_t::alloc(){
 		return nullptr;
 	}
 	if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
-		size_t bidx = impl_->last_alloc_id/64;
-		uint64_t * bmp = ((mempool_impl_head*)(&impl_[1]))->bmp;
-		size_t bitmap_count = DIV_CEIL(impl_->block_max,64);
+        mempool_impl_head_t::bmp_t * bmp = &((mempool_impl_head_t*)(&impl_[1]))->bmp;
+        size_t bidx = impl_->last_alloc_id/64;
 		//find first 0
 		size_t ffo = 0;
-		for (size_t i = 0; i < bitmap_count; ++i, bidx = (bidx+1)% bitmap_count) {			
-			if ((ffo = __builtin_ffsll(~(bmp[bidx])))) {
+		for (size_t i = 0; i < bmp->bmp_count; ++i, bidx = (bidx+1)% bmp->bmp_count) {			
+			if ((ffo = __builtin_ffsll(~(bmp->bmp_block[bidx])))) {
 				break;
 			}
 		}
-		assert(ffo);
+		assert(ffo && (0 == (bmp->bmp_block[bidx]&(1ULL << (ffo-1)))));
 		p = (char*)impl_ + impl_->data_begin + (bidx*64+ffo-1)*impl_->block_size;
-		bmp[bidx] |= (1ULL << (ffo - 1));//set 1
+		bmp->bmp_block[bidx] |= (1ULL << (ffo - 1));//set 1
 		++impl_->used;
 		impl_->last_alloc_id = bidx * 64 + ffo;
+        if (impl_->last_alloc_id >= impl_->capacity) {
+            impl_->last_alloc_id = 0;
+        }
 	}
 	else if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BLKLST) {
 		//free head alloc
-		mempool_impl_head::block_list_t * bkl = &((mempool_impl_head*)(&impl_[1]))->bkl;
+		mempool_impl_head_t::block_list_t * bkl = &((mempool_impl_head_t*)(&impl_[1]))->bkl;
 		size_t idx = bkl->free.front;
 		assert(0 == bkl->list[idx].busy);
 		//erase from free
@@ -156,30 +182,30 @@ void *  mempool_t::alloc(){
 	}
     return p;
 }
-void    mempool_t::free(void * p){
+int    mempool_t::free(void * p){
 	int ret = -1;
 	if (impl_->used == 0) {
-		return;
+		return -1;
 	}
 	size_t zid = this->id(p);
 	if (zid == 0) {
-		return;
+		return -2;
 	}
 	size_t idx = zid - 1;
 	if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
-		uint64_t * bmp = ((mempool_impl_head*)(&impl_[1]))->bmp;
+        mempool_impl_head_t::bmp_t * bmp = &((mempool_impl_head_t*)(&impl_[1]))->bmp;
 		uint64_t  mask = (1ULL << (idx % 64));
 		size_t bidx = idx / 64;
-		if (bmp[bidx] & mask) {
-			bmp[bidx] &= (~mask);
+		if (bmp->bmp_block[bidx] & mask) {
+			bmp->bmp_block[bidx] &= (~mask);
 			ret = 0;
 		}
 		else {
-			ret = -1;
+			ret = -3;
 		}
 	}
 	else if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BLKLST) {
-		mempool_impl_head::block_list_t * bkl = &((mempool_impl_head*)(&impl_[1]))->bkl;
+		mempool_impl_head_t::block_list_t * bkl = &((mempool_impl_head_t*)(&impl_[1]))->bkl;
 		if (1 == bkl->list[idx].busy) {
 			//erase from busy
 			bkl->list[bkl->list[idx].prev].next = bkl->list[idx].next;
@@ -193,15 +219,16 @@ void    mempool_t::free(void * p){
 			ret = 0;
 		}
 		else {
-			ret = -1;
+			ret = -4;
 		}
 	}
 	if (0 == ret) {
 		--impl_->used;
 	}
+    return ret;
 }
-void *  mempool_t::ptr(size_t id){
-	if (impl_->used == 0 || id == 0 || id > impl_->block_max) {
+void *  mempool_t::ptr(size_t id) const {
+	if (impl_->used == 0 || id == 0 || id > impl_->capacity) {
 		return nullptr;
 	}
 	return (char*)impl_ + impl_->data_begin + (id-1)*impl_->block_size;
@@ -221,24 +248,38 @@ size_t  mempool_t::capacity() const {
     return impl_->block_max;
 }
 void *  mempool_t::next(void * blk) {
+    if(used() == 0){
+        return nullptr;
+    }
 	if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
-		uint64_t * bmp = ((mempool_impl_head*)(&impl_[1]))->bmp;
-		size_t blkid = this->id(blk);//+1-1 . NEXT
+        mempool_impl_head_t::bmp_t * bmp = &((mempool_impl_head_t*)(&impl_[1]))->bmp;
+        size_t blkid = 0;
+        if(blk){
+            blkid = this->id(blk);//idx = (id+1) -1 :NEXT
+        }
 		size_t blkidx = blkid/64;
 		size_t bitidx = blkid%64;
-		size_t bitmap_count = impl_->block_max / 64;
-		for (; blkidx < bitmap_count; ++blkidx) {
-			for (int i = bitidx; i < 64; ++i) {
-				if (bmp[blkid] & (1ULL << i)) {
-					return this->ptr(blkidx*64+i+1);
-				}
-			}
+        for (int i = bitidx; i < 64; ++i) {
+            if (bmp->bmp_block[blkidx] & (1ULL << i)) {//busy
+                return this->ptr(blkidx * 64 + i + 1);
+            }
+        }
+        //next
+        ++blkidx;
+        for (; blkidx < bmp->bmp_count; ++blkidx) {
+            bitidx = __builtin_ffsll(bmp->bmp_block[blkidx]);
+            if(bitidx){
+                return this->ptr(blkidx * 64 + bitidx);
+            }
 		}
 		return nullptr;
 	}
 	else if (impl_->stg == mempool_conf_t::MEMPOOL_STRATEGY_BLKLST) {
-		mempool_impl_head::block_list_t * bkl = &((mempool_impl_head*)(&impl_[1]))->bkl;
-		size_t blkidx = this->id(blk) - 1;
+        size_t blkidx = 0;
+		mempool_impl_head_t::block_list_t * bkl = &((mempool_impl_head_t*)(&impl_[1]))->bkl;
+        if(blk){
+            blkidx = this->id(blk) - 1;
+        }
 		if (blkidx == bkl->busy.rear) {
 			return nullptr;
 		}
@@ -252,23 +293,25 @@ size_t  mempool_t::size(mempool_conf_t::strategy stg, size_t nblk, size_t blksz)
 	if (nblk == 0 || blksz == 0) {
 		return 0;
 	}
+    size_t rnblk = nblk;
+    size_t head_size = sizeof(mempool_impl_t) + sizeof(mempool_impl_head_t) + MMPOOL_DATA_BEGIN_PADDING_BUFF_SIZE + MMPOOL_PADDING_END_BLOCK_LIST;
 	if (stg == mempool_conf_t::MEMPOOL_STRATEGY_BITMAP) {
-		return ALIGN_N(sizeof(mempool_impl_t) + nblk* blksz + 16 +\
-			sizeof(uint64_t) * DIV_CEIL(nblk, 64), 16);
+        size_t  bmp_count = DIV_CEIL(nblk, 64);
+        head_size += sizeof(uint64_t)* bmp_count;
+        rnblk = bmp_count*64;
 	}
 	else if (stg == mempool_conf_t::MEMPOOL_STRATEGY_BLKLST) {
-		return ALIGN_N(sizeof(mempool_impl_t) + nblk* blksz + 16 +\
-			sizeof(mempool_impl_head::block_list_t) + \
-			sizeof(mempool_impl_head::block_list_t::entry_t)*(nblk-1), 16);
+        head_size += sizeof(mempool_impl_head_t::block_list_t::entry_t)* nblk;
 	}
 	else {		
 		return 0;
 	}
+    return ALIGN_N(head_size + rnblk*blksz, 16);
 }
 const char * mempool_t::stat(::std::string & str) const {
-	str += "Total size:" + ::std::to_string(impl_->data_size) +
-		" Bytes, Used (count):" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
-		", Usage (percentage):" + ::std::to_string(this->used() * 100 / this->capacity()) + "%";
+	str = "Total size:" + ::std::to_string(impl_->data_size) +
+		" Bytes, Used:" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
+		", Usage:" + ::std::to_string(this->used() * 100 / this->capacity()) + "%";
 	return str.c_str();
 }
 
@@ -313,17 +356,19 @@ struct hashmap_impl_t {
 	struct table_item_t {
 		size_t		code;
 		size_t		id;
+        size_t      next;
 	};
 	struct layout_desc {
 		table_item_t			table[1];
 		char					mmpool[1];
-		char					magic[16];
+		char					magic[32];
 	};
 };
 int         hashmap_t::init(const hashmap_conf_t & conf){
 	size_t total_size = size(conf.layer, conf.block_max, conf.block_size);
 	if (total_size == 0 || conf.data_size < total_size) {
-		GLOG_ERR("total size:%zu data size:%zu", total_size, conf.data_size);
+		GLOG_ERR("total size:%zu data size:%zu block max:%u block size:%u ",
+                 total_size, conf.data_size, conf.block_max, conf.block_size);
 		return -1;
 	}
 	impl_ = (hashmap_impl_t *)conf.data;
@@ -358,12 +403,13 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 		impl_->block_size = conf.block_size;
 		impl_->stat_hit_read = impl_->stat_insert = impl_->stat_probe_insert = \
 		impl_->stat_probe_read = 1;
-		size_t prime_n = dcs::prime_next(2*conf.block_max);
+		size_t prime_n = dcs::prime_next(117*(conf.block_max + 1)/100);
 		size_t table_size = prime_n;
 		impl_->layer = conf.layer;
-		impl_->layer_size[conf.layer - 1] = prime_n;
-		for (int i = conf.layer-2;i >= 0; --i) {
-			prime_n = dcs::prime_prev(prime_n);
+        impl_->layer_offset[0] = 1; //pos start from 1
+		impl_->layer_size[0] = prime_n;
+		for (int i = 0;i < impl_->layer; ++i) {
+			prime_n = dcs::prime_next(107*prime_n/100);
 			impl_->layer_size[i] = prime_n;
 			table_size += prime_n;
 		}
@@ -389,8 +435,80 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 	mpc.data_size = conf.data_size - impl_->mmpool_start;
     return impl_->mmpool.init(mpc);
 }
+static inline size_t _list_tail(hashmap_impl_t * impl_, size_t & skip_idx, size_t code, bool for_insert) {
+    hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    size_t itr_idx = skip_idx;
+    if(skip_idx == 0){
+        itr_idx = impl_->layer_offset[impl_->layer-1] + code % impl_->layer_size[impl_->layer-1];
+    }
+    assert(itr_idx >= impl_->layer_offset[impl_->layer-1] + impl_->layer_size[impl_->layer-1]);
+    while(table[itr_idx].next){
+        if(for_insert){
+            ++impl_->stat_probe_insert;
+        }
+        else {
+            ++impl_->stat_probe_read;        
+        }
+        skip_idx = itr_idx;
+        itr_idx = table[itr_idx].next;
+    }
+    return itr_idx;
+}
+static inline void 	_list_remove(hashmap_impl_t * impl_, size_t remove_idx, size_t code){
+    hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    size_t skip_prev_tail_idx = remove_idx;
+    size_t tail_idx = _list_tail(impl_, skip_prev_tail_idx, code, false);
+    //remove the last swap with remove idx
+    if (tail_idx != remove_idx) {
+        table[tail_idx].next = table[remove_idx].next;
+        table[remove_idx] = table[tail_idx];
+    }
+    table[tail_idx].code = 0;
+    table[tail_idx].next = 0;
+    table[tail_idx].id = 0;    
+}
+static inline void * _list_find(hashmap_impl_t * impl_, size_t & itr_idx, size_t code, const void * blk) {
+    hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    itr_idx = impl_->layer_offset[impl_->layer-1] + code % impl_->layer_size[impl_->layer-1];
+    void * p = nullptr;
+    while (itr_idx && table[itr_idx].id) {
+        ++impl_->stat_probe_read;
+        if(table[itr_idx].code == code){
+            p = impl_->mmpool.ptr(table[itr_idx].id);
+            if (0 == impl_->comp(blk, p)) {
+                ++impl_->stat_hit_read;
+                return p;
+            }        
+        }
+        itr_idx = table[itr_idx].next;
+    }
+    return nullptr;
+}
+static inline size_t _list_append(hashmap_impl_t * impl_, size_t code, size_t did){
+    hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    size_t tail_prev_idx = 0;
+    size_t tail_idx = _list_tail(impl_, tail_prev_idx, code, true);
+    assert(tail_idx >= impl_->layer_offset[impl_->layer - 1]);
+    size_t max_try = impl_->block_count;
+    size_t alloc_idx = tail_idx;
+    while (max_try-- > 0 && table[alloc_idx].id > 0) {
+        ++impl_->stat_probe_insert;
+        alloc_idx = alloc_idx + 1;
+        if (alloc_idx >= impl_->layer_offset[impl_->layer - 1] + impl_->layer_size[impl_->layer - 1]) {
+            alloc_idx = impl_->layer_offset[impl_->layer - 1];
+        }
+    }
+    assert(table[alloc_idx].id == 0 && table[alloc_idx].next == 0 && table[alloc_idx].code == 0);
+    table[alloc_idx].code = code;
+    table[alloc_idx].id = did;
+    if(tail_idx != alloc_idx){
+        table[tail_idx].next = alloc_idx;
+    }
+    return alloc_idx;
+}
 void *      hashmap_t::insert(const void * blk, bool unique){
-	if (unique) {
+    hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    if (unique) {
 		void * p = find(blk);
 		if (p) {
 			return nullptr;
@@ -400,144 +518,65 @@ void *      hashmap_t::insert(const void * blk, bool unique){
 	if (!p) {
 		return nullptr;
 	}
-	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    memcpy(p, blk, impl_->block_size);
+    if (impl_->init) {
+        impl_->init(p);
+    }
+    ++impl_->stat_insert;
 	size_t id = impl_->mmpool.id(p);
-	size_t code = impl_->hash(blk);
-	size_t lidx = 0;
-	bool inserted = false;
-	for (int i = 0;i < impl_->layer; ++i) {
-		lidx = impl_->layer_offset[i] + code % impl_->layer_size[i];
-		++impl_->stat_probe_insert;
-		if (table[lidx].id == 0) {
-			table[lidx].id = id;
-			table[lidx].code = code;
-			inserted = true;
-			break;
-		}
-	}
-	if (!inserted) {
-		//last layer
-		size_t retry = capacity();
-		while (table[lidx].id && retry-->0) {
-			 ++lidx;
-			 ++impl_->stat_probe_insert;
-			 if (lidx >= impl_->layer_offset[impl_->layer - 1] + impl_->layer_size[impl_->layer - 1]) {
-				 lidx = impl_->layer_offset[impl_->layer - 1];
-			 }
-		}
-		if (table[lidx].id) {
-			impl_->mmpool.free(p);
-			p = nullptr;
-			assert("no allocated space !" && false);
-		}
-		else {
-			table[lidx].id = id;
-			table[lidx].code = code;
-		}
-	}
-	if (p) {
-		memcpy(p, blk, impl_->block_size);
-		++impl_->stat_insert;
-		if (impl_->init) {
-			impl_->init(p);
-		}
-	}
+	size_t code = impl_->hash(blk) + 1;
+    for (int i = 0; i + 1 < impl_->layer; ++i) {
+        size_t alloc_idx = impl_->layer_offset[i] + code%impl_->layer_size[i];
+        ++impl_->stat_probe_insert;
+        if (table[alloc_idx].id == 0) {
+            assert(table[alloc_idx].code == 0);
+            table[alloc_idx].code = code;
+            table[alloc_idx].id = id;
+            return p;
+        }
+    }
+    _list_append(impl_, code, id);
     return p;
 }
-static inline size_t _list_tail(hashmap_impl_t * impl_, size_t code) {
-	size_t lidx = -1, plidx = -1;
-	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
-	for (int i = 0; i < impl_->layer; ++i) {
-		plidx = lidx;
-		lidx = impl_->layer_offset[i] + code % impl_->layer_size[i];
-		if (table[lidx].id == 0) {
-			return plidx;
-		}
-	}
-	//last layer
-	size_t retry = impl_->mmpool.capacity();
-	while (table[lidx].id && retry-->0) {
-		plidx = lidx;
-		++lidx;
-		if (lidx >= impl_->layer_offset[impl_->layer - 1] + impl_->layer_size[impl_->layer - 1]) {
-			lidx = impl_->layer_offset[impl_->layer - 1];
-		}
-	}
-	if (table[lidx].id) {
-		assert("no allocated space !" && false);
+void *      hashmap_t::find(const void * blk){
+    size_t code = impl_->hash(blk) + 1 , itr_idx = 0;
+    hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    for (int i = 0; (i+1) < impl_->layer; ++i) {
+        itr_idx = impl_->layer_offset[i] + code % impl_->layer_size[i];
+        ++impl_->stat_probe_read;
+        if (table[itr_idx].code == code) {
+            void * p = impl_->mmpool.ptr(table[itr_idx].id);
+            if (0 == impl_->comp(blk, p)) {
+                ++impl_->stat_hit_read;
+                return p;
+            }
+        }
+    }
+    return _list_find(impl_, itr_idx,  code, blk);
+}
+int         hashmap_t::remove(const void * blk){
+    size_t code = impl_->hash(blk) + 1, itr_idx = 0;
+    hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
+    void * p = nullptr;
+    for (int i = 0; (i + 1) < impl_->layer; ++i) {
+        itr_idx = impl_->layer_offset[i] + code % impl_->layer_size[i];
+        ++impl_->stat_probe_read;
+        if (table[itr_idx].code == code) {
+            void * p = impl_->mmpool.ptr(table[itr_idx].id);
+            if (0 == impl_->comp(blk, p)) {
+                ++impl_->stat_hit_read;
+                table[itr_idx].code = 0;
+                table[itr_idx].id = 0;
+                return impl_->mmpool.free(p);
+            }
+        }
+    }
+    p = _list_find(impl_, itr_idx, code, blk);
+	if (!p) {
 		return -1;
 	}
-	else {
-		return plidx;
-	}
-}
-static inline void * _list_find(size_t & lidx, hashmap_impl_t * impl_, size_t code, const void * blk) {
-	size_t retry = impl_->mmpool.capacity();
-	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
-	int last_layer_idx = impl_->layer - 1;
-	lidx = impl_->layer_offset[last_layer_idx] + code % impl_->layer_size[impl_->layer-1];
-	while (retry-- > 0 && table[lidx].id > 0) {
-		++impl_->stat_probe_read;
-		if (table[lidx].code == code) {
-			void * p = impl_->mmpool.ptr(table[lidx].id);
-			if (0 == impl_->comp(blk, p)) {
-				++impl_->stat_hit_read;
-				return p;
-			}
-		}
-		++lidx;
-		if (lidx >= impl_->layer_offset[last_layer_idx] + impl_->layer_size[last_layer_idx]) {
-			lidx = impl_->layer_offset[last_layer_idx];
-		}
-	}
-	return nullptr;
-}
-static inline void * _find(size_t & layer, size_t & lidx, hashmap_impl_t * impl_, const void * blk) {
-	size_t code = impl_->hash(blk);
-	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
-	lidx = 0;
-	layer = 0;
-	for (int i = 0;i < impl_->layer; ++i) {
-		lidx = impl_->layer_offset[i] + code % impl_->layer_size[i];
-		++impl_->stat_probe_read;
-		if (table[lidx].id) {
-			if (table[lidx].code == code) {
-				void * p = impl_->mmpool.ptr(table[lidx].id);
-				if (0 == impl_->comp(blk, p)) {
-					layer = i;
-					return p;
-				}
-			}
-		}
-		else {
-			return nullptr;
-		}
-	}
-	assert(lidx >= impl_->layer_offset[impl_->layer - 1]);
-	layer = impl_->layer-1;
-	return _list_find(lidx, impl_, code, blk);
-}
-
-void *      hashmap_t::find(const void * blk){
-	size_t lidx, layer;
-    return _find(layer, lidx, impl_, blk);
-}
-void        hashmap_t::remove(const void * blk){
-	size_t lidx, layer;
-	void * p = _find(layer, lidx, impl_, blk);
-	if (!p) {
-		return ;
-	}
-	hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
-	size_t code = impl_->hash(blk);
-	size_t ltidx = _list_tail(impl_, code);
-	assert(ltidx != (size_t)-1);
-	if (ltidx != lidx) {
-		table[lidx] = table[ltidx];
-	}
-	table[ltidx].id = 0;
-	table[ltidx].code = 0;
-	impl_->mmpool.free(p);
+	_list_remove(impl_, itr_idx, code);
+	return impl_->mmpool.free(p);
 }
 void *      hashmap_t::next(void * blk){
     return impl_->mmpool.next(blk);
@@ -550,6 +589,12 @@ size_t		hashmap_t::buckets() const {
 }
 size_t      hashmap_t::used() const {
     return impl_->mmpool.used();
+}
+void *      hashmap_t::ptr(size_t id) const {
+    return impl_->mmpool.ptr(id);
+}
+size_t      hashmap_t::id(void * p) const {
+    return impl_->mmpool.id(p);
 }
 size_t      hashmap_t::size(int layer, size_t nblk, size_t blksz){
 	if (layer < 1 || layer > HASHMAP_MAX_LAYER) {
@@ -590,13 +635,13 @@ const char * hashmap_t::layers(::std::string & str) const {
 	return str.c_str();
 }
 const char * hashmap_t::stat(::std::string & str) const {
-	str += "memory total size:" + ::std::to_string(impl_->total_size) +
+	str = "memory total size:" + ::std::to_string(impl_->total_size) +
 		" Bytes, mempool used:" + ::std::to_string(this->used()) + "/" + ::std::to_string(this->capacity()) +
-		", mempool usage (percentage):" + ::std::to_string(this->used() * 100 / this->capacity()) +
-		"%, load (percentage):" + ::std::to_string(this->load()) +
-		"%, hit rate (percentage):" + ::std::to_string(this->hit()) +
+		", mempool usage:" + ::std::to_string(this->used() * 100 / this->capacity()) +
+		"%, load:" + ::std::to_string(this->load()) +
+		"%, hit rate:" + ::std::to_string(this->hit()) +
 		"%, bucket factor:" + ::std::to_string(this->factor()) +
-		", collision (percentage):" + ::std::to_string(this->collision()) +
+		", collision:" + ::std::to_string(this->collision()) +
 		"%, layers size:" + ::std::to_string(impl_->layer);
 	return this->layers(str);
 }

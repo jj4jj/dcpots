@@ -118,6 +118,7 @@ struct AppImpl {
     dcshmobj_pool   shm_pool;
 	DateTime		datetime;
     AppRunStat      stat;
+    int             hz;
 };
 
 static App * s_app_instance{ nullptr };
@@ -440,7 +441,7 @@ static inline void init_signal(){
     dcs::signalh_push(SIGTERM, signalh_function::term_stop);
     dcs::signalh_push(SIGUSR1, signalh_function::usr1_restart);
     dcs::signalh_push(SIGUSR2, signalh_function::usr2_reload);
-    dcs::signalh_push(SIGSEGV, signalh_function::segv_crash);
+    //dcs::signalh_push(SIGSEGV, signalh_function::segv_crash);
 }
 static inline int init_facilities(App & app, AppImpl * impl_){
     //3.global logger
@@ -455,8 +456,12 @@ static inline int init_facilities(App & app, AppImpl * impl_){
         return -2;
     }
     impl_->interval = app.cmdopt().getoptint("tick-interval");
+    if(impl_->interval == 0){
+        impl_->interval = 10*1000;
+    }
     impl_->max_proc_tick = app.cmdopt().getoptint("tick-max-proc");
     impl_->stat.stat_update_period = app.cmdopt().getoptint("run-stat-interval");
+    impl_->hz = (1000*1000)/impl_->interval;
     //init timer
     ret = eztimer_init();
     if (ret){
@@ -597,6 +602,7 @@ int App::init(int argc, const char * argv[]){
     return on_init();
 }
 static inline int _app_tick(App * app, AppImpl * impl_){
+    impl_->datetime.update();
     impl_->time_now_us = dcs::time_unixtime_us();
     impl_->stat.update(impl_->time_now_us);
     int nproc = 0;
@@ -682,7 +688,13 @@ cmdline_opt_t & App::cmdopt(){
     return *impl_->cmdopt;
 }
 void            App::tick_interval(int interval){
-    impl_->interval = interval;
+    if(interval > 0){
+        impl_->interval = interval;
+        impl_->hz = (1000 * 1000) / impl_->interval;
+    }
+}
+int             App::tick_hz() const {
+    return impl_->hz;
 }
 int             App::tick_interval() const{
     return impl_->interval;

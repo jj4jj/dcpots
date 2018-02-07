@@ -174,12 +174,9 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
 	}
 	if (loglv == LOG_LVL_FATAL && available_size > 192){
 		//append stack frame info
-        if (msg_start[n - 1] == '\n') {
-            --n;
-        }
 		string strstack;
 		n += snprintf(&msg_start[n], available_size, "%s\n",
-			dcs::stacktrace(strstack, 2, 16, nullptr, " <-- "));
+			dcs::stacktrace(strstack, 2, 16, nullptr, "\n"));
         available_size = logger->last_msg.capacity() - (n + 2);
 	}
     msg_start[n] = 0;
