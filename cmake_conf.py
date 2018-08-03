@@ -46,17 +46,17 @@ units = [{
             'subdir':'utility/script',
             'incs':['/usr/local/include'],
         },
-        {
-            'name':'dcutil-drs',
-            'subdir':'utility/drs',
-            'incs':['3rd','{{protoi}}'],
-            'srcs': ['extensions.pb.cc'],
-            'objs': [{
-                'out':'{{cdir}}/extensions.pb.cc',
-                'dep':'{{cdir}}/extensions.proto',
-                'cmd':'{{protoc}} {{cdir}}/dcxconfig.proto {{cdir}}/extensions.proto -I{{cdir}}/ -I{{protoi}} -I/usr/include -I/usr/local/include --cpp_out={{cdir}}/'
-            }]
-        },
+        # {
+        #     'name':'dcutil-drs',
+        #     'subdir':'utility/drs',
+        #     'incs':['3rd','{{protoi}}'],
+        #     'srcs': ['extensions.pb.cc'],
+        #     'objs': [{
+        #         'out':'{{cdir}}/extensions.pb.cc',
+        #         'dep':'{{cdir}}/extensions.proto',
+        #         'cmd':'{{protoc}} {{cdir}}/dcxconfig.proto {{cdir}}/extensions.proto -I{{cdir}}/ -I{{protoi}} -I/usr/include -I/usr/local/include --cpp_out={{cdir}}/'
+        #     }]
+        # },
         {
             'name':'dcutil-crypt',
             'subdir':'utility/crypt',
