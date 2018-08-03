@@ -67,8 +67,8 @@ int			dcsmq_poll(dcsmq_t*, int max_time_us );
 int			dcsmq_send(dcsmq_t*,uint64_t dst, const dcsmq_msg_t & msg);
 int         dcsmq_sendv(dcsmq_t*, uint64_t dst, const std::vector<dcsmq_msg_t> & msgv);
 int			dcsmq_put(dcsmq_t*, uint64_t dst, const dcsmq_msg_t & msg);//send to peer like himself
-uint64_t    dcsmq_recv(dcsmq_t*, dcsmq_msg_t & msg);
-uint64_t	dcsmq_take(dcsmq_t*, dcsmq_msg_t & msg);//send to peer like himself
+uint64_t    dcsmq_recv(dcsmq_t*, dcsmq_msg_t & msg, bool block = false);
+uint64_t	dcsmq_take(dcsmq_t*, dcsmq_msg_t & msg, bool block = false);//send to peer like himself
 bool		dcsmq_server_mode(dcsmq_t *);
 void		dcsmq_set_session(dcsmq_t *, uint64_t session); //send or recv type
 uint64_t	dcsmq_session(dcsmq_t *);

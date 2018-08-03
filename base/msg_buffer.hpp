@@ -22,26 +22,26 @@ struct msg_buffer_t {
 		valid_size = 0;
 		return 0;
 	}
-    int  reserve(int max_sz, bool init = false){
-        if (max_size < max_sz ){            
+    int  reserve(int reserve_size, bool init = false){
+        if (max_size < reserve_size ){            
             if (max_size == 0){
                 buffer = nullptr; //str
             }
-            char * p = (char*)realloc(buffer, max_sz);
+            char * p = (char*)realloc(buffer, reserve_size);
             if (!p) {
                 destroy();
                 return -1;
             }
             buffer = p;
-            max_size = max_sz;
             //expanding
             if (init){
-                memset(buffer + max_size, 0, max_sz - max_size);
+                memset(buffer + max_size, 0, reserve_size - max_size);
             }
+            max_size = reserve_size;
         }
         else { //cut
             if (init){
-                memset(buffer + max_sz, 0, max_size - max_sz);
+                memset(buffer + reserve_size, 0, max_size - reserve_size);
             }
         }
         valid_size = 0;

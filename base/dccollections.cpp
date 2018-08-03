@@ -9,14 +9,16 @@
 #define ALIGN_N(s,n)		(DIV_CEIL(s,n)*n)
 #define MMPOOL_DATA_BEGIN_PADDING_BUFF_SIZE    (1024)
 #define MMPOOL_PADDING_END_BLOCK_LIST    (1024)
+#define MEMPOOL_MAGIC_BUFF_SIZE (32)
 ///////////////////////////////////////////////////////////////////////////////////////////
 namespace dcs {
 struct mempool_impl_t {
+    mempool_conf_t::block_init  init;
 	mempool_conf_t::strategy    stg;
 	size_t						data_size;
 	size_t						block_size;
 	size_t						block_max;
-	char						magic[32];
+	char						magic[MEMPOOL_MAGIC_BUFF_SIZE];
 	size_t                      used;
     size_t                      capacity;
 	size_t						last_alloc_id;
@@ -45,7 +47,17 @@ union mempool_impl_head_t {
 		entry_t				list[1];
 	} bkl;
 };
+struct mempool_layout_desc {
+    mempool_impl_t          impl;
+    mempool_impl_head_t     head;
+    mempool_impl_head_t     index[1];
+    char    padding_data_begin[MMPOOL_DATA_BEGIN_PADDING_BUFF_SIZE];
+    char    data[1];//data_begin,data_end
+    char    padding_data_end[MMPOOL_PADDING_END_BLOCK_LIST];
+};
+
 mempool_conf_t::mempool_conf_t(){
+    init = nullptr;
     data = nullptr;
     data_size = block_size = block_max = 0;
     stg = MEMPOOL_STRATEGY_BITMAP;
@@ -82,10 +94,16 @@ static inline int mmpool_blklist_init(mempool_impl_head_t::block_list_t * bkl, s
 int     mempool_t::init(const mempool_conf_t & conf){
 	size_t total_size = size(conf.stg, conf.block_max, conf.block_size);
 	if (total_size == 0 || conf.data_size < total_size) {
-		GLOG_ERR("config data size :%zu need %zu error !", conf.data_size, total_size);
+		GLOG_ERR("mempool config data size:%zu need size:%zu conf(stg:%d,nblk:%d,blksz:%d)error !", 
+                conf.data_size, total_size,
+                conf.stg, conf.block_max, conf.block_size);
 		return -1;
 	}
-	impl_ = (mempool_impl_t*)conf.data;
+    GLOG_DBG("mempool init config data size:%zu need size:%zu conf(stg:%d,nblk:%d,blksz:%d) ...",
+        conf.data_size, total_size,
+        conf.stg, conf.block_max, conf.block_size);
+    impl_ = (mempool_impl_t*)conf.data;
+    //////////////////////////////////////////////////////////////////////////
 	mempool_impl_head_t * mphead = (mempool_impl_head_t*)&(impl_[1]);
 	if (conf.attach) {
 		if (strcmp(MMPOOL_HEAD_MAGIC, impl_->magic)) {
@@ -100,10 +118,11 @@ int     mempool_t::init(const mempool_conf_t & conf){
             GLOG_ERR("mmpool magic data end error [%s] !", (char *)impl_ + impl_->data_end);
             return -1;
         }
-
+        impl_->init = conf.init;
 	}
 	else {
 		memset(impl_, 0, sizeof(*impl_));
+        impl_->init = conf.init;
 		impl_->block_max = conf.block_max;
 		impl_->data_size = conf.data_size;
 		impl_->block_size = conf.block_size;
@@ -180,6 +199,9 @@ void *  mempool_t::alloc(){
 		++impl_->used;
 		impl_->last_alloc_id = idx + 1;
 	}
+    if(impl_->init){
+        impl_->init(p);
+    }
     return p;
 }
 int    mempool_t::free(void * p){
@@ -233,7 +255,7 @@ void *  mempool_t::ptr(size_t id) const {
 	}
 	return (char*)impl_ + impl_->data_begin + (id-1)*impl_->block_size;
 }
-size_t  mempool_t::id(void * p) const {
+size_t  mempool_t::id(const void * p) const {
 	if (impl_->used == 0 || 
 		p < (char*)impl_ + impl_->data_begin ||
 		p >= (char*)impl_ + impl_->data_end) {
@@ -321,7 +343,6 @@ mempool_t::mempool_t(){
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 hashmap_conf_t::hashmap_conf_t() {
 	data = nullptr;
-    init = nullptr;
     hash = nullptr;
     comp = nullptr;
 	data_size = block_max = block_size = 0;
@@ -331,13 +352,15 @@ hashmap_conf_t::hashmap_conf_t() {
 #define  HASHMAP_MAGIC		("hashmap-magic")
 #define HASHMAP_MAX_LAYER	(11)
 //multi layer hash
+#define HASH_MAP_LAYER_1ST_FACTOR   (117)
+#define HASH_MAP_LAYER_OTHER_FACTOR   (107)
+#define HASH_MAP_MAGIC_BUFF_SIZE    (32)
 //cmax(count)
 struct hashmap_impl_t {
-	hashmap_conf_t::block_init  init;
 	hashmap_conf_t::block_hash  hash;
 	hashmap_conf_t::block_comp  comp;
 	mempool_t					mmpool;
-	char						magic[16];
+	char						magic[HASH_MAP_MAGIC_BUFF_SIZE];
 	int							layer;
 	size_t						layer_offset[HASHMAP_MAX_LAYER];
 	size_t						layer_size[HASHMAP_MAX_LAYER];
@@ -358,10 +381,11 @@ struct hashmap_impl_t {
 		size_t		id;
         size_t      next;
 	};
-	struct layout_desc {
-		table_item_t			table[1];
-		char					mmpool[1];
-		char					magic[32];
+	struct layout_desc { //the hash map layout
+        hashmap_impl_t        * head;
+		table_item_t			table[1];//layers(multi level)
+		char					mmpool[1];//mmpool
+		char					magic[HASH_MAP_MAGIC_BUFF_SIZE];
 	};
 };
 int         hashmap_t::init(const hashmap_conf_t & conf){
@@ -374,7 +398,6 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 	impl_ = (hashmap_impl_t *)conf.data;
 	if (conf.attach) {
 		impl_->comp = conf.comp;
-		impl_->init = conf.init;
 		impl_->hash = conf.hash;
 		//check
 		if (strcmp(impl_->magic, HASHMAP_MAGIC)) {
@@ -396,20 +419,20 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 	else {
 		memset(impl_, 0, sizeof(*impl_));
 		impl_->comp = conf.comp;
-		impl_->init = conf.init;
 		impl_->hash = conf.hash;
 		impl_->total_size = total_size;
 		impl_->block_count = conf.block_max;
 		impl_->block_size = conf.block_size;
 		impl_->stat_hit_read = impl_->stat_insert = impl_->stat_probe_insert = \
 		impl_->stat_probe_read = 1;
-		size_t prime_n = dcs::prime_next(117*(conf.block_max + 1)/100);
+        /////////////////////////////////////////////////////////////////////////
+		size_t prime_n = dcs::prime_next(HASH_MAP_LAYER_1ST_FACTOR*(conf.block_max + 1)/100);
 		size_t table_size = prime_n;
 		impl_->layer = conf.layer;
         impl_->layer_offset[0] = 1; //pos start from 1
 		impl_->layer_size[0] = prime_n;
-		for (int i = 0;i < impl_->layer; ++i) {
-			prime_n = dcs::prime_next(107*prime_n/100);
+		for (int i = 1;i < impl_->layer; ++i) {
+			prime_n = dcs::prime_next(HASH_MAP_LAYER_OTHER_FACTOR*prime_n/100);
 			impl_->layer_size[i] = prime_n;
 			table_size += prime_n;
 		}
@@ -425,6 +448,8 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 		strcpy((char*)impl_ + impl_->mmpool_end, HASHMAP_MAGIC);
 		hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
 		memset(table, 0 , sizeof(hashmap_impl_t::table_item_t)*table_size);
+        GLOG_DBG("hashtable mem head table size:%zd mempool offset:%zd(hash map table entry list size) mempool size:%zd", 
+                table_size, impl_->mmpool_start, impl_->mmpool_end - impl_->mmpool_start);
 	}
 	mempool_conf_t mpc;
 	mpc.stg = mempool_conf_t::MEMPOOL_STRATEGY_BITMAP;
@@ -432,8 +457,16 @@ int         hashmap_t::init(const hashmap_conf_t & conf){
 	mpc.block_size = conf.block_size;
 	mpc.attach = conf.attach;
 	mpc.data = (char*)impl_ + impl_->mmpool_start;
-	mpc.data_size = conf.data_size - impl_->mmpool_start;
-    return impl_->mmpool.init(mpc);
+	mpc.data_size = impl_->mmpool_end - impl_->mmpool_start;
+    int ret = impl_->mmpool.init(mpc);
+    if(ret){
+        GLOG_ERR("hashmap init mempool error:%d total size:%zd offset:%zd mempool size:%zd need size:%zd conf.size:%zd total need:%zd", 
+        conf.data_size, impl_->mmpool_start, mpc.data_size,
+            mempool_t::size(mempool_conf_t::MEMPOOL_STRATEGY_BITMAP, conf.block_max, conf.block_size),
+            conf.data_size, total_size);
+        return -1;
+    }
+    return 0;
 }
 static inline size_t _list_tail(hashmap_impl_t * impl_, size_t & skip_idx, size_t code, bool for_insert) {
     hashmap_impl_t::table_item_t * table = (hashmap_impl_t::table_item_t*)((char*)impl_ + impl_->table_start);
@@ -511,17 +544,16 @@ void *      hashmap_t::insert(const void * blk, bool unique){
     if (unique) {
 		void * p = find(blk);
 		if (p) {
+            GLOG_ERR("insert blk repeat !");
 			return nullptr;
 		}
 	}
 	void * p = impl_->mmpool.alloc();
 	if (!p) {
+        GLOG_ERR("alloc blk fail !");
 		return nullptr;
 	}
     memcpy(p, blk, impl_->block_size);
-    if (impl_->init) {
-        impl_->init(p);
-    }
     ++impl_->stat_insert;
 	size_t id = impl_->mmpool.id(p);
 	size_t code = impl_->hash(blk) + 1;
@@ -593,7 +625,7 @@ size_t      hashmap_t::used() const {
 void *      hashmap_t::ptr(size_t id) const {
     return impl_->mmpool.ptr(id);
 }
-size_t      hashmap_t::id(void * p) const {
+size_t      hashmap_t::id(const void * p) const {
     return impl_->mmpool.id(p);
 }
 size_t      hashmap_t::size(int layer, size_t nblk, size_t blksz){
@@ -604,15 +636,23 @@ size_t      hashmap_t::size(int layer, size_t nblk, size_t blksz){
 	if (mpsz == 0) {
 		return 0;
 	}
-	size_t prime_n = dcs::prime_next(2*nblk);
+    /////////////////////////////////////////////////////////
+    //refer to hashmap_layout
+    //impl
+    //item*layers_total
+    //mmpool
+    //magic
+	size_t prime_n = dcs::prime_next(HASH_MAP_LAYER_1ST_FACTOR * (nblk + 1) / 100);
 	size_t table_size = prime_n;
 	for (int i = 1; i < layer; ++i) {
-		prime_n = dcs::prime_prev(prime_n);
+		prime_n = dcs::prime_next(HASH_MAP_LAYER_OTHER_FACTOR * prime_n / 100);
 		table_size += prime_n;
 	}
-	mpsz += table_size*sizeof(hashmap_impl_t::table_item_t);
-	mpsz += sizeof(hashmap_impl_t);
-    return mpsz;
+
+    return ALIGN_N(sizeof(hashmap_impl_t) + \
+        (table_size * sizeof(hashmap_impl_t::table_item_t)) + \
+          mpsz + \
+        HASH_MAP_MAGIC_BUFF_SIZE, 16);
 }
 int         hashmap_t::load(int rate) const {
 	return used() * rate / buckets();

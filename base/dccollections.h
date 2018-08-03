@@ -7,11 +7,13 @@ namespace dcs {
             MEMPOOL_STRATEGY_BITMAP = 0,
             MEMPOOL_STRATEGY_BLKLST = 1,
         };
+        typedef void(*block_init)(void * blk);
         void *      data;
         size_t      data_size;
         size_t      block_size;
         size_t      block_max;
         bool        attach;
+        block_init  init;
         strategy    stg;
         mempool_conf_t();
     };
@@ -20,7 +22,7 @@ namespace dcs {
         void *  alloc();
         int     free(void *);
         void *  ptr(size_t id) const;
-        size_t  id(void *) const;
+        size_t  id(const void *) const;
         size_t  used() const;
         size_t  capacity() const;
 		void *  next(void * blk);
@@ -41,10 +43,8 @@ namespace dcs {
 		size_t      block_size;
 		size_t      block_max;
 		bool        attach;
-        typedef void(*block_init)(void * blk);
         typedef size_t(*block_hash)(const void * blk);
         typedef int(*block_comp)(const void * blkl, const void * blkr);
-        block_init  init;
         block_hash  hash;
         block_comp  comp;
 		int			layer;
@@ -61,7 +61,7 @@ namespace dcs {
 		size_t		buckets() const;
         size_t      used() const;
         void *      ptr(size_t id) const;
-        size_t      id(void * p) const;
+        size_t      id(const void * p) const;
 	public:
 		//statistic
 		int         load(int rate = 100) const;

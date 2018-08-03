@@ -118,8 +118,8 @@ namespace dcs {
 #if _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
         ret = daemon(!chrootdir, !closestd);
 #else
-        assert("not implement in this platform , using nohup & launch it ?")
-            ret = -404;//todo 
+        assert("not implement in this platform , using nohup & launch it ?");
+        ret = -404;//todo 
 #endif
         if (pidfile) {
             int pidget = lockpidfile(pidfile);
@@ -257,6 +257,10 @@ namespace dcs {
 		struct timespec st_mtim;  /* time of last modification */
 		struct timespec st_ctim;  /* time of last status change */
 #endif
+    int         file_md5sum(std::string & md5sum, const std::string & file){
+       return -1; 
+    }
+
 	time_t		file_modify_time(const std::string & file) {
 		struct stat lfst;
 		int ret = stat(file.c_str(), &lfst);
@@ -772,6 +776,34 @@ namespace dcs {
         }
         return ret;
     }
+    static inline int _set_socket_opt(int fd, int name, void * val, socklen_t len) {
+        int lv = SOL_SOCKET;
+        if (name == TCP_NODELAY) { lv = IPPROTO_TCP; }
+        int ret = setsockopt(fd, lv, name, val, len);
+        if (ret) {
+            GLOG_SER("set socket fd:%d opt name:%d error", fd, name, ret);
+        }
+        return ret;
+    }
+
+    static inline int _set_socket_ctl(int fd, int flag, bool open) {
+        int flags = fcntl(fd, F_GETFL, 0);
+        if (flags < 0) {
+            GLOG_SER("fcnctl get error fd:%d flag:%d", fd, flag);
+            return -1;
+        }
+        if (open) {
+            flags |= flag;
+        }
+        else {
+            flags &= ~(flag);
+        }
+        if (fcntl(fd, F_SETFL, flags) < 0) {
+            GLOG_SER("fcnctl set error fd:%d flags:%d", fd, flags);
+            return -1;
+        }
+        return 0;
+    }
     bool        isnonblockfd(int fd) {
         int flags = fcntl(fd, F_GETFL, 0);
         if (flags < 0) {
@@ -783,18 +815,9 @@ namespace dcs {
         return false;
     }
     int         nonblockfd(int fd, bool nonblock) {
-        int flags = fcntl(fd, F_GETFL, 0);
-        if (flags < 0) {
-            return -1;
-        }
-        if (nonblock) {
-            flags |= O_NONBLOCK;
-        }
-        else {
-            flags &= ~(O_NONBLOCK);
-        }
-        if (fcntl(fd, F_SETFL, flags) < 0) {
-            return -1;
+        int ret = _set_socket_ctl(fd, O_NONBLOCK, nonblock);
+        if(ret){
+            GLOG_SER("set fd:%d non block:%d error !", fd, nonblock);
         }
         return 0;
     }
@@ -813,6 +836,121 @@ namespace dcs {
         }
         return -1;
     }
+    int                 socket_nonblock(int fd, bool nb){
+        return nonblockfd(fd, nb);
+    }
+   
+    int                 socket_nodelay(int fd, bool nd){
+        int on = 1;
+        return _set_socket_opt(fd, TCP_NODELAY, &on, sizeof(on));
+    }
+    int                 socket_keepalive(int fd, bool ka){
+        int on = ka?1:0;
+        return _set_socket_opt(fd, SO_KEEPALIVE, &on, sizeof(on));
+    }
+    
+    int                 socket_buffer(int fd, int recv_buff_sz, int send_buf_sz){
+        size_t buffsz = recv_buff_sz;
+        int ret = 0;
+        ret |= _set_socket_opt(fd, SO_RCVBUF, &buffsz, sizeof(buffsz));
+        buffsz = send_buf_sz;
+        ret |= _set_socket_opt(fd, SO_SNDBUF, &buffsz, sizeof(buffsz));
+        if (ret != 0) {
+            GLOG_SER("set socket fd:%d options error buffer(%d,%d)", fd, recv_buff_sz, send_buf_sz);
+            return ret;
+        }
+        return 0;
+    }
+    int                 socket_reuse(int fd){
+        int on = 1;
+        return _set_socket_opt(fd, SO_REUSEADDR, &on, sizeof(on));
+    }
+    int                 socket_connect(int fd, const struct sockaddr_in & addr){
+        socklen_t addrlen = sizeof(struct sockaddr);
+        int ret = ::connect(fd, (struct sockaddr*)&addr, addrlen);
+        if (ret) {
+            if(errno != EINPROGRESS){
+                GLOG_SER("connect socket fd:%d error !", fd);
+                return -1;
+            }
+            else {
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    int                 socket_bind(int fd, const struct sockaddr_in & addr){
+        socklen_t addrlen = sizeof(struct sockaddr);
+        int ret = ::bind(fd, (struct sockaddr*)&addr, addrlen);
+        if (ret) {
+            GLOG_SER("bind socket fd:%d error !", fd);
+            return -1;
+        }
+        return 0;
+    }
+    int                 socket_listen(int fd, int max_back_log){
+        int ret = ::listen(fd, max_back_log);
+        if(ret){
+            GLOG_SER("listen socket fd:%d max back log:%d error !", fd, max_back_log);
+            return -1;
+        }
+        return 0;
+    }
+
+    int     socket_fd(struct sockaddr_in & addr, const std::string & saddr){
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_addr.s_addr = 0;
+        addr.sin_family = AF_INET;
+        addr.sin_port = 0;
+        //////////////////////////////////////////////////////////////////////////////
+        bool stream = true;
+        int offset = 0;
+        if(saddr.find("tcp://") == 0){
+            stream = true;
+            offset = 6;
+        }
+        else if (saddr.find("udp://") == 0) {
+            stream = false;
+            offset = 6;
+        }
+        std::vector<string> vs;
+        strsplit(saddr.substr(offset), ":", vs);
+        if (vs.empty()) {
+            GLOG_ERR("error format address:%s", saddr.c_str());
+            return -1;
+        }
+        int port = 0;
+        if (vs.size() == 2) {
+            port = stoi(vs[1]);
+        }
+        char _port[6];  /* strlen("65535"); */
+        snprintf(_port, 6, "%d", port);
+        struct addrinfo hints, *servinfo;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = stream ? SOCK_STREAM : SOCK_DGRAM;
+        if (getaddrinfo(vs[0].c_str(), _port, &hints, &servinfo) != 0) {
+            hints.ai_family = AF_INET6;
+            if (getaddrinfo(vs[0].c_str(), _port, &hints, &servinfo) != 0) {
+                GLOG_SER("getaddrinfo error try 6 and 4 host:%s", saddr.c_str());
+                return -1;
+            }
+        }
+        for (struct addrinfo * p = servinfo; p != NULL; p = p->ai_next) {
+            int sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+            if (sockfd == -1) {
+                continue;
+            }
+            memcpy(&addr, p->ai_addr, p->ai_addrlen);
+            freeaddrinfo(servinfo);
+            return sockfd;
+        }
+        freeaddrinfo(servinfo);
+        GLOG_SER("create socket:%s error", saddr.c_str());
+        return -1;
+    }
+
     int         netaddr(struct sockaddr_in & addr, bool stream, const std::string & saddr){
         memset(&addr, 0, sizeof(addr));
         addr.sin_addr.s_addr = 0;

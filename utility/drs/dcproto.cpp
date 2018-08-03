@@ -425,7 +425,8 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 				auto ev = field->enum_type()->FindValueByName(value);
 				if (!ev){
 					char * p = (char*)value.data();
-					int nve = strtoll(value.data(), &p, 10);
+					//int nve = strtoll(value.data(), &p, 10);
+					strtoll(value.data(), &p, 10);
 					if (p != value.data()) {
 						ev = field->enum_type()->FindValueByNumber(stoi(value));
 					}
@@ -461,22 +462,22 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 	else if (field->is_repeated() && idx < 0){ //add
 		switch (field->cpp_type()){
 		case FieldDescriptor::CPPTYPE_INT32:     // TYPE_INT32, TYPE_SINT32, TYPE_SFIXED32
-			reflection->AddInt32(&msg, field, std::stoi(value));
+			reflection->AddInt32(&msg, field, atoi(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_INT64:     // TYPE_INT64, TYPE_SINT64, TYPE_SFIXED64
-			reflection->AddInt64(&msg, field, stoll(value));
+			reflection->AddInt64(&msg, field, atoll(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_UINT32:     // TYPE_UINT32, TYPE_FIXED32			
-			reflection->AddUInt32(&msg, field, (uint32_t)(stoi(value)));
+			reflection->AddUInt32(&msg, field, (uint32_t)(atol(value.c_str())));
 			break;
 		case FieldDescriptor::CPPTYPE_UINT64:     // TYPE_UINT64, TYPE_FIXED64
-			reflection->AddUInt64(&msg, field, (uint64_t)(stoll(value)));
+			reflection->AddUInt64(&msg, field, (uint64_t)(atoll(value.c_str())));
 			break;
 		case FieldDescriptor::CPPTYPE_DOUBLE:     // TYPE_DOUBLE
-			reflection->AddDouble(&msg, field, stod(value));
+			reflection->AddDouble(&msg, field, atof(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_FLOAT:     // TYPE_FLOAT
-			reflection->AddFloat(&msg, field, stof(value));
+			reflection->AddFloat(&msg, field, (float)atof(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_BOOL:     // TYPE_BOOL
 			reflection->AddBool(&msg, field, (value == "true") ? true : false);
@@ -515,22 +516,22 @@ protobuf_msg_field_set_value(Message & msg, const string & name, int idx,
 	else {
 		switch (field->cpp_type()){
 		case FieldDescriptor::CPPTYPE_INT32:     // TYPE_INT32, TYPE_SINT32, TYPE_SFIXED32
-			reflection->SetInt32(&msg, field, std::stoi(value));
+			reflection->SetInt32(&msg, field, atoi(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_INT64:     // TYPE_INT64, TYPE_SINT64, TYPE_SFIXED64
-			reflection->SetInt64(&msg, field, stoll(value));
+			reflection->SetInt64(&msg, field, atoll(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_UINT32:     // TYPE_UINT32, TYPE_FIXED32			
-			reflection->SetUInt32(&msg, field, (uint32_t)(stoi(value)));
+			reflection->SetUInt32(&msg, field, (uint32_t)(atoi(value.c_str())));
 			break;
 		case FieldDescriptor::CPPTYPE_UINT64:     // TYPE_UINT64, TYPE_FIXED64
-			reflection->SetUInt64(&msg, field, (uint64_t)(stoll(value)));
+			reflection->SetUInt64(&msg, field, (uint64_t)(atoll(value.c_str())));
 			break;
 		case FieldDescriptor::CPPTYPE_DOUBLE:     // TYPE_DOUBLE
-			reflection->SetDouble(&msg, field, stod(value));
+			reflection->SetDouble(&msg, field, atof(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_FLOAT:     // TYPE_FLOAT
-			reflection->SetFloat(&msg, field, stof(value));
+			reflection->SetFloat(&msg, field, (float)atof(value.c_str()));
 			break;
 		case FieldDescriptor::CPPTYPE_BOOL:     // TYPE_BOOL
 			reflection->SetBool(&msg, field, (value == "true")?true:false);
@@ -725,6 +726,7 @@ convert_xml_to_pb(xml_node_t * node, int lv, void *ud, xml_doc_t::sax_event_type
 	default:
 		return 0;
 	}
+	return 0;
 }
 int
 protobuf_msg_from_xml_string(google::protobuf::Message & msg, const std::string & sxml, std::string & error){

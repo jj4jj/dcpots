@@ -70,6 +70,17 @@ NS_BEGIN(dcs)
     int                 socknetaddr(struct sockaddr_in & addr, const std::string & saddr);
     int                 netaddr(struct sockaddr_in & addr, bool stream, const std::string & saddr);
 
+    //socket util
+    int                 socket_fd(struct sockaddr_in & addr, const std::string & saddr);
+    int                 socket_nonblock(int fd, bool nb);
+    int                 socket_keepalive(int fd, bool ka);
+    int                 socket_nodelay(int fd, bool nd);
+    int                 socket_buffer(int fd, int recv_buff_sz, int send_buf_sz);
+    int                 socket_reuse(int fd);
+    int                 socket_bind(int fd, const struct sockaddr_in & addr);
+    int                 socket_listen(int fd, int max_back_log = 255);
+    int                 socket_connect(int fd , const struct sockaddr_in & addr);
+
     uint32_t            host_getipv4(const char * nic="eth0");
     string              stripfromu32v4(uint32_t ip);
     uint32_t            u32fromstripv4(const string & ip);

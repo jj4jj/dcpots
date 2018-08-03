@@ -68,10 +68,11 @@ int		_msgq_create(key_t key, int flag, size_t max_size){
 	}
 
 	if (mds.msg_qbytes < max_size){
+        GLOG_WAR("msgq channel size:%zd is less than :%d reset it match .", mds.msg_qbytes, max_size);
 		mds.msg_qbytes = max_size;
 		ret = msgctl(id, IPC_SET, (struct msqid_ds *)&mds);
 		if (ret != 0){
-			GLOG_SER( "msgctl error id:%d !", id);
+			GLOG_SER( "msgctl error id:%d when set size:%zd !", id, max_size);
 			return -3;
 		}
 	}
@@ -195,13 +196,18 @@ void    dcsmq_msg_cb(dcsmq_t * smq, dcsmq_msg_cb_t cb, void * ud){
 	smq->msg_cb_ud = ud;
 }
 static inline  uint64_t
-_dcsmq_recv_msg(dcsmq_t * smq, int msgid, uint64_t session, dcsmq_msg_t & msg){
+_dcsmq_recv_msg(dcsmq_t * smq, int msgid, uint64_t session, dcsmq_msg_t & msg, bool block){
     ssize_t msg_sz = -1;
 RETRY_RECV:
-    msg_sz = msgrcv(msgid, msg.buffer, msg.sz, session, IPC_NOWAIT);
+    if(block){
+        msg_sz = msgrcv(msgid, msg.buffer, msg.sz, session, 0);
+    }
+    else {
+        msg_sz = msgrcv(msgid, msg.buffer, msg.sz, session, IPC_NOWAIT);
+    }
     if (msg_sz <= 0){
         if (errno == EINTR){
-            goto RETRY_RECV;
+            return -1;
         }
         //error occur , must be break .
         if (errno != ENOMSG){ //normal error 
@@ -212,7 +218,7 @@ RETRY_RECV:
                 goto RETRY_RECV;
             }
             else{
-                GLOG_ERR("msg recv error recever:%d! ", smq->recver);
+                GLOG_SER("msg recv error recever:%d errno:%d ! ", smq->recver, errno);
             }
         }
         return -1;
@@ -236,7 +242,7 @@ int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){
 	while (past_us < max_time_us){
         dcmsg.buffer = (char*)smq->recvbuff;
         dcmsg.sz = smq->conf.msg_buffsz;
-        recvmsgid = _dcsmq_recv_msg(smq, smq->recver, smq->session, dcmsg);
+        recvmsgid = _dcsmq_recv_msg(smq, smq->recver, smq->session, dcmsg, false);
         if (recvmsgid == (uint64_t)-1){
             break;
         }
@@ -252,11 +258,11 @@ int     dcsmq_poll(dcsmq_t*  smq, int max_time_us){
 	}
 	return ntotal_proc;
 }
-uint64_t	 dcsmq_take(dcsmq_t* smq, dcsmq_msg_t & msg) {//send to peer like himself
-    return _dcsmq_recv_msg(smq, smq->sender, smq->session, msg);
+uint64_t	 dcsmq_take(dcsmq_t* smq, dcsmq_msg_t & msg, bool block) {//send to peer like himself
+    return _dcsmq_recv_msg(smq, smq->sender, smq->session, msg, block);
 }
-uint64_t     dcsmq_recv(dcsmq_t* smq, dcsmq_msg_t & msg){
-    return _dcsmq_recv_msg(smq, smq->recver, smq->session, msg);
+uint64_t     dcsmq_recv(dcsmq_t* smq, dcsmq_msg_t & msg, bool block){
+    return _dcsmq_recv_msg(smq, smq->recver, smq->session, msg, block);
 }
 int     _dcsmq_sendv(dcsmq_t* smq, int msgid, uint64_t dst, const std::vector<dcsmq_msg_t> & msgv) {
     if (dst == 0) {

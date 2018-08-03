@@ -236,12 +236,12 @@ bool cmdline_opt_t::hasopt(const char * opt, int idx)  const {
     auto range = impl_->dict_opts.equal_range(opt);
     while (range.first != range.second){
         if (idx == 0){
-            return range.first->second.c_str();
+            return true;
         }
         --idx;
         range.first++;
     }
-    return nullptr;
+    return false;
 }
 const char * cmdline_opt_t::getoptstr(const char * opt, int idx)  const {
 	auto range = impl_->dict_opts.equal_range(opt);

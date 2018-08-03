@@ -52,7 +52,7 @@ void *			dcshm_open(int key, bool & attach, size_t size){
         GLOG_SER("shm address attach error id:%u!", id);
         return nullptr;
 	}
-    GLOG_TRA("attached a shm ptr:%p [%lu] key:%u shmid:%d for attach:%d size:%zu", ap, (uint64_t)ap, key, id, attach, size);
+    GLOG_DBG("attached a shm ptr:%p [%lu] key:%u shmid:%d for attach:%d size:%fMB", ap, (uint64_t)ap, key, id, attach, size/(1024.0*1024.0));
 	return ap;
 }
 void	 dcshm_close(void * p, int key){

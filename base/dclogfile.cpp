@@ -1,6 +1,8 @@
 
 #include "dcutils.hpp"
+#include "dchannel.h"
 #include "dclogfile.h"
+#include "logger.h"
 
 NS_BEGIN(dcs)
 
@@ -13,17 +15,18 @@ struct logfile_roll_impl_t {
 	int			next_rollid { 0 };
 };
 
-struct logfile_net_impl_t {
-    string          netaddr;
-    int             fd {-1};
+struct logfile_async_impl_t {
+    string          addr;
+    ChannelPoint *  point;
     std::string     prefix;
+    uint32_t        buffsz {1024*1024*8};
     std::string     logmsg;
 };
 
 struct logfile_impl_t {
-    bool                    is_net_log;
+    bool                    is_async;
     logfile_roll_impl_t     roll;
-    logfile_net_impl_t      net;
+    logfile_async_impl_t    async;
 };
 
 logfile_t::logfile_t(){
@@ -37,9 +40,8 @@ logfile_t::~logfile_t(){
 }
 int logfile_t::init(const char * path, int max_roll, int max_file_size,
                      logfile_roll_order order){
-    impl->is_net_log = (strstr(path, "tcp://") == path ||
-                        strstr(path, "udp://") == path );
-    if(!impl->is_net_log){
+    impl->is_async = (strstr(path, "://")!=nullptr);
+    if(!impl->is_async){
         if (path && *path) {
             impl->roll.logfile = path;
             impl->roll.max_roll = max_roll;
@@ -51,12 +53,36 @@ int logfile_t::init(const char * path, int max_roll, int max_file_size,
         }
     }
     else {
-        impl->net.netaddr = path;
-        impl->net.fd = -1;
-        std::string::size_type sep = impl->net.netaddr.find("?");
+        //xxx://<key>?path=v&size=v
+        impl->async.addr = path;
+        impl->async.point = nullptr;
+        std::string::size_type sep = impl->async.addr.find("?");
         if(sep != std::string::npos){
-            impl->net.prefix = impl->net.netaddr.substr(sep+1);
-            impl->net.netaddr.erase(sep);
+            std::string params = impl->async.addr.substr(sep + 1);
+            impl->async.addr.erase(sep);
+            std::vector<std::string>    vs;
+            dcs::strsplit(params, "&", vs);
+            std::string spath = params;
+            uint32_t def_buffsz = 1024*1024*8;
+            for(auto & kv : vs){
+                std::vector<std::string>  vskv;
+                dcs::strsplit(kv,"=", vskv);
+                if(vskv.size() != 2){
+                    continue;
+                }
+                if(vskv[0] == "path"){
+                    spath = vskv[1];
+                }
+                else if(vskv[0] == "buffsz"){
+                    def_buffsz = atoi(vskv[1].c_str());
+                }
+            }
+            impl->async.prefix = spath;
+            impl->async.buffsz = def_buffsz;
+        }
+        else {
+            fprintf(stderr, "error addr key:%s (format:xxx://key?path=v&buffsz=v)", path);
+            return -2;
         }
     }
     return open();
@@ -68,7 +94,7 @@ static inline void _init_open_logfile(logfile_roll_impl_t * impl) {
 		std::string file_name;
 		for (int i = 1; i <= impl->max_roll; ++i) {
 			file_name = impl->logfile + "." + std::to_string(i);
-			mt = dcs::file_modify_time(file_name);
+			mt = file_modify_time(file_name);
 			if (mt > last_modify_time) {
 				last_modify_time = mt;
 				impl->next_rollid = (i%impl->max_roll) + 1;
@@ -98,7 +124,7 @@ static inline void _shift_logfile(logfile_roll_impl_t * impl) {
 }
 
 int logfile_t::open(){
-    if(!impl->is_net_log){    
+    if(!impl->is_async){    
         if(impl->roll.pf){
             return 0;//ok already
         }
@@ -117,12 +143,12 @@ int logfile_t::open(){
         _init_open_logfile(&impl->roll);    
     }
     else {
-        if (impl->net.fd != -1) {
+        if (impl->async.point) {
             return 0;//ok already
         }
-        impl->net.fd = dcs::openfd(impl->net.netaddr, "w", 800);
-        if(impl->net.fd < 0){
-            fprintf(stderr, "open netaddr:%s error:%d !", impl->net.netaddr.c_str(), impl->net.fd);
+        impl->async.point = AsyncChannel::instance().Open(impl->async.addr.c_str(), impl->async.buffsz);
+        if(!impl->async.point){
+            fprintf(stderr, "open async addr:%s !", impl->async.addr.c_str());
             return -3;
         }
     }
@@ -132,7 +158,7 @@ void logfile_t::close(){
     if(!impl){
         return;
     }
-    if(!impl->is_net_log){
+    if(!impl->is_async){
         if (impl->roll.pf) {
             fflush(impl->roll.pf);
             fclose(impl->roll.pf);
@@ -140,15 +166,15 @@ void logfile_t::close(){
         } 
     }
     else {
-        if(impl->net.fd >= 0){
-            dcs::closefd(impl->net.fd);
-            impl->net.fd = -1;       
+        if(impl->async.point){
+            AsyncChannel::instance().Close(impl->async.point);
+            impl->async.point = nullptr;
         }
     }
 }
-int logfile_t::write(const char * logmsg){
+int logfile_t::write(const char * logmsg, int loglv){
     if (!impl) { return -1; }
-    if(!impl->is_net_log){
+    if(!impl->is_async){
         if(!impl->roll.pf){
             return -1;
         }
@@ -162,16 +188,13 @@ int logfile_t::write(const char * logmsg){
         return 0;
     }
     else {
-        impl->net.logmsg = impl->net.prefix + "|" + logmsg;
-        dcs::strreplace(impl->net.logmsg, "\n", "`", true);
-        if('`' == impl->net.logmsg.back()){
-            impl->net.logmsg.back() = '\n';
+        if(loglv == LOG_LVL_ERROR || loglv == LOG_LVL_FATAL){
+            impl->async.logmsg = impl->async.prefix + "!|" + logmsg;
         }
-        int ret = dcs::writefd(impl->net.fd, impl->net.logmsg.c_str(), impl->net.logmsg.length(), "end", 0);
-        if(ret <= 0){
-            return -2;
+        else {
+            impl->async.logmsg = impl->async.prefix + "|" + logmsg;
         }
-        return 0;
+        return AsyncChannel::instance().Send(impl->async.point, impl->async.logmsg.data(), impl->async.logmsg.length());
     }
 }
 

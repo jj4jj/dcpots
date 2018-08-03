@@ -8,4 +8,5 @@ struct singleton : public noncopyable {
 		static T sto;
 		return sto;
 	}
+    static T & Instance() {return instance();}
 };

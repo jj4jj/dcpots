@@ -10,6 +10,7 @@ struct dcshmobj_user_t {
     virtual const char *    name() const;
     virtual size_t          size() const;
     virtual int             on_alloced(void * udata, size_t udsize, bool attached);
+    virtual int             on_rebuild();
     ////////////////////////////////////////////////////////////////////////////////////
     virtual size_t          pack_size(void * udata) const;
     virtual bool            pack(void * buff, size_t buff_sz, const void * udata) const;

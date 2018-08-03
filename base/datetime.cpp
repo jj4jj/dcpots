@@ -94,10 +94,10 @@ uint32_t			DateTime::mktime(const struct tm & vtm) const {
 	struct tm ttm = vtm;
 	ttm.tm_isdst = impl->local_tz.tz_dsttime;
 #if	_BSD_SOURCE || _SVID_SOURCE
-	time_t tmstmp = timegm(&ttm);
+	time_t tmstmp = ::timegm(&ttm);
 	return tmstmp - impl->set_gmtoff - impl->timeoffset;
 #else
-	time_t tmstmp = mktime(&ttm); //<=> timelocal
+	time_t tmstmp = ::mktime(&ttm); //<=> timelocal
 	return tmstmp - impl->local_gmtoff_adjust - impl->timeoffset;
 #endif
 }

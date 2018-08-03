@@ -12,95 +12,71 @@
 #include "dcshmobj.hpp"
 #include "datetime.h"
 ///////////////////////////////////////////////////
-#include "app.hpp"
-
+#include "app_stat.h"
+#include "app.h"
 
 NS_BEGIN(dcs)
 
-struct AppStatItem {
-    uint64_t        total_time_ns {0};
-    uint32_t        max_time_ns {0};
-    uint32_t        min_time_ns {1000*1000*1000};
-    uint64_t        call_begin_time_ns {0};
-    uint64_t        ncall {0};
-    uint64_t        nproc {0};
-    void clear(){
-        total_time_ns = 0;
-        max_time_ns = 0;
-        min_time_ns = 0;
-        ncall = 0;
-        nproc = 0;
+void AppStatItem::clear() {
+    total_time_ns = 0;
+    max_time_ns = 0;
+    min_time_ns = 0;
+    ncall = 0;
+    nproc = 0;
+}
+void AppStatItem::begin() {
+    call_begin_time_ns = dcs::time_unixtime_ns();
+}
+int AppStatItem::end(int nproc_) {
+    uint64_t cost_time_ns = dcs::time_unixtime_ns() - call_begin_time_ns;
+    total_time_ns += cost_time_ns;
+    if (cost_time_ns > max_time_ns) {
+        max_time_ns = cost_time_ns;
     }
-    void begin(){
-        call_begin_time_ns = dcs::time_unixtime_ns();
+    if (cost_time_ns < min_time_ns) {
+        min_time_ns = cost_time_ns;
     }
-    int end(int nproc_ = 0){
-        uint64_t cost_time_ns = dcs::time_unixtime_ns() - call_begin_time_ns;
-        total_time_ns += cost_time_ns;
-        if(cost_time_ns > max_time_ns){
-            max_time_ns = cost_time_ns;
-        }
-        if(cost_time_ns < min_time_ns){
-            min_time_ns = cost_time_ns;
-        }
-        ++ncall;
-        if(nproc_ > 0){
-            nproc += nproc_;
-        }
-        return (cost_time_ns+999)/1000;
+    ++ncall;
+    if (nproc_ > 0) {
+        nproc += nproc_;
     }
-};
+    return (cost_time_ns + 999) / 1000;
+}
+void AppRunStat::start() {
+    start_time_us = dcs::time_unixtime_us();
+    total_time_us = 0;
+    next_update_time_s = start_time_us / (1000 * 1000) + stat_update_period;
+    strlog.reserve(1024 + 256 * APP_RUN_STAT_ITEM_MAX);
+}
+void AppRunStat::update(uint64_t time_now_us) {
+    total_time_us = time_now_us - start_time_us;
+    uint32_t timenow_s = time_now_us / (1000 * 1000);
+    if (timenow_s > next_update_time_s) {
+        //clear
+        for (int i = 0; i < APP_RUN_STAT_ITEM_MAX; ++i) {
+            item[i].clear();
+        }
+        next_update_time_s = timenow_s + stat_update_period;
+    }
+}
+const char * AppRunStat::log() {
+    std::string strtime;
+    int n = dcs::strprintf(strlog, "#AppRuningStat# period:%d start-time:%s total-run-time:%ds ",
+        stat_update_period, dcs::strftime(strtime, start_time_us / (1000 * 1000)),
+        total_time_us / (1000 * 1000));
+    static const char * item_name_dict[APP_RUN_STAT_ITEM_MAX] = { "idle","tick", "loop", };
+    for (int i = 0; i < APP_RUN_STAT_ITEM_MAX; ++i) {
+        n += snprintf((char*)strlog.data() + n, 192, " | name:%s time total:%lums max:%uns min:%uns avg:%luns ncall:%lu nproc:%lu",
+            item_name_dict[i], item[i].total_time_ns / (1000 * 1000),
+            item[i].max_time_ns, item[i].min_time_ns,
+            item[i].ncall > 0 ? (item[i].total_time_ns / item[i].ncall) : 0,
+            item[i].ncall, item[i].nproc);
 
-enum AppRunStatItemType {
-    APP_RUN_STAT_ITEM_IDLE = 0,
-    APP_RUN_STAT_ITEM_TICK,
-    APP_RUN_STAT_ITEM_LOOP,
-    //////////////////////////////
-    APP_RUN_STAT_ITEM_MAX,
-};
-struct AppRunStat {
-    uint64_t        start_time_us {0};
-    uint64_t        total_time_us {0};
-    uint32_t        next_update_time_s {0};
-    uint32_t        stat_update_period {60};
-    AppStatItem     item[APP_RUN_STAT_ITEM_MAX];
-    std::string     strlog;
-    void start(){
-        start_time_us = dcs::time_unixtime_us();
-        total_time_us = 0;
-        next_update_time_s = start_time_us/(1000*1000) + stat_update_period;
-        strlog.reserve(1024+256*APP_RUN_STAT_ITEM_MAX);
     }
-    void update(uint64_t time_now_us){
-        total_time_us = time_now_us - start_time_us;
-        uint32_t timenow_s = time_now_us/(1000*1000);
-        if(timenow_s > next_update_time_s){
-            //clear
-            for(int i = 0 ;i < APP_RUN_STAT_ITEM_MAX; ++i){
-                item[i].clear();
-            }
-            next_update_time_s = timenow_s + stat_update_period;
-        }
-    }
-    const char * log(){
-        std::string strtime;
-        int n = dcs::strprintf(strlog, "#AppRuningStat# period:%d start-time:%s total-run-time:%ds ",
-                       stat_update_period, dcs::strftime(strtime, start_time_us/(1000*1000)),
-                       total_time_us/(1000*1000));
-        static const char * item_name_dict[APP_RUN_STAT_ITEM_MAX] = {"idle","tick", "loop", };
-        for(int i = 0 ;i < APP_RUN_STAT_ITEM_MAX; ++i){
-            n += snprintf((char*)strlog.data() + n, 192, " | name:%s time total:%lums max:%uns min:%uns avg:%luns ncall:%lu nproc:%lu",
-                          item_name_dict[i], item[i].total_time_ns/(1000*1000),
-                          item[i].max_time_ns, item[i].min_time_ns,
-                          item[i].ncall > 0 ? (item[i].total_time_ns / item[i].ncall):0,
-                          item[i].ncall, item[i].nproc);
-        
-        }
-        ((char*)strlog.data())[n] = 0;
-        return strlog.data();
-    }
-};
-
+    ((char*)strlog.data())[n] = 0;
+    return strlog.data();
+}
+//////////////////////////////////////////////////////////////////////////
 struct AppImpl {
     std::string		version { "0.0.1" };
     cmdline_opt_t * cmdopt{ nullptr };
@@ -385,6 +361,13 @@ static int app_timer_dispatch(uint32_t ud, const void * cb, int sz){
 const   char *  App::program() const {
     return const_cast<App*>(this)->cmdopt().program();
 }
+void        dcs::App::stat_interval(int interval)  {
+    impl_->stat.stat_update_period = interval;
+}
+
+const AppRunStat & dcs::App::stat() const{
+    return impl_->stat;
+}
 const   char *  App::name() const {
     return const_cast<App*>(this)->cmdopt().getoptstr("name");
 }
@@ -506,9 +489,6 @@ static inline int init_facilities(App & app, AppImpl * impl_){
         }
     }
     //////////////////////////////////////////////////////////////////////////
-    app.schedule([impl_]{
-        GLOG_IFO("app run stat dump:%s", impl_->stat.log());
-    }, -impl_->stat.stat_update_period*1000);
 
     return 0;
 }
@@ -627,11 +607,12 @@ static inline void _app_idle(App * app, AppImpl * impl_){
     impl_->stat.item[APP_RUN_STAT_ITEM_IDLE].end();
 }
 int App::start(){
-    int  nproc = 0 , ntick = 0;
+	int  nproc = 0;/* , ntick = 0;*/
     bool bstat = 0;
     while (true){
         nproc = 0;
-        ntick = _app_tick(this, impl_);
+        //ntick = _app_tick(this, impl_);
+		_app_tick(this, impl_);
         if (impl_->stoping){ //need stop
             bstat = on_stop();
             if (bstat){
@@ -732,5 +713,7 @@ void			App::add_time_offset(int seconds) {
 	}
 	GLOG_IFO("add time seconds offset %d", seconds);
 }
-
+void            App::clear_time_offset(){
+    impl_->datetime.add_time_offset(-1 * impl_->datetime.time_offset());
+}
 NS_END()

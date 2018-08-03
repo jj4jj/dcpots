@@ -7,6 +7,7 @@
 //////////////////////////////////////////////////////////////////
 const char * dcshmobj_user_t::name() const { return "shmobj_user"; }
 int          dcshmobj_user_t::on_alloced(void * data, size_t udsize, bool attached) { UNUSED(data); UNUSED(attached); return 0; }
+int          dcshmobj_user_t::on_rebuild(){return 0;}
 size_t       dcshmobj_user_t::size() const { return 0; }
 size_t       dcshmobj_user_t::pack_size(void * ) const { return 0; }
 bool         dcshmobj_user_t::pack(void * , size_t , const void * ) const { return false; }
@@ -28,7 +29,7 @@ struct dcshmobj_pool_mm_fmt {
         struct {
             uint32_t    block_offset;
             uint32_t    block_count;
-            uint32_t    real_size;
+            size_t      real_size;
             char        name[MAX_USER_NAME_LEN];
         } objects[MAX_OBJECT_TYPE_COUNT];
     } head;
@@ -43,7 +44,7 @@ struct dcshmobj_pool_mm_fmt {
         size_t  count;
         void    fill(const char * nam, size_t ofs, size_t cnt){
             for (size_t i = 0; i < sizeof(magic) / sizeof(int); i += sizeof(int)){
-                *(int*)(magic + i) = SAFE_CHECK_MAGIC_NUMBER;
+                *(int*)((char*)magic + i) = SAFE_CHECK_MAGIC_NUMBER;
             }
             strncpy(name, nam, sizeof(name)-1);
             offset = ofs;
@@ -51,7 +52,7 @@ struct dcshmobj_pool_mm_fmt {
         }
         bool    check(){
             for (size_t i = 0; i < sizeof(magic) / sizeof(int); i += sizeof(int)){
-                if (*(int*)(magic + i) != (int)SAFE_CHECK_MAGIC_NUMBER){
+                if (*(int*)((char*)magic + i) != (int)SAFE_CHECK_MAGIC_NUMBER){
                     return false;
                 }
             }
@@ -120,7 +121,7 @@ int     dcshmobj_pool_impl::regis(dcshmobj_user_t * user){
         }
     }
     shm_users.push_back(user);
-    GLOG_IFO("shm pool register user:%s alloc size:%zu", user->name(), user->size());
+    GLOG_IFO("shm pool register user:%s alloc size:%zd(%fMB)", user->name(), user->size(),user->size()/(1024.0*1024.0));
     return 0;
 }
 size_t  dcshmobj_pool_impl::total_size() const {
@@ -216,6 +217,8 @@ int     dcshmobj_pool_impl::start_with_backup_shm(dcshmobj_pool_mm_fmt * shmback
     size_t nb_alloced = 0;
     size_t safe_block_size = dcshmobj_pool_mm_fmt::align_size(sizeof(dcshmobj_pool_mm_fmt::_safe_magic_t));
     size_t safe_block_count = dcshmobj_pool_mm_fmt::size_block(safe_block_size);
+    size_t user_block_size_total = 0;
+    size_t user_block_count = 0;
     for (size_t i = 0; i < this->shm_users.size(); ++i){
         dcshmobj_user_t * user = this->shm_users[i];
         strncpy(shm->head.objects[i].name, user->name(), sizeof(shm->head.objects[i].name) - 1);
@@ -225,8 +228,14 @@ int     dcshmobj_pool_impl::start_with_backup_shm(dcshmobj_pool_mm_fmt * shmback
         dcshmobj_pool_mm_fmt::_safe_magic_t * safe_block = (dcshmobj_pool_mm_fmt::_safe_magic_t *)
             shm->body.blocks[nb_alloced + shm->head.objects[i].block_count];
         safe_block->fill(user->name(), nb_alloced, shm->head.objects[i].block_count);
+        user_block_count = (shm->head.objects[i].block_count + safe_block_count);
+        user_block_size_total = user_block_count *(dcshmobj_pool_mm_fmt::CHUNK_BLOCK_SIZE);
+        GLOG_DBG("shm idx:%d name:%s size:%zd block init fill offset:%zd blk count:%d safe blk(%dBytes) count:%d user size total:%zd safe padding size:%zd",
+            i, user->name(), user->size(), nb_alloced,
+            shm->head.objects[i].block_count, dcshmobj_pool_mm_fmt::CHUNK_BLOCK_SIZE,
+            safe_block_count, user_block_size_total, user_block_size_total - user->size());
         //fill safe check
-        nb_alloced += shm->head.objects[i].block_count + safe_block_count;
+        nb_alloced += user_block_count;
         ++shm->head.objects_count;
     }
     //check recover shm
@@ -236,8 +245,10 @@ int     dcshmobj_pool_impl::start_with_backup_shm(dcshmobj_pool_mm_fmt * shmback
             const char * objname = shm->head.objects[i].name;
             dcshmobj_user_t * user = find_user(objname);
             assert(user);
-            GLOG_IFO("allocate shm %s init new fresh ...", user->name());
-            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0], shm->head.objects[i].real_size,  false);
+            GLOG_DBG("allocate shm idx:%d name:%s init new fresh shm size:%zd real size:%u ...", i,
+                                    user->name(), user->size(), shm->head.objects[i].real_size);
+            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0],
+                                    shm->head.objects[i].real_size,  false);
             if (ret){
                 GLOG_ERR("allocated user :%s size:%zu alloc init error ret:%d !", user->name(), user->size(), ret);
                 return -4;
@@ -268,8 +279,10 @@ int     dcshmobj_pool_impl::start_with_backup_shm(dcshmobj_pool_mm_fmt * shmback
                 }
                 recover_ok = true;
             }
-            GLOG_IFO("allocate shm %s recover state(attached):%d", user->name(), recover_ok ? 1 : 0);
-            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0], shm->head.objects[i].real_size, recover_ok);
+            GLOG_IFO("allocate shm %s recover state(attached):%d size:%zd user:(%zd)", 
+                        user->name(), recover_ok ? 1 : 0, shm->head.objects[i].real_size, user->size());
+            ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0],
+                        shm->head.objects[i].real_size, recover_ok);
             if (ret){
                 GLOG_ERR("allocated user :%s size:%zu alloc init error ret:%d recover state:%d!",
                     user->name(), user->size(), ret, recover_ok ? 1 : 0);
@@ -286,24 +299,27 @@ int     dcshmobj_pool_impl::start(const char * keypath){
     if (shm_users.empty()){
         return 0;
     }
-    bool attached = true; //just attach first try
-    int ret = 0;
     shm_keypath = keypath;
+    bool attached = true; //just attach first try
     shm = _dcshmobj_pool_shm_open(keypath, total_size(), attached);
-    dcshmobj_pool_mm_fmt * shmbackup = _dcshmobj_pool_backup_shm_open(keypath);
+    dcshmobj_pool_mm_fmt * shmbackup = nullptr;//_dcshmobj_pool_backup_shm_open(keypath);
     std::string shm_stat_str;
+    //shm ok and is attached
     if (shm && attached){
         GLOG_IFO("recover shm attached stat:%s", shm->stat_dump(shm_stat_str));
     }
+    //shm backup is ready ?
     if (shmbackup){
         GLOG_IFO("backup recover shm attached stat:%s", shm->stat_dump(shm_stat_str));
     }
+
+    //no attached shm
     if (!shm){
         return start_with_backup_shm(shmbackup);
     }
     assert(attached);
     //must be attach
-    ret = check_valid();
+    int ret = check_valid();
     if (ret > 0 && !shmbackup){
         GLOG_ERR("check shm size not match error :%d and not found backup recover shm (maybe should clear shm ? or checking program update error ?)", ret);
         return -2;
@@ -320,16 +336,28 @@ int     dcshmobj_pool_impl::start(const char * keypath){
         return start_with_backup_shm(shmbackup);
     }
     assert(ret == 0);
-    GLOG_IFO("using attached memory for recover...");
+    GLOG_IFO("using attached memory for recover ...");
     for (size_t i = 0; i < shm->head.objects_count; ++i){
         const char * objname = shm->head.objects[i].name;
         dcshmobj_user_t * user = find_user(objname);
         assert(user);
-        GLOG_IFO("allocate object shm :%s with recover mode (all attached)", user->name());
+        GLOG_IFO("allocate object shm :%s size:%zu with recover mode (all attached)",
+                user->name(), shm->head.objects[i].real_size);
         ret = user->on_alloced(&shm->body.blocks[shm->head.objects[i].block_offset][0],  shm->head.objects[i].real_size, true);
         if (ret){
             GLOG_ERR("allocated user :%s size:%zu attach init error ret:%d !", user->name(), user->size(), ret);
             return -4;
+        }
+    }
+    for (size_t i = 0; i < shm->head.objects_count; ++i) {
+        const char * objname = shm->head.objects[i].name;
+        dcshmobj_user_t * user = find_user(objname);
+        assert(user);
+        GLOG_IFO("rebuild object shm :%s call", user->name());
+        ret = user->on_rebuild();
+        if (ret) {
+            GLOG_ERR("rebuild user :%s size:%zu attach init error ret:%d !", user->name(), user->size(), ret);
+            return -5;
         }
     }
     if (shmbackup){

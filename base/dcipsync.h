@@ -5,7 +5,7 @@ namespace dcs {
 
     struct  ipsync_t;
     ipsync_t *  ipsync_init(int key, bool attach = false);
-    int         ipsync_lock(ipsync_t *, bool wait = false);
+    int         ipsync_lock(ipsync_t *, int wait_us = 0);
     void        ipsync_unlock(ipsync_t *);
     void        ipsync_free(ipsync_t *);
 };

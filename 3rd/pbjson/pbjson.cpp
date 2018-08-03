@@ -64,8 +64,8 @@ namespace pbjson
 		/* 由于iconv()函数会修改指针，所以要保存源指针 */
 		char *tmpin = inbuf;
 		char *tmpout = outbuf;
-		size_t insize = *inlen;
-		size_t outsize = *outlen;
+		//size_t insize = *inlen;
+		//size_t outsize = *outlen;
 
 		/* 进行转换
 		*@param cd iconv_open()产生的句柄
@@ -75,7 +75,7 @@ namespace pbjson
 		*@param outlen 存放转换后,tempoutbuf剩余的空间
 		*/
 		size_t ret = iconv(cd, &tmpin, inlen, &tmpout, outlen);
-		if (ret == -1)
+		if (ret == (size_t)-1)
 		{
 			iconv_close(cd);
 			return false;
@@ -103,8 +103,8 @@ namespace pbjson
 		/* 由于iconv()函数会修改指针，所以要保存源指针 */
 		char *tmpin = inbuf;
 		char *tmpout = outbuf;
-		size_t insize = *inlen;
-		size_t outsize = *outlen;
+		//size_t insize = *inlen;
+		//size_t outsize = *outlen;
 
 		/* 进行转换
 		*@param cd iconv_open()产生的句柄
@@ -114,7 +114,7 @@ namespace pbjson
 		*@param outlen 存放转换后,tempoutbuf剩余的空间
 		*/
 		size_t ret = iconv(cd, &tmpin, inlen, &tmpout, outlen);
-		if (ret == -1)
+		if (ret == (size_t)-1)
 		{
 			iconv_close(cd);
 			return false;

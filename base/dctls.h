@@ -28,7 +28,7 @@ struct thread_local_storage {
         }
     }
     static void _tls_desctruct(void * val) {
-        TVal * v = (TVal*)val;
+        //TVal * v = (TVal*)val;
     }
 };
 

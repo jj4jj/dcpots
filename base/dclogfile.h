@@ -13,7 +13,7 @@ struct logfile_t {
                  logfile_roll_order order = LOGFILE_ROLL_DSC);
     int     open();
     void    close();
-    int     write(const char * logmsg);
+    int     write(const char * logmsg, int loglv = -1);
 public:
     logfile_t();
     ~logfile_t();

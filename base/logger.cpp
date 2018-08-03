@@ -72,7 +72,7 @@ logger_t *	logger_create(const logger_config_t & conf){
     }
 
     //error log
-    if(!log_err_filepath.empty()){
+    if(log_all_filepath.find("://") == std::string::npos && !log_err_filepath.empty()){
         em->errfilt = true;
         ret = em->errfile.init(log_err_filepath.c_str(), conf.max_roll, conf.max_file_size);
         if (ret) {
@@ -180,12 +180,12 @@ int				logger_write(logger_t * logger, int loglv, int  sys_err_, const char* fmt
         available_size = logger->last_msg.capacity() - (n + 2);
 	}
     msg_start[n] = 0;
-    if (logger->logfile.write(msg_start)) {
+    if (logger->logfile.write(msg_start, loglv)) {
         fputs(msg_start, stderr);
     }
     if(logger->errfilt){
         if (loglv == LOG_LVL_ERROR || loglv == LOG_LVL_FATAL) {
-            logger->errfile.write(msg_start);
+            logger->errfile.write(msg_start, loglv);
         }
     }
     ///////////////////////////////////////////////////////////////////////    
