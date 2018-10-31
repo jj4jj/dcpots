@@ -94,7 +94,7 @@ struct AppImpl {
     dcshmobj_pool   shm_pool;
 	DateTime		datetime;
     AppRunStat      stat;
-    int             hz;
+    int             hz {0};
 };
 
 static App * s_app_instance{ nullptr };

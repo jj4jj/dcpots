@@ -1063,12 +1063,29 @@ namespace dcs {
         soaddr = (struct sockaddr_in *)&(_temp.ifr_addr);
         return soaddr->sin_addr.s_addr;
     }
-    string      stripfromu32v4(uint32_t ip) {
-        char tmpbuff[64] = { 0 };
-        if (nullptr == inet_ntop(AF_INET, &ip, tmpbuff, sizeof(tmpbuff))) {
-            return "";
+    string      stripfromsockaddr(const struct sockaddr & addr){
+        char szIpStrBuff[128] = { 0 };
+        switch(addr.sa_family){
+            case AF_INET:
+                inet_ntop(AF_INET, &(((const struct sockaddr_in *)&addr)->sin_addr),
+                    szIpStrBuff, sizeof(szIpStrBuff));
+            break;
+                inet_ntop(AF_INET6, &(((const struct sockaddr_in6 *)&addr)->sin6_addr),
+                    szIpStrBuff, sizeof(szIpStrBuff));
+            case AF_INET6:
+            break;
+            default:
+            return "(unknown)";
+            break;
         }
-        return string(tmpbuff);
+        return szIpStrBuff;
+    }
+    string      stripfromu32v4(uint32_t ip) {
+        char szIpStrBuff[64] = { 0 };
+        if (nullptr == inet_ntop(AF_INET, &ip, szIpStrBuff, sizeof(szIpStrBuff))) {
+            return "(unknown)";
+        }
+        return string(szIpStrBuff);
     }
     uint32_t    u32fromstripv4(const string & ip) {
         uint32_t uip;

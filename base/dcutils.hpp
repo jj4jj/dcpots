@@ -83,6 +83,7 @@ NS_BEGIN(dcs)
 
     uint32_t            host_getipv4(const char * nic="eth0");
     string              stripfromu32v4(uint32_t ip);
+    string              stripfromsockaddr(const struct sockaddr & addr);
     uint32_t            u32fromstripv4(const string & ip);
     string              host_getmac(const char * nic="eth0");
 

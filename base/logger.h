@@ -132,6 +132,25 @@ int				logger_write(logger_t *, int loglv, int sys_err_, const char* fmt, ...);
 #endif
 //////////////////////////////////////////////////////////////////////////////////
 
+#ifndef BLOCK_RUN
+#define BLOCK_RUN
+
+#define BLOCK_RUN_BEG(logger_, log_lv_)  if ((log_lv_) >= logger_level((logger_))){
+#define BLOCK_RUN_END() }
+
+#define RUN_BLOCK_END()     BLOCK_RUN_END()
+#define RUN_BLOCK_TRA()     BLOCK_RUN_BEG(nullptr, LOG_LVL_TRACE)
+#define RUN_BLOCK_DBG()     BLOCK_RUN_BEG(nullptr, LOG_LVL_DEBUG)
+#define RUN_BLOCK_INFO()    BLOCK_RUN_BEG(nullptr, LOG_LVL_INFO)
+#define RUN_BLOCK_WAR()     BLOCK_RUN_BEG(nullptr, LOG_LVL_WARNING)
+#define RUN_BLOCK_ERR()     BLOCK_RUN_BEG(nullptr, LOG_LVL_ERROR)
+#define RUN_BLOCK_FTL()     BLOCK_RUN_BEG(nullptr, LOG_LVL_FATAL)
+
+
+
+#endif
+
+
 #define GLOG_TRA(format_, ...)		GLOG(LOG_LVL_TRACE, 0, format_, ##__VA_ARGS__)
 #define GLOG_DBG(format_, ...)		GLOG(LOG_LVL_DEBUG, 0, format_, ##__VA_ARGS__)
 #define GLOG_IFO(format_, ...)		GLOG(LOG_LVL_INFO, 0, format_, ##__VA_ARGS__)

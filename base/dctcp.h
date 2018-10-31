@@ -35,13 +35,15 @@ enum dctcp_event_type {
     DCTCP_READ ,
     DCTCP_EVENT_MAX
 };
+struct sockaddr;
 struct dctcp_event_t {
     dctcp_event_type			type;
     int							listenfd{ -1 };//for new connection host fd
     int							fd{ -1 };//event fd
     const dctcp_msg_t *			msg;
-	dctcp_close_reason_type		reason;
-	int							error;
+	dctcp_close_reason_type		reason { DCTCP_MSG_OK};
+	int							error {0};
+    struct sockaddr         *   netaddr {nullptr};
 	dctcp_event_t();
 };
 
