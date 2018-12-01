@@ -10,6 +10,7 @@
 struct DateTimeImpl {
 	struct timeval  update_tv;
 	struct timeval  tv;
+    struct timeval  tv_sp_tmp;
 	struct timezone	local_tz; //minuests of west
 	int	set_gmtoff {0}; //minutes of east
 	int set_dst {0};
@@ -25,7 +26,7 @@ static inline void timezone_str_format(char * str, size_t sz, int gmtoff) {
 DateTime::DateTime() {
 	impl = new DateTimeImpl();
 	gettimeofday(&impl->update_tv, &impl->local_tz);
-	impl->tv = impl->update_tv;
+	impl->tv_sp_tmp = impl->tv = impl->update_tv;
 	impl->set_gmtoff = -60 * impl->local_tz.tz_minuteswest;
 	timezone_str_format(impl->timezone, sizeof(impl->timezone), impl->set_gmtoff);
 }
@@ -65,9 +66,9 @@ uint32_t			DateTime::now() const {
 	return impl->tv.tv_sec + impl->timeoffset;
 }
 struct timeval &	DateTime::now_tv() const {
-	gettimeofday(&impl->tv, NULL);
-	impl->tv.tv_sec += impl->timeoffset;
-	return impl->tv;
+	gettimeofday(&impl->tv_sp_tmp, NULL);
+	impl->tv_sp_tmp.tv_sec += impl->timeoffset;
+	return impl->tv_sp_tmp;
 }
 int64_t				DateTime::diff(const struct timeval & tv1, const struct timeval & tv2) const {
 	return (tv1.tv_sec - tv2.tv_sec)*TIME_RATIO_SECOND_MICRO_SECONDS+ (tv1.tv_usec - tv2.tv_usec);
