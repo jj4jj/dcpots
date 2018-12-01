@@ -216,18 +216,8 @@ _dctcp_get_proto_dispatcher(dctcp_t * stcp, int fd, int listenfd){
 static	inline void	dctcp_event_dispatch(dctcp_t *stcp, const dctcp_event_t & ev, 
 		dctcp_proto_dispatcher_t * proto_env = nullptr){
     
-    RUN_BLOCK_TRA()
-    char msg_buffer_head_tail[8] = {0};
-    if(ev.msg && ev.msg->buff){
-        memcpy(msg_buffer_head_tail, ev.msg->buff, std::min(4, ev.msg->buff_sz));
-        if(ev.msg->buff_sz > 4){
-            memcpy(msg_buffer_head_tail+4, ev.msg->buff + ev.msg->buff_sz-4, std::min(4, ev.msg->buff_sz - 4));
-        }
-    }
-    GLOG_TRA("stcp:%p dispatch event fd:%d(%d) evt:%d reason:%d error:%d msg size:%d buff:%08x",
-        stcp, ev.fd, ev.listenfd, ev.type, ev.reason, ev.error, ev.msg ? ev.msg->buff_sz : 0,
-        *(uint64_t*)msg_buffer_head_tail);
-    RUN_BLOCK_END()
+    GLOG_TRA("stcp:%p dispatch event fd:%d(%d) evt:%d reason:%d error:%d msg size:%d",
+        stcp, ev.fd, ev.listenfd, ev.type, ev.reason, ev.error, ev.msg ? ev.msg->buff_sz : 0);
 
 	if (proto_env){ //settings
 		if (proto_env->event_cb){
@@ -761,17 +751,6 @@ static inline int _dctcp_check_send_queue(dctcp_t * stcp, int fd, int listenfd, 
     while (send_pdu > 0){
         int ret = send(fd, msgbuff->buffer + sent,
             send_pdu, MSG_DONTWAIT | MSG_NOSIGNAL);
-
-        RUN_BLOCK_TRA()
-        char msg_send_buffer_head_tail[8] = {0};
-        memcpy(msg_send_buffer_head_tail, msgbuff->buffer + sent, std::min(4, send_pdu));
-        if (send_pdu > 4) {
-            memcpy(msg_send_buffer_head_tail + 4, msgbuff->buffer + sent + send_pdu - 4, std::min(4, send_pdu - 4));
-        }
-        GLOG_TRA("send socket fd:%d buffer offset:%d size:%d %08x ret:%d valid size:%d", fd, sent,
-                send_pdu, *(uint64_t*)msg_send_buffer_head_tail, ret, msgbuff->valid_size);
-        RUN_BLOCK_END()
-
         if (ret > 0){ //send ok
             sent += ret;
         }
@@ -899,15 +878,7 @@ static inline int _write_tcp_socket(dctcp_t * stcp, int fd, const char * msg, in
         return -4;
     }
 
-    RUN_BLOCK_TRA()
-        char msg_send_buffer_head_tail[8] = { 0 };
-    memcpy(msg_send_buffer_head_tail, msg, std::min(4, sz));
-    if (sz > 4) {
-        memcpy(msg_send_buffer_head_tail + 4, msg + sz - 4, std::min(4, sz - 4));
-    }
-    GLOG_TRA("send msg with fd:%d(%d) payload:%d buff:%08x frame size:%d", fd, listenfd, sz, *(uint64_t*)msg_send_buffer_head_tail, msgbuff->valid_size);
-
-    RUN_BLOCK_END()
+    GLOG_TRA("send msg with fd:%d(%d) payload:%d frame size:%d", fd, listenfd, sz, msgbuff->valid_size);
 
     return _dctcp_check_send_queue(stcp, fd, listenfd, msgbuff);
 }
@@ -929,7 +900,7 @@ static inline void _proc(dctcp_t * stcp, const epoll_event & ev){
     else if (ev.events & (EPOLLHUP | EPOLLERR)) {
         //rst ?
         GLOG_WAR("connection fd:%d hup(rst?) or error (%d) listen:%d ", efd, ev.events, listenfd);
-        _close_fd(stcp, efd, dctcp_close_reason_type::DCTCP_INVAL_CALL, listenfd);
+        _close_fd(stcp, efd, dctcp_close_reason_type::DCTCP_CONNX_HUP, listenfd);
     }
     else if ((ev.events & EPOLLIN)) {
         if (_is_listenner(stcp, efd)) {

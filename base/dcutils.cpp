@@ -1070,9 +1070,10 @@ namespace dcs {
                 inet_ntop(AF_INET, &(((const struct sockaddr_in *)&addr)->sin_addr),
                     szIpStrBuff, sizeof(szIpStrBuff));
             break;
+            case AF_INET6:
                 inet_ntop(AF_INET6, &(((const struct sockaddr_in6 *)&addr)->sin6_addr),
                     szIpStrBuff, sizeof(szIpStrBuff));
-            case AF_INET6:
+
             break;
             default:
             return "(unknown)";

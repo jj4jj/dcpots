@@ -630,6 +630,7 @@ int App::start(){
             int rret = on_reload();
             if (rret){
                 GLOG_ERR("reload error ret :%d !", nproc);
+                return -1;
             }
             impl_->reloading = false;
         }

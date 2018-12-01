@@ -20,11 +20,11 @@ enum dctcp_close_reason_type {
 	DCTCP_MSG_OK = 0, //OK
 	DCTCP_MSG_ERR = 1,	//msg error
 	DCTCP_CONNECT_ERR = 2, //connect
-	DCTCP_PEER_CLOSE = 3,
+	DCTCP_PEER_CLOSE = 3, //peer close it
 	DCTCP_POLL_ERR = 4, //refer to errno
-	DCTCP_INVAL_CALL = 5, //usage err
+    DCTCP_CONNX_HUP = 5, //hup or error(refuse)
 	DCTCP_SYS_CALL_ERR = 6, //system call error refer to errno
-	DCTCP_CLOSE_ACTIVE = 7, //by uplayer
+	DCTCP_CLOSE_ACTIVE = 7, //by uplayer (user)
 };
 
 enum dctcp_event_type {

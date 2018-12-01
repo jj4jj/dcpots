@@ -1,4 +1,4 @@
-#include "dcsmq.h"
+﻿#include "dcsmq.h"
 #include "dcutils.hpp"
 #include "profile.h"
 #include <sys/msg.h>
@@ -218,7 +218,7 @@ RETRY_RECV:
                 goto RETRY_RECV;
             }
             else{
-                GLOG_SER("msg recv error recever:%d errno:%d ! ", smq->recver, errno);
+                GLOG_SER("msg recv error recever:%d session:%d errno:%d ! ", smq->recver, session, errno);
             }
         }
         return -1;
@@ -320,5 +320,19 @@ void	dcsmq_set_session(dcsmq_t * smq, uint64_t session){
 	}
 }
 const dcsmq_stat_t *	dcsmq_stat(dcsmq_t * smq){
+    if (::dcs::time_unixtime_ms() - smq->stat.ipc_stat_time >= 10 * 1000){
+        smq->stat.ipc_stat_time = ::dcs::time_unixtime_ms();
+        smq->stat.msg_cur_bytes = 0;
+        smq->stat.msg_max_bytes = 0;
+        struct msqid_ds mds;
+        int ret = msgctl(smq->sender, IPC_STAT, (struct msqid_ds *)&mds);
+        if (ret != 0){
+            GLOG_SER("msgctl error id:%d !", smq->sender);
+        }
+        else{
+            smq->stat.msg_cur_bytes = mds.msg_cbytes;
+            smq->stat.msg_max_bytes = mds.msg_qbytes;
+        }
+    }
     return &smq->stat;
 }

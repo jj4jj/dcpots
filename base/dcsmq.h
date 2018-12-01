@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "stdinc.h"
 
 struct dcsmq_t;
@@ -57,6 +57,9 @@ struct dcsmq_stat_t {
     uint64_t            recv_last;
     uint64_t            msg_stime;//time us
     uint64_t            msg_rtime;//time us
+    uint64_t            ipc_stat_time;//time ms
+    uint64_t            msg_cur_bytes;
+    uint64_t            msg_max_bytes;
 };
 
 typedef int (*dcsmq_msg_cb_t)(dcsmq_t * , uint64_t src, const dcsmq_msg_t & msg, void * ud);
@@ -72,5 +75,6 @@ uint64_t	dcsmq_take(dcsmq_t*, dcsmq_msg_t & msg, bool block = false);//send to p
 bool		dcsmq_server_mode(dcsmq_t *);
 void		dcsmq_set_session(dcsmq_t *, uint64_t session); //send or recv type
 uint64_t	dcsmq_session(dcsmq_t *);
+
 const dcsmq_stat_t *	dcsmq_stat(dcsmq_t *);
 
