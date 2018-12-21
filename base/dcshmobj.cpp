@@ -26,6 +26,7 @@ struct dcshmobj_pool_mm_fmt {
     struct _head_t {
         uint16_t        version;
         uint16_t        objects_count;
+        uint32_t        status;
         struct {
             uint32_t    block_offset;
             uint32_t    block_count;
@@ -442,3 +443,15 @@ int               dcshmobj_pool::start(const char * keypath){
 int               dcshmobj_pool::stop(){
     return   impl_->stop();
 }
+void              dcshmobj_pool::set_status(int status) {
+    if (impl_ && impl_->shm) {
+        impl_->shm->head.status = status;
+    }
+}
+int               dcshmobj_pool::get_status() {
+    if (impl_ && impl_->shm) {
+        return impl_->shm->head.status;
+    }
+    return 0;
+}
+

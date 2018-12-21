@@ -70,6 +70,8 @@ struct dcshmobj_pool {
     int               regis(dcshmobj_user_t * user);
     int               start(const char * keypath);
     int               stop();
+    void              set_status(int status);
+    int               get_status();
     /////////////////////////////////////////////////
 public:
     dcshmobj_pool();
