@@ -550,7 +550,7 @@ void *      hashmap_t::insert(const void * blk, bool unique){
 	}
 	void * p = impl_->mmpool.alloc();
 	if (!p) {
-        GLOG_ERR("alloc blk fail !");
+        GLOG_ERR("alloc blk fail count:%zd !", impl_->mmpool.used());
 		return nullptr;
 	}
     memcpy(p, blk, impl_->block_size);

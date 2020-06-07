@@ -891,34 +891,31 @@ static inline void _proc(dctcp_t * stcp, const epoll_event & ev){
 	int listenfd = (ev.data.u64 >> 32)&0xFFFFFFFF;
     int efd = (ev.data.u64)&0xFFFFFFFF;
     GLOG_TRA("proc tcp event fd:%d (listen:%d) event:%d ", efd, listenfd, ev.events);
-    //error check
-    if (ev.events & EPOLLRDHUP){
-		//peer close
-        GLOG_WAR("connection fd:%d rdhup peer closed listen:%d ", efd, listenfd);
-		_close_fd(stcp, efd, dctcp_close_reason_type::DCTCP_PEER_CLOSE, listenfd);
-	}
-    else if (ev.events & (EPOLLHUP | EPOLLERR)) {
-        //rst ?
-        GLOG_WAR("connection fd:%d hup(rst?) or error (%d) listen:%d ", efd, ev.events, listenfd);
-        _close_fd(stcp, efd, dctcp_close_reason_type::DCTCP_CONNX_HUP, listenfd);
+    if (ev.events & (EPOLLHUP | EPOLLERR)) {
+        //rst ? dont close just check
+        GLOG_DBG("connection fd:%d hup(rst?) or error (%d) listen:%d ", efd, ev.events, listenfd);
+        //_close_fd(stcp, efd, dctcp_close_reason_type::DCTCP_CONNX_HUP, listenfd);
+		((epoll_event&)ev).events |= (EPOLLIN|EPOLLOUT);
     }
-    else if ((ev.events & EPOLLIN)) {
+    if ((ev.events & EPOLLIN)) {
         if (_is_listenner(stcp, efd)) {
             //new connection
             _new_connx(stcp, efd);
         }
         else {
+			//error check
+			if (ev.events & EPOLLRDHUP){
+				//peer close
+				GLOG_WAR("connection fd:%d rdhup peer closed listen:%d ", efd, listenfd);
+				_close_fd(stcp, efd, dctcp_close_reason_type::DCTCP_PEER_CLOSE, listenfd);
+			}
             _read_tcp_socket(stcp, efd, listenfd);
         }
     }
-	else if (ev.events & EPOLLOUT){
+	if (ev.events & EPOLLOUT){
 		_connect_check(stcp, efd);
 	}
-	else {
-		//error
-        GLOG_ERR("poll fd:%d call error:%d events:%lu", efd, listenfd, ev.events);
-		_close_fd(stcp, efd, dctcp_close_reason_type::DCTCP_SYS_CALL_ERR, listenfd);
-	}
+
 }
 void			dctcp_close(dctcp_t * stcp, int fd){
 	_close_fd(stcp, fd, dctcp_close_reason_type::DCTCP_MSG_OK, _dctcp_get_fd_listenfd(stcp, fd));

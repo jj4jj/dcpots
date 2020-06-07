@@ -8,6 +8,7 @@
 #include<netinet/in.h>
 #include <dlfcn.h>
 #include <dirent.h>
+#include <sys/stat.h>
 
 #include "dcbitset.hpp"
 #define FS_PATH_SEP ('/')
@@ -66,42 +67,66 @@ namespace {
 };
 
 namespace dcs {
-	uint64_t	time_unixtime_ns(){
-		#if 0
-		int clock_getres(clockid_t clk_id, struct timespec *res);
-		int clock_gettime(clockid_t clk_id, struct timespec *tp);
-			CLOCK_REALTIME
-			System - wide  clock  that measures real(i.e., wall - clock) time.Setting this clock requires appropriate privileges.This clock is affected by discontinuous jumps in the
-			system time(e.g., if the system administrator manually changes the clock), and by the incremental adjustments performed by adjtime(3) and NTP.
-			CLOCK_REALTIME_COARSE(since Linux 2.6.32; Linux - specific)
-			A faster but less precise version of CLOCK_REALTIME.Use when you need very fast, but not fine - grained timestamps.
-			CLOCK_MONOTONIC
-			Clock that cannot be set and represents monotonic time since some unspecified starting point.This clock is not affected by discontinuous jumps in the system time
-			(e.g., if the system administrator manually changes the clock), but is affected by the incremental adjustments performed by adjtime(3) and NTP.
-			CLOCK_MONOTONIC_COARSE(since Linux 2.6.32; Linux - specific)
-			A faster but less precise version of CLOCK_MONOTONIC.Use when you need very fast, but not fine - grained timestamps.
-			CLOCK_MONOTONIC_RAW(since Linux 2.6.28; Linux - specific)
-			Similar  to  CLOCK_MONOTONIC, but  provides access to a raw hardware - based time that is not subject to NTP adjustments or the incremental adjustments performed by
-			adjtime(3).
-			CLOCK_BOOTTIME(since Linux 2.6.39; Linux - specific)
-			Identical to CLOCK_MONOTONIC, except it also includes any time that the system is suspended.This allows applications to get a suspend - aware monotonic clock with©\
-			out having to deal with the complications of CLOCK_REALTIME, which may have discontinuities if the time is changed using settimeofday(2).
-			CLOCK_PROCESS_CPUTIME_ID(since Linux 2.6.12)
-			Per - process CPU - time clock(measures CPU time consumed by all threads in the process).
-			CLOCK_THREAD_CPUTIME_ID(since Linux 2.6.12)
-			Thread - specific CPU - time clock.
-		#endif
-		struct timespec tp;
-		clock_gettime(CLOCK_REALTIME, &tp);
-		return (tp.tv_sec*1000000000 + tp.tv_nsec);
-	}
-    uint64_t	time_unixtime_us() {
+    uint64_t    time_unixtime_ns(){
+        #if 0
+        int clock_getres(clockid_t clk_id, struct timespec *res);
+        int clock_gettime(clockid_t clk_id, struct timespec *tp);
+            CLOCK_REALTIME
+            System - wide  clock  that measures real(i.e., wall - clock) time.Setting this clock requires appropriate privileges.This clock is affected by discontinuous jumps in the
+            system time(e.g., if the system administrator manually changes the clock), and by the incremental adjustments performed by adjtime(3) and NTP.
+            CLOCK_REALTIME_COARSE(since Linux 2.6.32; Linux - specific)
+            A faster but less precise version of CLOCK_REALTIME.Use when you need very fast, but not fine - grained timestamps.
+            CLOCK_MONOTONIC
+            Clock that cannot be set and represents monotonic time since some unspecified starting point.This clock is not affected by discontinuous jumps in the system time
+            (e.g., if the system administrator manually changes the clock), but is affected by the incremental adjustments performed by adjtime(3) and NTP.
+            CLOCK_MONOTONIC_COARSE(since Linux 2.6.32; Linux - specific)
+            A faster but less precise version of CLOCK_MONOTONIC.Use when you need very fast, but not fine - grained timestamps.
+            CLOCK_MONOTONIC_RAW(since Linux 2.6.28; Linux - specific)
+            Similar  to  CLOCK_MONOTONIC, but  provides access to a raw hardware - based time that is not subject to NTP adjustments or the incremental adjustments performed by
+            adjtime(3).
+            CLOCK_BOOTTIME(since Linux 2.6.39; Linux - specific)
+            Identical to CLOCK_MONOTONIC, except it also includes any time that the system is suspended.This allows applications to get a suspend - aware monotonic clock with©\
+            out having to deal with the complications of CLOCK_REALTIME, which may have discontinuities if the time is changed using settimeofday(2).
+            CLOCK_PROCESS_CPUTIME_ID(since Linux 2.6.12)
+            Per - process CPU - time clock(measures CPU time consumed by all threads in the process).
+            CLOCK_THREAD_CPUTIME_ID(since Linux 2.6.12)
+            Thread - specific CPU - time clock.
+        #endif
+        struct timespec tp;
+        clock_gettime(CLOCK_REALTIME, &tp);
+        return (tp.tv_sec*1000000000 + tp.tv_nsec);
+    }
+    uint64_t    time_unixtime_us() {
         timeval tv;
         gettimeofday(&tv, NULL);
         return tv.tv_sec * 1000000 + tv.tv_usec;
     }
 
-    int			daemonlize(int closestd, int chrootdir, const char * pidfile) {
+    static void _daemonlize(){
+        // [1] fork child process and exit father process  
+        pid_t pid = fork();  
+        if(pid < 0) {  
+            perror("fork error!");  
+            exit(1);  
+        }  
+        if(pid > 0) { 
+            exit(0);} 
+        // [2] create a new session  
+        setsid();  
+        // [4] umask 0  
+        umask(0);  
+	if(fork() > 0){exit(0);}
+	int fd = 0;
+	if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
+	    dup2(fd, STDIN_FILENO);
+	    dup2(fd, STDOUT_FILENO);
+	    dup2(fd, STDERR_FILENO);
+	    if (fd > STDERR_FILENO) 
+		close(fd);
+	}
+    }
+
+    int            daemonlize(int closestd, int chrootdir, const char * pidfile) {
         //1.try lock file
         int lockfd = -1;
         if (pidfile) {
@@ -118,8 +143,9 @@ namespace dcs {
 #if _BSD_SOURCE || (_XOPEN_SOURCE && _XOPEN_SOURCE < 500)
         ret = daemon(!chrootdir, !closestd);
 #else
-        assert("not implement in this platform , using nohup & launch it ?");
-        ret = -404;//todo 
+    _daemonlize();
+        //assert("not implement in this platform , using nohup & launch it ?");
+        //ret = -404;//todo 
 #endif
         if (pidfile) {
             int pidget = lockpidfile(pidfile);
@@ -130,20 +156,20 @@ namespace dcs {
             }
         }
         if (ret) {
-            GLOG_ERR("error daemonlization ... errno:%d (%s)", errno, strerror(errno));
+            GLOG_ERR("error daemonlization ret:%d ... errno:%d (%s)", ret, errno, strerror(errno));
             exit(ret);
         }
         return 0;
     }
-    typedef  std::unordered_map<int, std::stack<sah_handler> >	signalh_stacks_t;
-    static signalh_stacks_t	s_sigh_stacks;
-    int					signalh_ignore(int sig) {
+    typedef  std::unordered_map<int, std::stack<sah_handler> >    signalh_stacks_t;
+    static signalh_stacks_t    s_sigh_stacks;
+    int                    signalh_ignore(int sig) {
         return signalh_set(sig, (sah_handler)SIG_DFL);
     }
-    int					signalh_default(int sig) {
+    int                    signalh_default(int sig) {
         return signalh_set(sig, (sah_handler)SIG_DFL);
     }
-    void				signalh_clear(int sig) {
+    void                signalh_clear(int sig) {
         if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()) {
             return;
         }
@@ -162,7 +188,7 @@ namespace dcs {
         act.sa_flags = sah_flags | SA_SIGINFO;
         return sigaction(sig, &act, NULL);
     }
-    int					signalh_push(int sig, sah_handler sah, int sah_flags) {
+    int                    signalh_push(int sig, sah_handler sah, int sah_flags) {
         if (s_sigh_stacks.find(sig) == s_sigh_stacks.end()) {
             s_sigh_stacks[sig] = std::stack<sah_handler>();
         }        
@@ -173,7 +199,7 @@ namespace dcs {
         s_sigh_stacks[sig].push((sah_handler)sah);
         return 0;
     }
-    sah_handler			signalh_pop(int sig) {
+    sah_handler            signalh_pop(int sig) {
         if (s_sigh_stacks.find(sig) == s_sigh_stacks.end() ||
             s_sigh_stacks[sig].empty()) {
             return (sah_handler)SIG_DFL;
@@ -182,12 +208,12 @@ namespace dcs {
         s_sigh_stacks[sig].pop();
         return sah;
     }
-    bool		file_exists(const std::string & file) {
+    bool        file_exists(const std::string & file) {
         FILE * fp = fopen(file.c_str(), "r");
         fclose(fp);
         return fp != nullptr;
     }
-    int			readfile(const std::string & file, std::string & content) {
+    int            readfile(const std::string & file, std::string & content) {
         char filebuff[512];
         content.clear();
         content.reserve(1024 * 8);
@@ -214,7 +240,7 @@ namespace dcs {
         }
         return -3;
     }
-    int			readfile(const std::string & file, char * buffer, size_t sz) {
+    int            readfile(const std::string & file, char * buffer, size_t sz) {
         FILE * fp = fopen(file.c_str(), "r");
         if (!fp) {
             GLOG_SER("open file:%s error!", file.c_str());
@@ -237,46 +263,46 @@ namespace dcs {
         return -2;
     }
 #if 0
-	struct stat {
-		dev_t     st_dev;         /* ID of device containing file */
-		ino_t     st_ino;         /* inode number */
-		mode_t    st_mode;        /* protection */
-		nlink_t   st_nlink;       /* number of hard links */
-		uid_t     st_uid;         /* user ID of owner */
-		gid_t     st_gid;         /* group ID of owner */
-		dev_t     st_rdev;        /* device ID (if special file) */
-		off_t     st_size;        /* total size, in bytes */
-		blksize_t st_blksize;     /* blocksize for filesystem I/O */
-		blkcnt_t  st_blocks;      /* number of 512B blocks allocated */
+    struct stat {
+        dev_t     st_dev;         /* ID of device containing file */
+        ino_t     st_ino;         /* inode number */
+        mode_t    st_mode;        /* protection */
+        nlink_t   st_nlink;       /* number of hard links */
+        uid_t     st_uid;         /* user ID of owner */
+        gid_t     st_gid;         /* group ID of owner */
+        dev_t     st_rdev;        /* device ID (if special file) */
+        off_t     st_size;        /* total size, in bytes */
+        blksize_t st_blksize;     /* blocksize for filesystem I/O */
+        blkcnt_t  st_blocks;      /* number of 512B blocks allocated */
 
-								  /* Since Linux 2.6, the kernel supports nanosecond
-								  precision for the following timestamp fields.
-								  For the details before Linux 2.6, see NOTES. */
+                                  /* Since Linux 2.6, the kernel supports nanosecond
+                                  precision for the following timestamp fields.
+                                  For the details before Linux 2.6, see NOTES. */
 
-		struct timespec st_atim;  /* time of last access */
-		struct timespec st_mtim;  /* time of last modification */
-		struct timespec st_ctim;  /* time of last status change */
+        struct timespec st_atim;  /* time of last access */
+        struct timespec st_mtim;  /* time of last modification */
+        struct timespec st_ctim;  /* time of last status change */
 #endif
     int         file_md5sum(std::string & md5sum, const std::string & file){
        return -1; 
     }
 
-	time_t		file_modify_time(const std::string & file) {
-		struct stat lfst;
-		int ret = stat(file.c_str(), &lfst);
-		if (ret) {
-			return 0;
-		}
-		return lfst.st_mtime;//.tv_sec;
-	}
-	time_t		file_access_time(const std::string & file) {
-		struct stat lfst;
-		int ret = stat(file.c_str(), &lfst);
-		if (ret) {
-			return 0;
-		}
-		return lfst.st_atime;//.tv_sec;
-	}
+    time_t        file_modify_time(const std::string & file) {
+        struct stat lfst;
+        int ret = stat(file.c_str(), &lfst);
+        if (ret) {
+            return 0;
+        }
+        return lfst.st_mtime;//.tv_sec;
+    }
+    time_t        file_access_time(const std::string & file) {
+        struct stat lfst;
+        int ret = stat(file.c_str(), &lfst);
+        if (ret) {
+            return 0;
+        }
+        return lfst.st_atime;//.tv_sec;
+    }
     int         touch_file(const std::string & file_path){
         FILE * fp = fopen(file_path.c_str(), "a+");
         if (!fp) {
@@ -295,7 +321,36 @@ namespace dcs {
         fclose(fp);
         return sz;
     }
-    const char *		path_base(const char * path) {
+	bool path_exists(const char * path) {
+		if (!path) {
+			return false;
+		}
+		struct stat buf;
+		return stat(path, &buf) == 0; //ENOENT
+	}
+	int path_inode(const char * path) {
+		struct stat buf;
+		if (stat(path, &buf) == 0) {
+			return buf.st_ino;
+		}
+		return -1;
+	}
+	int path_token(const char * path, int proj)
+	{
+		assert(proj <= 32 && "just support 5 bit proj");
+		struct stat buf;
+		if (stat(path, &buf) == 0) {
+			//32=4|23|5
+			uint32_t key = (buf.st_dev & 0xF);
+			key <<= 23;
+			key |= (buf.st_ino & 0x7FFFFF);
+			key <<= 5;
+			key |= (proj & 0x1F);
+			return key;
+		}
+		return ftok(path, proj);
+	}
+    const char *        path_base(const char * path) {
         if(!path || !*path){
             return ".";
         }
@@ -307,7 +362,7 @@ namespace dcs {
         }
         return p;
     }
-    string 				path_dir(const char * path){
+    string                 path_dir(const char * path){
         std::string strpath = path;
         strpath.erase(strpath.find_last_of(FS_PATH_SEP));
         if(strpath.empty()){
@@ -315,7 +370,7 @@ namespace dcs {
         }
         return strpath;
     }
-    int			writefile(const std::string & file, const char * buffer, size_t sz) {
+    int            writefile(const std::string & file, const char * buffer, size_t sz) {
         FILE * fp = fopen(file.c_str(), "w");
         if (!fp) {
             GLOG_SER("open file %s e!", file.c_str());
@@ -408,7 +463,7 @@ namespace dcs {
     }
 
     //write size , return > 0 wirte size, <= 0 error
-    static inline	int  _writefd(int fd, const char * buffer, size_t sz, int timeout_ms) {
+    static inline    int  _writefd(int fd, const char * buffer, size_t sz, int timeout_ms) {
         if (fd < 0 || sz == 0) { return -1; }
         size_t tsz = 0;
         int n = 0;
@@ -489,11 +544,11 @@ namespace dcs {
             return fd;
         }
         else if (uri.find("udp://") == 0) {//+6
-            const char * connaddr = uri.substr(6).c_str();
+            const char * connaddr = uri.c_str()+6;
             sockaddr_in iaddr;
             int ret = socknetaddr(iaddr, connaddr);
             if (ret) {
-                GLOG_ERR("error net udp address:%s", connaddr);
+                GLOG_ERR("error net udp address:[%s]/[%s]", connaddr, uri.c_str());
                 return -1;
             }
             int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -1006,6 +1061,10 @@ namespace dcs {
             dname = saddr.substr(fpos+2);
         }
         strsplit(dname, ":", vs);
+    if (vs.size() != 2){
+            GLOG_ERR("get host name error first hostname:[%s]", saddr.c_str());
+        return -1;    
+    }
         if (strisint(vs[0])) {
             addr.sin_addr.s_addr = stol(vs[0]);
         }
@@ -1154,7 +1213,7 @@ namespace dcs {
         close(fd);
         return ret;
     }
-    int			lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd, bool notify) {
+    int            lockpidfile(const std::string & file, int kill_other_sig, bool nb, int * pfd, bool notify) {
         int fd = open(file.c_str(), O_RDWR | O_CREAT, 0644);
         if (fd == -1) {
             GLOG_ERR("open file:%s error ", file.c_str());
@@ -1242,7 +1301,7 @@ namespace dcs {
         return hash_dbj2(buff.data(), buff.length());
         }
     }
-    int			strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs,
+    int            strsplit(const std::string & str, const string & sep, std::vector<std::string> & vs,
         bool ignore_empty, int maxsplit, int beg_, int end_){
         vs.clear();
         string::size_type beg = beg_;
@@ -1280,16 +1339,16 @@ namespace dcs {
     bool                time_same_hour(time_t t1, time_t t2){
         return t1 / 3600 == t2 / 3600;
     }
-	bool                time_same_ten_minutes(time_t t1, time_t t2){
-		if (t1 / 3600 == t2 / 3600)
-		{
-			return (t1 % 3600) / 600 == (t2 % 3600) / 600;
-		}
-		else
-		{
-			return false;
-		}
-	}
+    bool                time_same_ten_minutes(time_t t1, time_t t2){
+        if (t1 / 3600 == t2 / 3600)
+        {
+            return (t1 % 3600) / 600 == (t2 % 3600) / 600;
+        }
+        else
+        {
+            return false;
+        }
+    }
     bool                time_same_week(time_t t1, time_t t2){
         struct tm _sftm;
         localtime_r(&t1, &_sftm);
@@ -1323,15 +1382,15 @@ namespace dcs {
         return m1 == m2 && time_same_year(t1, t2);
     }
 
-	int	getminutes(time_t unixtime){
-		if (unixtime == 0U){
-			unixtime = time(NULL);
-		}
-		struct tm _sftm;
-		localtime_r(&unixtime, &_sftm);
-		return _sftm.tm_min;
-	}
-    const char*		strftime(std::string & str, time_t unixtime, const char * format){
+    int    getminutes(time_t unixtime){
+        if (unixtime == 0U){
+            unixtime = time(NULL);
+        }
+        struct tm _sftm;
+        localtime_r(&unixtime, &_sftm);
+        return _sftm.tm_min;
+    }
+    const char*        strftime(std::string & str, time_t unixtime, const char * format){
         str.reserve(32);
         if (unixtime == 0U){
             unixtime = time(NULL);
@@ -1341,7 +1400,7 @@ namespace dcs {
         strftime((char*)str.c_str(), str.capacity(), format, &_sftm);
         return str.c_str();
     }
-    const char*		strftime(std::string & str, struct tm & rtm, const char * format){
+    const char*        strftime(std::string & str, struct tm & rtm, const char * format){
         str.reserve(32);
         strftime((char*)str.c_str(), str.capacity(), format, &rtm);
         return str.c_str();
@@ -1356,7 +1415,7 @@ namespace dcs {
         unixtime = mktime(&_tmptm);
         return unixtime;
     }
-    time_t			    stdstrtime(const char * strtime){
+    time_t                stdstrtime(const char * strtime){
         return strptime(strtime, "%FT%X%z");
     }
     bool            strisint(const std::string & str, int base){
@@ -1374,12 +1433,12 @@ namespace dcs {
         }
         return true;
     }
-    void			strrepeat(std::string & str, const char * rep, int repcount){
+    void            strrepeat(std::string & str, const char * rep, int repcount){
         while (repcount-- > 0){
             str.append(rep);
         }
     }
-    size_t			vstrprintf(std::string & str, const char* format, va_list ap){
+    size_t            vstrprintf(std::string & str, const char* format, va_list ap){
         size_t ncvt = vsnprintf((char*)str.data(), str.capacity(), format, ap);
         if (ncvt == str.capacity()){
             str[ncvt - 1] = 0;
@@ -1387,16 +1446,16 @@ namespace dcs {
         }
         return ncvt;
     }
-    size_t			strprintf(std::string & str, const char * format, ...){
-        va_list	ap;
+    size_t            strprintf(std::string & str, const char * format, ...){
+        va_list    ap;
         va_start(ap, format);
         size_t ncvt = vstrprintf(str, format, ap);
         va_end(ap);
         return ncvt;
     }
-    size_t			strnprintf(std::string & str, size_t max_sz, const char * format, ...){
+    size_t            strnprintf(std::string & str, size_t max_sz, const char * format, ...){
         str.reserve(max_sz);
-        va_list	ap;
+        va_list    ap;
         va_start(ap, format);
         size_t ncvt = vstrprintf(str, format, ap);
         va_end(ap);
@@ -1405,28 +1464,29 @@ namespace dcs {
 
 
     //////////////////////////////////////////////////////////////////////////////////////////
-    const char*			strcharsetrandom(std::string & randoms, int length, const char * charset){
+    const char*            strcharsetrandom(std::string & randoms, int length, const char * charset){
         if (!charset || !(*charset)){
             return nullptr;
         }
         randoms.reserve(length);
         int charsetlen = strlen(charset);
-        std::random_device	rd;
+        std::random_device    rd;
         for (int i = 0; i < length; ++i){
             randoms.append(1, charset[rd() % charsetlen]);
         }
         return randoms.c_str();
     }
-    const char*			strrandom(std::string & randoms, int length, char charbeg, char charend){
+    const char*            strrandom(std::string & randoms, int length, char charbeg, char charend){
         if (charbeg > charend){ std::swap(charbeg, charend); }
         randoms.reserve(length);
-        std::random_device	rd;
+        std::random_device    rd;
         for (int i = 0; i < length; ++i){
             randoms.append(1, (char)(rd() % (charend - charbeg + 1) + charbeg));
         }
         return randoms.c_str();
     }
     string &            strreplace(string & str, const string & sub, const string & repl, bool global){
+        if ( sub == repl ){ return str;}
         string::size_type found = str.find(sub);
         if (global){
             while (found != string::npos){
@@ -1474,7 +1534,7 @@ namespace dcs {
                 return str;
             }
         }
-		str.clear();
+        str.clear();
         return str;
     }
     std::string &       strrtrim(std::string & str, const char * charset){
@@ -1489,7 +1549,7 @@ namespace dcs {
                 return str;
             }
         }
-		str.clear();
+        str.clear();
         return str;
     }
 
@@ -1559,7 +1619,7 @@ namespace dcs {
     int             b64_encode(std::string & b64, const char * buff, int slen){
         b64.clear();
         b64.reserve(slen * 4 / 3 + 3);
-		const unsigned char * data = (const unsigned char *)buff;
+        const unsigned char * data = (const unsigned char *)buff;
         for (int i = 0; i < slen; i += 3) {
             uint32_t n = data[i] << 16;
             if (i + 1 < slen){
@@ -1698,11 +1758,5 @@ namespace dcs {
 
 
 
-
-
-
-
 }
-
-
 

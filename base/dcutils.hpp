@@ -36,6 +36,10 @@ NS_BEGIN(dcs)
     int                 file_md5sum(std::string & md5sum, const std::string & file);
 	const char *		path_base(const char * path);
     std::string         path_dir(const char * path);
+	bool				path_exists(const char * path);
+	int					path_inode(const char * path);
+	//proj <= 32
+	int					path_token(const char * path, int proj = 1);
     typedef void(*path_walker_t)(const char * dirname, const char * basename, bool is_dir, void * ud);
     int                 path_walk(const char * path, path_walker_t walker, void * ud, int depth = 0);
     enum  path_entry_filter {

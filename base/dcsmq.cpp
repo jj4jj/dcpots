@@ -101,10 +101,10 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
     }
     if (send_queue_buff_size > 0){
         if (dcs::strisint(conf.keypath)){
-            sender_key = stoi(conf.keypath) + prj_id[0] - 1;
+            sender_key = stoi(conf.keypath)*1000 + prj_id[0] - 1;
         }
         else {
-            sender_key = ftok(conf.keypath.c_str(), prj_id[0]);
+			sender_key = dcs::path_token(conf.keypath.c_str(), prj_id[0]);
         }
         if (sender_key == -1){
             //error no
@@ -125,10 +125,10 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
     }
     if (recv_queue_buff_size > 0){
         if (dcs::strisint(conf.keypath)){
-            receiver_key = stoi(conf.keypath) + prj_id[1] - 1;
+            receiver_key = stoi(conf.keypath)*1000 + prj_id[1] - 1;
         }
         else {
-            receiver_key = ftok(conf.keypath.c_str(), prj_id[1]);
+            receiver_key = dcs::path_token(conf.keypath.c_str(), prj_id[1]);
         }
         if (receiver_key == -1){
             //error no
@@ -154,7 +154,7 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	dcsmq_t * smq = new dcsmq_t();
 	if (!smq){
 		//memalloc
-		GLOG_FTL("malloc error");
+		GLOG_FTL("malloc dcsmsg error");
 		return nullptr;
 	}
 	smq->sendbuff = (msgbuf	*)malloc(conf.msg_buffsz + sizeof(size_t));
@@ -162,7 +162,14 @@ dcsmq_t * dcsmq_create(const dcsmq_config_t & conf){
 	if (!smq->sendbuff ||
 		!smq->recvbuff){
 		//mem alloc
-		GLOG_FTL("malloc error");
+        if (smq->sendbuff) {
+            free(smq->sendbuff);
+        }
+        if (smq->recvbuff) {
+            free(smq->recvbuff);
+        }
+        delete smq;
+		GLOG_FTL("malloc dcsmq msg buffer error");
 		return nullptr;
 	}
 	smq->conf = conf;
@@ -316,6 +323,7 @@ uint64_t	dcsmq_session(dcsmq_t * smq){
 }
 void	dcsmq_set_session(dcsmq_t * smq, uint64_t session){
 	if (!smq->conf.passive){
+        GLOG_TRA("smg set session:%lu", session);
 		smq->session = session;
 	}
 }
